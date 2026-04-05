@@ -1,5 +1,6 @@
 package com.hotel.hotel_backend.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -24,17 +25,23 @@ public class HotelSearchRequest {
     @DateTimeFormat (iso = DateTimeFormat.ISO.DATE)
     private LocalDate checkIn;
 
-    @AssertTrue(message = "checkOut must be after checkIn")
     @NotNull
     @DateTimeFormat (iso = DateTimeFormat.ISO.DATE)
     private LocalDate checkOut;
 
     @NotNull
-    @Min(value = 1, message = "Quantity must be >= 0")
+    @Min(value = 1, message = "Quantity must be >= 1")
     private Integer adults = 1;
 
     @NotNull
-    @Min(value = 1, message = "Quantity must be >= 0")
+    @Min(value = 1, message = "Quantity must be >= 1")
     private Integer rooms = 1;
 
+    @AssertTrue(message = "checkOut must be after checkIn")
+    public boolean isDateRangeValid() {
+        if(checkIn == null || checkOut == null){
+            return true;
+        }
+        return checkOut.isAfter(checkIn);
+    }
 }

@@ -9,6 +9,8 @@ import jakarta.persistence.OptimisticLockException;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,9 +20,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.core.AuthenticationException;
 
 import java.util.List;
+
+
+
+
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
 
     @ExceptionHandler(ApiException.class)
 
@@ -35,10 +43,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(code.status).body(ApiResponse.fail(err));
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
-        List<ApiError.FieldErrorItem> details = ex.getBindingResult()
-                .getFieldErrors()
+    public ResponseEntity<ApiResponse<Void>>badRequest(BindingResult bindingResult) {
+        List<ApiError.FieldErrorItem> details = bindingResult.getFieldErrors()
                 .stream()
                 .map(this::toFieldError)
                 .toList();
@@ -47,8 +53,11 @@ public class GlobalExceptionHandler {
                 "Dữ liệu không hợp lệ",
                 details
         );
-
         return ResponseEntity.badRequest().body(ApiResponse.fail(err));
+    }
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException exception) {
+        return badRequest(exception.getBindingResult());
     }
 
     @ExceptionHandler({
@@ -107,5 +116,11 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(ErrorCode.VALIDATION_ERROR.status).body(ApiResponse.fail(err));
     }
+
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBind(BindException exception) {
+        return badRequest(exception.getBindingResult());
+    }
+
 
 }

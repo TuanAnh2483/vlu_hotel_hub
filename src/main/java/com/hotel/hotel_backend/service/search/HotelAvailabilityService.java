@@ -6,11 +6,8 @@ import com.hotel.hotel_backend.entity.Room;
 import com.hotel.hotel_backend.entity.RoomStatus;
 import com.hotel.hotel_backend.repository.DailyInventoryRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
-import jakarta.validation.constraints.AssertTrue;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
@@ -23,53 +20,28 @@ public class HotelAvailabilityService {
     private final RoomRepository roomRepository;
     private final DailyInventoryRepository dailyInventoryRepository;
 
-   ///  điều kiện khi filter date time
-   public boolean isDateRangeValid(HotelSearchCriteria criteria) {
-       // 1. Chặn ngay nếu một trong hai ngày bị null
-       if (criteria.checkIn() == null || criteria.checkOut() == null) {
-           return false;
-       }
-
-       // 2. Chặn nếu ngày nhận phòng ở quá khứ (Tùy chọn nhưng nên có)
-       if (criteria.checkIn().isBefore(LocalDate.now())) {
-           return false;
-       }
-
-       // 3. Quan trọng: CheckOut PHẢI SAU CheckIn (không chấp nhận bằng nhau)
-       // Nếu checkIn = 2026-04-10 và checkOut = 2026-04-10 -> isAfter sẽ trả về false -> Hợp lệ!
-       return criteria.checkOut().isAfter(criteria.checkIn());
-   }
-
+    ///  điều kiện khi filter date time
     public List<Hotel> filterAvailableHotels(List<Hotel> hotels, HotelSearchCriteria criteria) {
         if (hotels.isEmpty()) {
             return List.of();
         }
-
+        if(criteria.checkIn() == null || criteria.checkOut() == null) {
+            return List.of();
+        }
 
         List<Long> hotelIds = hotels.stream()
                 .map(Hotel::getId)
                 .toList();
-        if (criteria.checkIn() == null || criteria.checkOut() == null) {
-            return List.of();
-        }
-        boolean dateValid = isDateRangeValid(criteria);
-        if (dateValid) {
-        }
-
-
 
         // Phase 1: searchable hotels must have at least one active room.
-        List<Room> activeRooms = roomRepository.findByHotelIdInAndStatus(
-                hotelIds,
-                RoomStatus.ACTIVE
-        );
+        List<Room> activeRooms = roomRepository.findByHotelIdInAndStatus(hotelIds,RoomStatus.ACTIVE);
+
         List<Room> availableRooms = activeRooms.stream()
                 .filter(room-> isRoomAvailable(room,criteria))
                 .toList();
 
-
-
-        Set<Long> hotelIdsWithAvailableRooms = activeRooms.stream()
+        Set<Long> hotelIdsWithAvailableRooms = availableRooms
+                .stream()
                 .map(room -> room.getHotel().getId())
                 .collect(Collectors.toSet());
 
@@ -90,15 +62,13 @@ public class HotelAvailabilityService {
             Long nigth = ChronoUnit.DAYS.between(criteria.checkIn(), criteria.checkOut());
 
             // kiểm tra đủ số ngày
-        if(inventories.size() != nigth) {
+        if(inventories.size() != nigth){
                 return false;
-            }
+        }
 
         // kiểm tra mỗi ngày availableRooms - blockedRooms >= criteria.rooms()
         return inventories.stream()
                 .allMatch(inventory ->
                         inventory.getAvailableRooms()-inventory.getBlockedRooms()>= criteria.rooms());
     }
-
-
 }
