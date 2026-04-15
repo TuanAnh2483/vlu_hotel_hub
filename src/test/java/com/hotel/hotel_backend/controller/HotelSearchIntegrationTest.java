@@ -1,14 +1,7 @@
 package com.hotel.hotel_backend.controller;
 
-import com.hotel.hotel_backend.entity.DailyInventory;
-import com.hotel.hotel_backend.entity.Hotel;
-import com.hotel.hotel_backend.entity.Room;
-import com.hotel.hotel_backend.entity.User;
-import com.hotel.hotel_backend.entity.UserType;
-import com.hotel.hotel_backend.repository.DailyInventoryRepository;
-import com.hotel.hotel_backend.repository.HotelRepository;
-import com.hotel.hotel_backend.repository.RoomRepository;
-import com.hotel.hotel_backend.repository.UserRepository;
+import com.hotel.hotel_backend.entity.*;
+import com.hotel.hotel_backend.repository.*;
 import com.hotel.hotel_backend.service.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +11,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -46,6 +40,10 @@ class HotelSearchIntegrationTest {
     private DailyInventoryRepository dailyInventoryRepository;
 
     @Autowired
+    private DailyRateRepository dailyRateRepository;
+
+
+    @Autowired
     private InventoryService inventoryService;
 
     private LocalDate checkIn;
@@ -55,6 +53,7 @@ class HotelSearchIntegrationTest {
     void setUp() {
         // Reset DB truoc moi test de tung case doc lap nhau.
         // checkIn/checkOut duoc co dinh de helper inventory va request dung chung cung mot ky o.
+        dailyRateRepository.deleteAll();
         dailyInventoryRepository.deleteAll();
         roomRepository.deleteAll();
         hotelRepository.deleteAll();
@@ -295,5 +294,216 @@ class HotelSearchIntegrationTest {
 
         inventory.setBlockedRooms(blockedRooms);
         dailyInventoryRepository.save(inventory);
+    }
+
+
+    private void createDailyRate(Room room, LocalDate date, long price, int minStay, boolean isClosed) {
+        // Helper nay tao pricing data theo tung ngay cho room type.
+        // Test co the dieu khien ro cac nhanh DailyRate, fallback, isClosed va minStay.
+        DailyRate dailyRate = new DailyRate();
+        dailyRate.setId(new DailyRateId(room.getId(), date));
+        dailyRate.setRoom(room);
+        dailyRate.setPrice(price);
+        dailyRate.setMinStay(minStay);
+        dailyRate.setClosed(isClosed);
+        dailyRateRepository.save(dailyRate);
+    }
+
+    @Test
+    void searchShouldUseDailyRatesToCalculateMinPrice() throws Exception {
+        User owner = createOwner("owner-dailyrate@test.com");
+
+        Hotel hotel = createHotel(owner, "Rate Hotel", "Bangkok", "District 1");
+
+        Room room = createRoom(hotel, "Rate Room", 1);
+
+        initInventory(room);
+
+        createDailyRate(room, checkIn, 800_000L, 2, false);
+        createDailyRate(room, checkIn.plusDays(1), 900_000L, 1, false);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data[0].minPrice").value(1_700_000));
+    }
+    @Test
+    void searchShouldFallbackToBasePriceWhenDailyRateIsMissingForOneNight() throws Exception {
+        // Contract:
+        // Neu thieu DailyRate o mot dem, room type van duoc dinh gia
+        // bang cach dung DailyRate cho ngay co du lieu va fallback Room.price cho ngay con lai.
+        User owner = createOwner("owner-fallback@test.com");
+
+        Hotel hotel = createHotel(owner, "Fallback Hotel", "Bangkok", "District 1");
+        Room room = createRoom(hotel, "Fallback Room", 1);
+        initInventory(room);
+
+        // Chi co daily rate cho dem dau, dem con lai phai fallback ve base price cua room.
+        createDailyRate(room, checkIn, 800_000L, 1, false);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data[0].minPrice").value(1_800_000));
+    }
+
+    @Test
+    void searchShouldIgnoreClosedRoomTypeWhenCalculatingMinPrice() throws Exception {
+        // Contract:
+        // Room type re hon nhung bi closed o mot dem phai bi loai khoi pricing.
+        // Search phai lay minPrice tu room type hop le con lai.
+        User owner = createOwner("owner-closed@test.com");
+
+        Hotel hotel = createHotel(owner, "Closed Rate Hotel", "Bangkok", "District 1");
+
+        Room closedRoom = createRoom(hotel, "Closed Room", 2);
+        initInventory(closedRoom);
+        createDailyRate(closedRoom, checkIn, 700_000L, 1, false);
+        createDailyRate(closedRoom, checkIn.plusDays(1), 700_000L, 1, true);
+
+        Room validRoom = createRoom(hotel, "Valid Room", 2);
+        initInventory(validRoom);
+        createDailyRate(validRoom, checkIn, 900_000L, 1, false);
+        createDailyRate(validRoom, checkIn.plusDays(1), 900_000L, 1, false);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data[0].minPrice").value(1_800_000));
+    }
+
+    @Test
+    void searchShouldIgnoreRoomTypeWhenMinStayExceedsStayLength() throws Exception {
+        // Contract:
+        // Room type re hon nhung yeu cau minStay lon hon so dem user chon
+        // phai bi loai khoi pricing. Search phai lay minPrice tu room type hop le con lai.
+        User owner = createOwner("owner-minstay@test.com");
+
+        Hotel hotel = createHotel(owner, "Min Stay Hotel", "Bangkok", "District 1");
+
+        Room minStayRoom = createRoom(hotel, "Min Stay Room", 2);
+        initInventory(minStayRoom);
+        createDailyRate(minStayRoom, checkIn, 700_000L, 3, false);
+        createDailyRate(minStayRoom, checkIn.plusDays(1), 700_000L, 3, false);
+
+        Room validRoom = createRoom(hotel, "Valid Room", 2);
+        initInventory(validRoom);
+        createDailyRate(validRoom, checkIn, 900_000L, 1, false);
+        createDailyRate(validRoom, checkIn.plusDays(1), 900_000L, 1, false);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data[0].minPrice").value(1_800_000));
+    }
+
+    @Test
+    void hotelDetailShouldReturnStaticHotelInformation() throws Exception {
+        // Contract:
+        // GET /api/hotels/{id} chi tra thong tin tinh cua hotel, khong dính availability/pricing.
+        User owner = createOwner("owner-detail@test.com");
+
+        Hotel hotel = createHotel(owner, "Detail Hotel", "Bangkok", "District 1");
+        hotel.setDescription("Hotel used for detail endpoint test");
+        hotel.setRatingAvg(new BigDecimal("4.75"));
+        hotel.setRatingCount(18);
+        hotel = hotelRepository.save(hotel);
+
+        mockMvc.perform(get("/api/hotels/{id}", hotel.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data.name").value("Detail Hotel"))
+                .andExpect(jsonPath("$.data.address").value("Detail Hotel address"))
+                .andExpect(jsonPath("$.data.province").value("Bangkok"))
+                .andExpect(jsonPath("$.data.district").value("District 1"))
+                .andExpect(jsonPath("$.data.description").value("Hotel used for detail endpoint test"))
+                .andExpect(jsonPath("$.data.ratingAvg").value(4.75))
+                .andExpect(jsonPath("$.data.ratingCount").value(18));
+    }
+
+    @Test
+    void availableRoomsShouldReturnOnlySellableRoomTypesForStay() throws Exception {
+        // Contract:
+        // Endpoint available-rooms chi tra room type ban duoc cho ky o, kem availableUnits va stayPrice.
+        User owner = createOwner("owner-available-rooms@test.com");
+
+        Hotel hotel = createHotel(owner, "Room Detail Hotel", "Bangkok", "District 1");
+
+        Room validRoom = createRoom(hotel, "Valid Room", 2);
+        initInventory(validRoom);
+        createDailyRate(validRoom, checkIn, 800_000L, 1, false);
+        createDailyRate(validRoom, checkIn.plusDays(1), 900_000L, 1, false);
+
+        Room soldOutRoom = createRoom(hotel, "Sold Out Room", 1);
+        initInventory(soldOutRoom);
+        blockInventoryForEntireStay(soldOutRoom, 1);
+
+        mockMvc.perform(get("/api/hotels/{id}/available-rooms", hotel.getId())
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].roomId").value(validRoom.getId()))
+                .andExpect(jsonPath("$.data[0].name").value("Valid Room"))
+                .andExpect(jsonPath("$.data[0].capacity").value(2))
+                .andExpect(jsonPath("$.data[0].availableUnits").value(2))
+                .andExpect(jsonPath("$.data[0].stayPrice").value(1_700_000));
+    }
+
+    @Test
+    void availableRoomsShouldReturnBadRequestWhenCheckOutIsNotAfterCheckIn() throws Exception {
+        // Contract:
+        // Endpoint available-rooms phai fail o boundary validation khi date range khong hop le.
+        LocalDate invalidCheckIn = LocalDate.now().plusDays(5);
+        LocalDate invalidCheckOut = invalidCheckIn;
+
+        User owner = createOwner("owner-available-rooms-validation@test.com");
+        Hotel hotel = createHotel(owner, "Validation Hotel", "Bangkok", "District 1");
+
+        mockMvc.perform(get("/api/hotels/{id}/available-rooms", hotel.getId())
+                        .param("checkIn", invalidCheckIn.toString())
+                        .param("checkOut", invalidCheckOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
     }
 }

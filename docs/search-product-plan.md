@@ -1,12 +1,14 @@
 # Search Product Plan
-
+## Skill
+- Chuẩn best practice 
+- chuẩn SOLID 
+- Mô tả code để hiểu thêm phần core
 ## Muc tieu
 
 Phat trien feature search theo 2 huong song song:
 
 - Bam sat de cuong do an hien tai.
 - Nang cap dan de dung duoc theo tu duy product thuc te.
-
 Tai lieu nay dung de giu scope ro rang, tranh sua lan man.
 
 ## Quy tac lam viec
@@ -60,6 +62,29 @@ Tam thoi giu nguyen ten de tranh lan scope refactor.
 
 Tam chap nhan `adults = 1` va `rooms = 1` neu client khong truyen, nhung phai document ro trong API contract.
 
+### Hotel detail tach thanh 2 endpoint
+
+De tranh tron du lieu tinh va du lieu dong theo ngay, hotel detail se tach thanh:
+
+- `GET /api/hotels/{id}`: thong tin tinh cua hotel
+- `GET /api/hotels/{id}/available-rooms`: room types book duoc theo stay
+
+### Hotel detail chi tra room types available o v1
+
+Neu user da truyen `checkIn/checkOut`, endpoint `available-rooms` chi tra:
+
+- room type con inventory cho toan bo ky o
+- room type khong bi `isClosed`
+- room type dat `minStay`
+- room type co `stayPrice` tinh duoc 
+
+Khong tra room type sold-out o v1.
+
+### Gia o detail la `stayPrice`
+
+Room type response o v1 se tra tong gia cua toan bo ky o.
+Chua them `nightlyBreakdown` o giai doan nay.
+
 ## Trang thai hien tai
 
 ### Da xong
@@ -70,16 +95,25 @@ Tam chap nhan `adults = 1` va `rooms = 1` neu client khong truyen, nhung phai do
 - Filter availability theo toan bo ky o
 - Kiem tra du `rooms`
 - Kiem tra du `adults`
-- Integration test cho cac case co ban
+- Search response tra du summary data:
+  - `hotelId`
+  - `name`
+  - `address`
+  - `province`
+  - `district`
+  - `ratingAvg`
+  - `ratingCount`
+  - `minPrice`
+- Da dung `Daily Rates` de tinh `minPrice` theo ky o
+- Da fallback ve `Room.price` khi thieu `DailyRate`
+- Integration test cho core search va pricing contract
 
 ### Chua xong
 
-- Response search chua du thong tin theo de cuong
-- Chua tinh `minPrice`
-- Chua dung `Daily Rates`
 - Chua co pagination
 - Chua co sorting
 - Chua co hotel detail endpoint dung nghia product
+- Chua co available room types endpoint dung nghia product
 - Chua toi uu N+1 inventory query
 
 ## Search Contract v1
@@ -110,6 +144,46 @@ Search list se huong toi cau truc:
 - `ratingCount`
 - `minPrice`
 
+## Hotel Detail Contract v1
+
+### Endpoint 1 - Hotel info
+
+`GET /api/hotels/{id}`
+
+Muc dich:
+
+- tra thong tin tinh cua hotel de render man hinh detail
+
+Response huong toi:
+
+- `hotelId`
+- `name`
+- `address`
+- `province`
+- `district`
+- `description`
+- `ratingAvg`
+- `ratingCount`
+
+### Endpoint 2 - Available room types
+
+`GET /api/hotels/{id}/available-rooms`
+
+Query params:
+
+- `checkIn`: required
+- `checkOut`: required
+- `adults`: optional, default `1`
+- `rooms`: optional, default `1`
+
+Response moi room type huong toi:
+
+- `roomId`
+- `name`
+- `capacity`
+- `availableUnits`
+- `stayPrice`
+
 ## Ke hoach theo phase
 
 ### Phase 1 - Align voi de cuong
@@ -135,11 +209,11 @@ Muc tieu: `minPrice` dung theo ky o, khong chi dung availability.
 
 Tasks:
 
-- [ ] Ra soat model `Daily Rates`
-- [ ] Chot rule tinh gia cho stay
-- [ ] Implement tinh `minPrice` theo tung hotel
-- [ ] Fallback tu `daily rate` ve `basePrice`
-- [ ] Viet test cho pricing
+- [x] Ra soat model `Daily Rates`
+- [x] Chot rule tinh gia cho stay
+- [x] Implement tinh `minPrice` theo tung hotel
+- [x] Fallback tu `daily rate` ve `basePrice`
+- [x] Viet test cho pricing
 
 Definition of done:
 
@@ -153,15 +227,17 @@ Muc tieu: tach summary search va hotel detail.
 Tasks:
 
 - [ ] Thiet ke `GET /api/hotels/{id}`
-- [ ] Tra thong tin chi tiet hotel
+- [ ] Thiet ke `GET /api/hotels/{id}/available-rooms`
+- [ ] Tra thong tin tinh cua hotel
 - [ ] Tra room types available theo khoang ngay
-- [ ] Tra price breakdown cho tung room type
-- [ ] Viet test cho endpoint detail
+- [ ] Tra `stayPrice` cho tung room type
+- [ ] Viet test cho 2 endpoint detail
 
 Definition of done:
 
 - Search list chi giu vai tro summary
-- Detail endpoint phuc vu man hinh hotel detail
+- Hotel info va available room types duoc tach ro vai tro
+- Frontend hotel detail co du du lieu de render man hinh chi tiet
 
 ### Phase 4 - Product usability
 
@@ -211,6 +287,7 @@ Lam dung thu tu nay:
 
 Task tiep theo duoc chon:
 
-- [ ] Ra soat model `Daily Rates` hien co trong code
-- [ ] Chot entity/repository nao can them de tinh gia theo ngay
-- [ ] Chot thuat toan `minPrice` theo `Daily Rates` + fallback `Room.price`
+- [ ] Kiem tra `Hotel` entity hien tai da co `description` chua
+- [ ] Thiet ke DTO response cho `GET /api/hotels/{id}`
+- [ ] Thiet ke DTO response cho `GET /api/hotels/{id}/available-rooms`
+- [ ] Chot service nao se tai su dung pricing + availability logic hien co

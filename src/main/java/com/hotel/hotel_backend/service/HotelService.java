@@ -37,7 +37,7 @@ public class HotelService {
         hotel.setDistrict(request.district());
         hotel.setProvince(request.province());
         hotel.setOwner(owner);
-
+        hotel.setDescription(request.description());
         hotelRepository.save(hotel);
 
         return mapToResponse(hotel);
@@ -62,6 +62,7 @@ public class HotelService {
         hotel.setAddress(request.address());
         hotel.setDistrict(request.district());
         hotel.setProvince(request.province());
+        hotel.setDescription(request.description());
 
         return mapToResponse(hotel);
     }
@@ -106,7 +107,8 @@ public class HotelService {
                 hotel.getName(),
                 hotel.getAddress(),
                 hotel.getDistrict(),
-                hotel.getProvince()
+                hotel.getProvince(),
+                hotel.getDescription()
         );
     }
 }

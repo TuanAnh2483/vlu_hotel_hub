@@ -12,5 +12,6 @@ public record UpdateHotelRequest(
         String province,
         @NotBlank(message="null able")
         String district,
+        String description,
         HotelStatus status
 ) {}

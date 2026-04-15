@@ -7,6 +7,7 @@ import com.hotel.hotel_backend.mapper.HotelSearchMapper;
 import com.hotel.hotel_backend.service.search.HotelAvailabilityService;
 import com.hotel.hotel_backend.service.search.HotelCandidateQueryService;
 import com.hotel.hotel_backend.service.search.HotelSearchCriteria;
+import com.hotel.hotel_backend.service.search.HotelStayCriteria;
 import com.hotel.hotel_backend.service.search.HotelSearchUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,13 +25,20 @@ public class HotelSearchService implements HotelSearchUseCase {
 
     @Override
     public List<HotelSearchItemResponse> search(HotelSearchCriteria criteria) {
+        HotelStayCriteria stayCriteria = new HotelStayCriteria(
+                criteria.checkIn(),
+                criteria.checkOut(),
+                criteria.adults(),
+                criteria.rooms()
+        );
+
         List<Hotel> candidateHotels = hotelCandidateQueryService.findCandidates(criteria);
-        List<Hotel> availableHotels = hotelAvailabilityService.filterAvailableHotels(candidateHotels, criteria);
+        List<Hotel> availableHotels = hotelAvailabilityService.filterAvailableHotels(candidateHotels, stayCriteria);
 
         return availableHotels.stream()
                 .map(hotel -> hotelSearchMapper.toItem(
                         hotel,
-                        hotelAvailabilityService.findMinPriceForStay(hotel, criteria)
+                        hotelAvailabilityService.findMinPriceForStay(hotel, stayCriteria)
                 ))
                 .toList();
     }

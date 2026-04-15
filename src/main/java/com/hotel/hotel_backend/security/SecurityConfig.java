@@ -71,6 +71,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/register-partner").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/hotels/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/*/available-rooms").permitAll()
                         .requestMatchers("/error").permitAll()
 
                         // còn lại bắt buộc phải login

@@ -5,6 +5,8 @@ public record HotelResponse(
         String name,
         String address,
         String district,
-        String province
+        String province,
+        String description
+
 ) {}
 

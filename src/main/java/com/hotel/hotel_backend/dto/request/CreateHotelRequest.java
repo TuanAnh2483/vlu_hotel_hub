@@ -15,5 +15,7 @@ public record CreateHotelRequest(
         String district,
 
         @NotBlank(message = "Province is required")
-        String province
+        String province,
+
+        String description
 ) {}

@@ -12,5 +12,4 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
  List<Hotel> findByProvinceAndStatus(String province, HotelStatus status);
 
  List<Hotel> findByProvinceAndDistrictAndStatus(String province, String district, HotelStatus status);
-
 }

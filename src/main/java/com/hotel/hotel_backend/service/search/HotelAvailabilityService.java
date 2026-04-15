@@ -1,5 +1,6 @@
 package com.hotel.hotel_backend.service.search;
 
+import com.hotel.hotel_backend.dto.response.HotelAvailableRoomItemResponse;
 import com.hotel.hotel_backend.entity.*;
 import com.hotel.hotel_backend.repository.DailyInventoryRepository;
 import com.hotel.hotel_backend.repository.DailyRateRepository;
@@ -20,7 +21,7 @@ public class HotelAvailabilityService {
     private final DailyInventoryRepository dailyInventoryRepository;
     private final DailyRateRepository dailyRateRepository;
 
-    public List<Hotel> filterAvailableHotels(List<Hotel> hotels, HotelSearchCriteria criteria) {
+    public List<Hotel> filterAvailableHotels(List<Hotel> hotels, HotelStayCriteria criteria) {
         // Khong co candidate hotel thi khong can lam them buoc nao nua.
         if (hotels.isEmpty()) {
             return List.of();
@@ -52,22 +53,18 @@ public class HotelAvailabilityService {
                 .toList();
     }
 
-    public Long findMinPriceForStay(Hotel hotel, HotelSearchCriteria criteria) {
-
+    public Long findMinPriceForStay(Hotel hotel, HotelStayCriteria criteria) {
         if (hotel == null || !hasValidStayRequest(criteria)) {
             return null;
         }
 
-
-        return roomRepository.findByHotelIdInAndStatus(List.of(hotel.getId()), RoomStatus.ACTIVE).stream()
-                .filter(room -> availableUnitsForStay(room, criteria) > 0)
-                .map(room -> calculateRoomStayPrice(room,criteria))   /// total price
-                .filter(price -> price != null)
+        return findAvailableRoomQuotes(hotel, criteria).stream()
+                .map(RoomStayQuote::stayPrice)
                 .min(Long::compareTo)
                 .orElse(null);
     }
 
-    private int availableUnitsForStay(Room room, HotelSearchCriteria criteria) {
+    private int availableUnitsForStay(Room room, HotelStayCriteria criteria) {
         // Inventory duoc luu theo tung ngay.
         // Muon biet room type nay con bao nhieu phong cho ca ky o,
         // ta phai load toan bo inventory trong [checkIn, checkOut).
@@ -92,7 +89,7 @@ public class HotelAvailabilityService {
                 .orElse(0);
     }
 
-    private boolean canSatisfyStay(List<Room> rooms, HotelSearchCriteria criteria) {
+    private boolean canSatisfyStay(List<Room> rooms, HotelStayCriteria criteria) {
         // Khong co room active nao thi chac chan fail.
         if (rooms.isEmpty()) {
             return false;
@@ -108,7 +105,7 @@ public class HotelAvailabilityService {
 
         // Tong so phong available cua hotel phai du lon de cover request rooms.
         int totalAvailableRooms = options.stream()
-                .mapToInt(opt-> opt.availableUnits())
+                .mapToInt(opt -> opt.availableUnits())
                 .sum();
 
         if (totalAvailableRooms < criteria.rooms()) {
@@ -141,7 +138,7 @@ public class HotelAvailabilityService {
         return roomsRemaining == 0 && coveredAdults >= criteria.adults();
     }
 
-    private boolean hasValidStayRequest(HotelSearchCriteria criteria) {
+    private boolean hasValidStayRequest(HotelStayCriteria criteria) {
         return criteria.checkIn() != null
                 && criteria.checkOut() != null
                 && criteria.checkOut().isAfter(criteria.checkIn())
@@ -156,10 +153,10 @@ public class HotelAvailabilityService {
 
 
     /// Với mỗi room khả dụng tính tổng giá của kỳ ở
-    /// bỏ room nào không có đinh giá hoặc không hợp lệ
-    private Long calculateRoomStayPrice(Room room, HotelSearchCriteria criteria) {
-        Long night = ChronoUnit.DAYS.between(criteria.checkIn(), criteria.checkOut());
-        if(night<=0){
+    ///
+    private Long calculateRoomStayPrice(Room room, HotelStayCriteria criteria) {
+        long night = ChronoUnit.DAYS.between(criteria.checkIn(), criteria.checkOut());
+        if (night <= 0) {
             return null;
         }
         List<DailyRate> dailyRates = dailyRateRepository.findByIdRoomIdAndIdDateBetween(
@@ -167,35 +164,101 @@ public class HotelAvailabilityService {
                 criteria.checkIn(),
                 criteria.checkOut().minusDays(1)
         );
-        Map<LocalDate,DailyRate> ratesByDate = dailyRates.stream()
-                .collect(Collectors.toMap(rate-> rate.getId().date(),rate->rate));
+        Map<LocalDate, DailyRate> ratesByDate = dailyRates.stream()
+                .collect(Collectors.toMap(rate -> rate.getId().date(), rate -> rate));
 
 
         //loop checkIn<checkOut
-        long totalPrice = 0 ;
+        long totalPrice = 0;
 
-        for(LocalDate date = criteria.checkIn();
-                date.isBefore(criteria.checkOut());
-                date = date.plusDays(1))
-        {
+        for (LocalDate date = criteria.checkIn();
+             date.isBefore(criteria.checkOut());
+             date = date.plusDays(1)) {
             DailyRate rate = ratesByDate.get(date);
-            if(rate == null){
-                totalPrice += room.getPrice() ;
+            if (rate == null) {
+                totalPrice += room.getPrice();
                 continue;
             }
 
-            if(rate.isClosed()) {
+            if (rate.isClosed()) {
                 return null;
             }
 
-            if(rate.getMinStay()!= null && rate.getMinStay() > night){
+            if (rate.getMinStay() != null && rate.getMinStay() > night) {
                 return null;
 
             }
             totalPrice += rate.getPrice();
         }
-        return  totalPrice;
+        return totalPrice;
     }
+
+    private record RoomStayQuote(Room room, int availableUnits, long stayPrice) {
+        int capacity(){
+            return room.getCapacity();
+        }
+    }
+
+    private RoomStayQuote evaluateRoomStayForStay(Room room, HotelStayCriteria criteria) {
+        int availableUnit = availableUnitsForStay(room, criteria);
+        if (availableUnit <= 0) {
+            return null;
+        }
+        Long stayPrice = calculateRoomStayPrice(room, criteria);
+        if (stayPrice == null) {
+            return null;
+        }
+
+
+        return new RoomStayQuote(room, availableUnit, stayPrice);
+    }
+
+
+    /// method trả ở mức room_type
+    private List<RoomStayQuote> findAvailableRoomQuotes(Hotel hotel, HotelStayCriteria criteria) {
+        if (hotel == null || !hasValidStayRequest(criteria)) {
+            return List.of();
+        }
+
+        List<Room> activeRooms = roomRepository.findByHotelIdInAndStatus(
+                List.of(hotel.getId()),
+                RoomStatus.ACTIVE
+        );
+
+        List<RoomStayQuote> quotes = new ArrayList<>();
+        for (Room room : activeRooms) {
+            RoomStayQuote quote = evaluateRoomStayForStay(room, criteria);
+            if (quote != null) {
+                quotes.add(quote);
+            }
+        }
+
+        quotes.sort(
+                Comparator.comparingLong(RoomStayQuote::stayPrice)
+                        .thenComparing(Comparator.comparingInt(RoomStayQuote::capacity).reversed())
+        );
+
+        return quotes;
+
+    }
+
+    private HotelAvailableRoomItemResponse toAvailableRoomItemResponse(RoomStayQuote quote) {
+        return new HotelAvailableRoomItemResponse(
+                quote.room().getId(),
+                quote.room().getName(),
+                quote.room().getCapacity(),
+                quote.availableUnits(),
+                quote.stayPrice()
+        );
+    }
+
+    public List<HotelAvailableRoomItemResponse> findAvailableRoomItems(Hotel hotel, HotelStayCriteria criteria) {
+        return findAvailableRoomQuotes(hotel, criteria).stream()
+                .map(this::toAvailableRoomItemResponse)
+                .toList();
+    }
+
+
 
 
 }
