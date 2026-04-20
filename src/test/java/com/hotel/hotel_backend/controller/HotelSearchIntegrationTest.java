@@ -14,7 +14,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -83,15 +85,21 @@ class HotelSearchIntegrationTest {
                         .param("rooms", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
-                .andExpect(jsonPath("$.data[0].name").value("Available Hotel"))
-                .andExpect(jsonPath("$.data[0].address").value("Available Hotel address"))
-                .andExpect(jsonPath("$.data[0].province").value("Bangkok"))
-                .andExpect(jsonPath("$.data[0].district").value("District 1"))
-                .andExpect(jsonPath("$.data[0].ratingAvg").value(0))
-                .andExpect(jsonPath("$.data[0].ratingCount").value(0))
-                .andExpect(jsonPath("$.data[0].minPrice").value(2_000_000));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].name").value("Available Hotel"))
+                .andExpect(jsonPath("$.data.items[0].address").value("Available Hotel address"))
+                .andExpect(jsonPath("$.data.items[0].province").value("Bangkok"))
+                .andExpect(jsonPath("$.data.items[0].district").value("District 1"))
+                .andExpect(jsonPath("$.data.items[0].ratingAvg").value(0))
+                .andExpect(jsonPath("$.data.items[0].ratingCount").value(0))
+                .andExpect(jsonPath("$.data.items[0].minPrice").value(2_000_000))
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalItems").value(1))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.sort").value("price_asc"));
     }
 
     @Test
@@ -119,9 +127,266 @@ class HotelSearchIntegrationTest {
                         .param("rooms", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hotelId").value(availableHotel.getId()))
-                .andExpect(jsonPath("$.data[0].name").value("Available Hotel"));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(availableHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].name").value("Available Hotel"));
+    }
+
+    @Test
+    void searchShouldFilterHotelsByHotelAmenities() throws Exception {
+        // Contract:
+        // hotelAmenities la filter o muc hotel va semantics la AND.
+        User owner = createOwner("owner-hotel-amenity@test.com");
+
+        Hotel matchedHotel = createHotel(
+                owner,
+                "Pool Parking Hotel",
+                "Bangkok",
+                "District 1",
+                Set.of(HotelAmenity.POOL, HotelAmenity.PARKING)
+        );
+        Room matchedRoom = createRoom(matchedHotel, "Matched Room", 1);
+        initInventory(matchedRoom);
+
+        Hotel unmatchedHotel = createHotel(
+                owner,
+                "Wifi Only Hotel",
+                "Bangkok",
+                "District 1",
+                Set.of(HotelAmenity.WIFI)
+        );
+        Room unmatchedRoom = createRoom(unmatchedHotel, "Unmatched Room", 1);
+        initInventory(unmatchedRoom);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("hotelAmenities", "POOL,PARKING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(matchedHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].name").value("Pool Parking Hotel"));
+    }
+
+    @Test
+    void searchShouldFilterHotelsByHotelType() throws Exception {
+        // Contract:
+        // hotelTypes la filter muc hotel va semantics trong cung group la OR.
+        User owner = createOwner("owner-hotel-type@test.com");
+
+        Hotel resortHotel = createHotel(owner, "Island Resort", "Bangkok", "District 1", HotelType.RESORT);
+        Room resortRoom = createRoom(resortHotel, "Resort Room", 1);
+        initInventory(resortRoom);
+
+        Hotel apartmentHotel = createHotel(owner, "City Apartment", "Bangkok", "District 1", HotelType.APARTMENT);
+        Room apartmentRoom = createRoom(apartmentHotel, "Apartment Room", 1);
+        initInventory(apartmentRoom);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("hotelTypes", "RESORT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(resortHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].name").value("Island Resort"));
+    }
+
+    @Test
+    void searchShouldFilterByRoomCategoryAndUseMatchingCategoryPriceOnly() throws Exception {
+        // Contract:
+        // roomCategories phai loc room pool truoc pricing, minPrice chi duoc tinh tren category da match.
+        User owner = createOwner("owner-room-category@test.com");
+
+        Hotel hotel = createHotel(owner, "Category Hotel", "Bangkok", "District 1");
+
+        Room cheapStandardRoom = createRoom(hotel, "Cheap Standard", 1, 2, RoomCategory.STANDARD, BedType.DOUBLE, Set.of());
+        initInventory(cheapStandardRoom);
+        createDailyRate(cheapStandardRoom, checkIn, 400_000L, 1, false);
+        createDailyRate(cheapStandardRoom, checkIn.plusDays(1), 400_000L, 1, false);
+
+        Room suiteRoom = createRoom(hotel, "Suite Room", 1, 2, RoomCategory.SUITE, BedType.DOUBLE, Set.of());
+        initInventory(suiteRoom);
+        createDailyRate(suiteRoom, checkIn, 950_000L, 1, false);
+        createDailyRate(suiteRoom, checkIn.plusDays(1), 950_000L, 1, false);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("roomCategories", "SUITE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].minPrice").value(1_900_000));
+    }
+
+    @Test
+    void searchShouldFilterByBedType() throws Exception {
+        // Contract:
+        // bedTypes phai loc room pool o room-level, hotel khong con room match thi bi loai.
+        User owner = createOwner("owner-bed-type@test.com");
+
+        Hotel twinHotel = createHotel(owner, "Twin Hotel", "Bangkok", "District 1");
+        Room twinRoom = createRoom(twinHotel, "Twin Room", 1, 2, RoomCategory.DELUXE, BedType.TWIN, Set.of());
+        initInventory(twinRoom);
+
+        Hotel doubleHotel = createHotel(owner, "Double Hotel", "Bangkok", "District 1");
+        Room doubleRoom = createRoom(doubleHotel, "Double Room", 1, 2, RoomCategory.DELUXE, BedType.DOUBLE, Set.of());
+        initInventory(doubleRoom);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("bedTypes", "TWIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(twinHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].name").value("Twin Hotel"));
+    }
+
+    @Test
+    void searchShouldFilterByRoomAmenitiesAndUseMatchingRoomPriceOnly() throws Exception {
+        // Contract:
+        // roomAmenities phai loc room pool truoc availability/pricing.
+        // minPrice phai tinh tu room da match amenity, khong lay room re hon nhung khong match.
+        User owner = createOwner("owner-room-amenity@test.com");
+
+        Hotel matchedHotel = createHotel(owner, "Breakfast Hotel", "Bangkok", "District 1");
+
+        Room cheapPlainRoom = createRoom(matchedHotel, "Cheap Plain Room", 1);
+        initInventory(cheapPlainRoom);
+        createDailyRate(cheapPlainRoom, checkIn, 400_000L, 1, false);
+        createDailyRate(cheapPlainRoom, checkIn.plusDays(1), 400_000L, 1, false);
+
+        Room breakfastRoom = createRoom(
+                matchedHotel,
+                "Balcony Room",
+                1,
+                2,
+                Set.of(RoomAmenity.BALCONY)
+        );
+        initInventory(breakfastRoom);
+        createDailyRate(breakfastRoom, checkIn, 900_000L, 1, false);
+        createDailyRate(breakfastRoom, checkIn.plusDays(1), 900_000L, 1, false);
+
+        Hotel unmatchedHotel = createHotel(owner, "Plain Hotel", "Bangkok", "District 1");
+        Room unmatchedRoom = createRoom(unmatchedHotel, "Plain Room", 1);
+        initInventory(unmatchedRoom);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("roomAmenities", "BALCONY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(matchedHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].minPrice").value(1_800_000));
+    }
+
+    @Test
+    void searchShouldCombineHotelAndRoomAmenityFilters() throws Exception {
+        // Contract:
+        // Search chi duoc giu hotel khi pass dong thoi hotel amenity va room amenity filter.
+        User owner = createOwner("owner-combined-amenity@test.com");
+
+        Hotel fullyMatchedHotel = createHotel(
+                owner,
+                "Matched Amenity Hotel",
+                "Bangkok",
+                "District 1",
+                Set.of(HotelAmenity.POOL)
+        );
+        Room matchedRoom = createRoom(
+                fullyMatchedHotel,
+                "Matched Room",
+                1,
+                2,
+                Set.of(RoomAmenity.BALCONY)
+        );
+        initInventory(matchedRoom);
+
+        Hotel hotelOnlyMatched = createHotel(
+                owner,
+                "Hotel Only Match",
+                "Bangkok",
+                "District 1",
+                Set.of(HotelAmenity.POOL)
+        );
+        Room hotelOnlyRoom = createRoom(hotelOnlyMatched, "Plain Room", 1);
+        initInventory(hotelOnlyRoom);
+
+        Hotel roomOnlyMatched = createHotel(owner, "Room Only Match", "Bangkok", "District 1");
+        Room roomOnlyRoom = createRoom(
+                roomOnlyMatched,
+                "Balcony Room",
+                1,
+                2,
+                Set.of(RoomAmenity.BALCONY)
+        );
+        initInventory(roomOnlyRoom);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("hotelAmenities", "POOL")
+                        .param("roomAmenities", "BALCONY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(fullyMatchedHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].name").value("Matched Amenity Hotel"));
+    }
+
+    @Test
+    void searchShouldReturnEmptyResultWithPaginationMetadataWhenNoHotelMatches() throws Exception {
+        // Contract:
+        // Search khong co ket qua van phai tra 200 voi pagination metadata on dinh,
+        // thay vi tra loi hoac bo trong metadata.
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(0))
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalItems").value(0))
+                .andExpect(jsonPath("$.data.totalPages").value(0))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.sort").value("price_asc"));
     }
 
     @Test
@@ -167,9 +432,9 @@ class HotelSearchIntegrationTest {
                         .param("rooms", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hotelId").value(familyHotel.getId()))
-                .andExpect(jsonPath("$.data[0].name").value("Family Hotel"));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(familyHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].name").value("Family Hotel"));
     }
 
     @Test
@@ -190,6 +455,24 @@ class HotelSearchIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void searchShouldReturnFieldErrorWhenPageIsLessThanOne() throws Exception {
+        // Contract:
+        // Validation error phai tra field detail ro rang de frontend bind loi vao dung input.
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("page", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details[0].field").value("page"));
     }
 
     @Test
@@ -217,9 +500,9 @@ class HotelSearchIntegrationTest {
                         .param("rooms", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hotelId").value(availableHotel.getId()))
-                .andExpect(jsonPath("$.data[0].name").value("Always Available Hotel"));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(availableHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].name").value("Always Available Hotel"));
     }
 
     private User createOwner(String email) {
@@ -233,12 +516,27 @@ class HotelSearchIntegrationTest {
 
     private Hotel createHotel(User owner, String name, String province, String district) {
         // Tao hotel voi location cu the de test filter location.
+        return createHotel(owner, name, province, district, HotelType.HOTEL, Set.of());
+    }
+
+    private Hotel createHotel(User owner, String name, String province, String district, Set<HotelAmenity> amenities) {
+        return createHotel(owner, name, province, district, HotelType.HOTEL, amenities);
+    }
+
+    private Hotel createHotel(User owner, String name, String province, String district, HotelType hotelType) {
+        return createHotel(owner, name, province, district, hotelType, Set.of());
+    }
+
+    private Hotel createHotel(User owner, String name, String province, String district, HotelType hotelType, Set<HotelAmenity> amenities) {
+        // Tao hotel voi location cu the de test filter location va filter amenity muc hotel.
         Hotel hotel = new Hotel();
         hotel.setOwner(owner);
         hotel.setName(name);
         hotel.setAddress(name + " address");
         hotel.setProvince(province);
         hotel.setDistrict(district);
+        hotel.setHotelType(hotelType);
+        hotel.setAmenities(amenities);
         return hotelRepository.save(hotel);
     }
 
@@ -248,6 +546,22 @@ class HotelSearchIntegrationTest {
     }
 
     private Room createRoom(Hotel hotel, String name, int quantity, int capacity) {
+        return createRoom(hotel, name, quantity, capacity, RoomCategory.STANDARD, BedType.DOUBLE, Set.of());
+    }
+
+    private Room createRoom(Hotel hotel, String name, int quantity, int capacity, Set<RoomAmenity> amenities) {
+        return createRoom(hotel, name, quantity, capacity, RoomCategory.STANDARD, BedType.DOUBLE, amenities);
+    }
+
+    private Room createRoom(
+            Hotel hotel,
+            String name,
+            int quantity,
+            int capacity,
+            RoomCategory roomCategory,
+            BedType bedType,
+            Set<RoomAmenity> amenities
+    ) {
         // quantity = hotel co bao nhieu phong thuoc room type nay.
         // capacity = moi phong trong room type nay chua duoc bao nhieu nguoi.
         // Test capacity dung helper nay de mo phong hotel du phong nhung thieu suc chua cho adults.
@@ -257,6 +571,9 @@ class HotelSearchIntegrationTest {
         room.setPrice(1_000_000L);
         room.setCapacity(capacity);
         room.setQuantity(quantity);
+        room.setRoomCategory(roomCategory);
+        room.setBedType(bedType);
+        room.setAmenities(amenities);
         return roomRepository.save(room);
     }
 
@@ -332,9 +649,9 @@ class HotelSearchIntegrationTest {
                         .param("rooms", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
-                .andExpect(jsonPath("$.data[0].minPrice").value(1_700_000));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].minPrice").value(1_700_000));
     }
     @Test
     void searchShouldFallbackToBasePriceWhenDailyRateIsMissingForOneNight() throws Exception {
@@ -359,9 +676,9 @@ class HotelSearchIntegrationTest {
                         .param("rooms", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
-                .andExpect(jsonPath("$.data[0].minPrice").value(1_800_000));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].minPrice").value(1_800_000));
     }
 
     @Test
@@ -392,9 +709,9 @@ class HotelSearchIntegrationTest {
                         .param("rooms", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
-                .andExpect(jsonPath("$.data[0].minPrice").value(1_800_000));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].minPrice").value(1_800_000));
     }
 
     @Test
@@ -425,85 +742,166 @@ class HotelSearchIntegrationTest {
                         .param("rooms", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].hotelId").value(hotel.getId()))
-                .andExpect(jsonPath("$.data[0].minPrice").value(1_800_000));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(hotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].minPrice").value(1_800_000));
     }
 
     @Test
-    void hotelDetailShouldReturnStaticHotelInformation() throws Exception {
+    void searchShouldReturnSecondPageWithPaginationMetadata() throws Exception {
         // Contract:
-        // GET /api/hotels/{id} chi tra thong tin tinh cua hotel, khong dính availability/pricing.
-        User owner = createOwner("owner-detail@test.com");
+        // Search phai tra metadata pagination on dinh va cat dung item theo page/size.
+        User owner = createOwner("owner-pagination@test.com");
 
-        Hotel hotel = createHotel(owner, "Detail Hotel", "Bangkok", "District 1");
-        hotel.setDescription("Hotel used for detail endpoint test");
-        hotel.setRatingAvg(new BigDecimal("4.75"));
-        hotel.setRatingCount(18);
-        hotel = hotelRepository.save(hotel);
+        Hotel cheapestHotel = createHotel(owner, "Cheapest Hotel", "Bangkok", "District 1");
+        Room cheapestRoom = createRoom(cheapestHotel, "Cheapest Room", 1);
+        initInventory(cheapestRoom);
+        createDailyRate(cheapestRoom, checkIn, 700_000L, 1, false);
+        createDailyRate(cheapestRoom, checkIn.plusDays(1), 800_000L, 1, false);
 
-        mockMvc.perform(get("/api/hotels/{id}", hotel.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.hotelId").value(hotel.getId()))
-                .andExpect(jsonPath("$.data.name").value("Detail Hotel"))
-                .andExpect(jsonPath("$.data.address").value("Detail Hotel address"))
-                .andExpect(jsonPath("$.data.province").value("Bangkok"))
-                .andExpect(jsonPath("$.data.district").value("District 1"))
-                .andExpect(jsonPath("$.data.description").value("Hotel used for detail endpoint test"))
-                .andExpect(jsonPath("$.data.ratingAvg").value(4.75))
-                .andExpect(jsonPath("$.data.ratingCount").value(18));
-    }
+        Hotel middleHotel = createHotel(owner, "Middle Hotel", "Bangkok", "District 1");
+        Room middleRoom = createRoom(middleHotel, "Middle Room", 1);
+        initInventory(middleRoom);
+        createDailyRate(middleRoom, checkIn, 800_000L, 1, false);
+        createDailyRate(middleRoom, checkIn.plusDays(1), 900_000L, 1, false);
 
-    @Test
-    void availableRoomsShouldReturnOnlySellableRoomTypesForStay() throws Exception {
-        // Contract:
-        // Endpoint available-rooms chi tra room type ban duoc cho ky o, kem availableUnits va stayPrice.
-        User owner = createOwner("owner-available-rooms@test.com");
+        Hotel expensiveHotel = createHotel(owner, "Expensive Hotel", "Bangkok", "District 1");
+        Room expensiveRoom = createRoom(expensiveHotel, "Expensive Room", 1);
+        initInventory(expensiveRoom);
+        createDailyRate(expensiveRoom, checkIn, 900_000L, 1, false);
+        createDailyRate(expensiveRoom, checkIn.plusDays(1), 1_000_000L, 1, false);
 
-        Hotel hotel = createHotel(owner, "Room Detail Hotel", "Bangkok", "District 1");
-
-        Room validRoom = createRoom(hotel, "Valid Room", 2);
-        initInventory(validRoom);
-        createDailyRate(validRoom, checkIn, 800_000L, 1, false);
-        createDailyRate(validRoom, checkIn.plusDays(1), 900_000L, 1, false);
-
-        Room soldOutRoom = createRoom(hotel, "Sold Out Room", 1);
-        initInventory(soldOutRoom);
-        blockInventoryForEntireStay(soldOutRoom, 1);
-
-        mockMvc.perform(get("/api/hotels/{id}/available-rooms", hotel.getId())
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
                         .param("checkIn", checkIn.toString())
                         .param("checkOut", checkOut.toString())
                         .param("adults", "2")
-                        .param("rooms", "1"))
+                        .param("rooms", "1")
+                        .param("page", "2")
+                        .param("size", "2")
+                        .param("sort", "price_asc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].roomId").value(validRoom.getId()))
-                .andExpect(jsonPath("$.data[0].name").value("Valid Room"))
-                .andExpect(jsonPath("$.data[0].capacity").value(2))
-                .andExpect(jsonPath("$.data[0].availableUnits").value(2))
-                .andExpect(jsonPath("$.data[0].stayPrice").value(1_700_000));
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(expensiveHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].minPrice").value(1_900_000))
+                .andExpect(jsonPath("$.data.page").value(2))
+                .andExpect(jsonPath("$.data.size").value(2))
+                .andExpect(jsonPath("$.data.totalItems").value(3))
+                .andExpect(jsonPath("$.data.totalPages").value(2))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.sort").value("price_asc"));
     }
 
     @Test
-    void availableRoomsShouldReturnBadRequestWhenCheckOutIsNotAfterCheckIn() throws Exception {
+    void searchShouldSortHotelsByRatingDescending() throws Exception {
         // Contract:
-        // Endpoint available-rooms phai fail o boundary validation khi date range khong hop le.
-        LocalDate invalidCheckIn = LocalDate.now().plusDays(5);
-        LocalDate invalidCheckOut = invalidCheckIn;
+        // sort=rating_desc phai uu tien ratingAvg giam dan, tie-break tiep theo moi den hotelId.
+        User owner = createOwner("owner-rating-sort@test.com");
 
-        User owner = createOwner("owner-available-rooms-validation@test.com");
-        Hotel hotel = createHotel(owner, "Validation Hotel", "Bangkok", "District 1");
+        Hotel lowerRatedHotel = createHotel(owner, "Lower Rated Hotel", "Bangkok", "District 1");
+        lowerRatedHotel.setRatingAvg(new BigDecimal("4.20"));
+        lowerRatedHotel.setRatingCount(12);
+        lowerRatedHotel = hotelRepository.save(lowerRatedHotel);
+        Room lowerRatedRoom = createRoom(lowerRatedHotel, "Lower Rated Room", 1);
+        initInventory(lowerRatedRoom);
 
-        mockMvc.perform(get("/api/hotels/{id}/available-rooms", hotel.getId())
-                        .param("checkIn", invalidCheckIn.toString())
-                        .param("checkOut", invalidCheckOut.toString())
+        Hotel higherRatedHotel = createHotel(owner, "Higher Rated Hotel", "Bangkok", "District 1");
+        higherRatedHotel.setRatingAvg(new BigDecimal("4.80"));
+        higherRatedHotel.setRatingCount(25);
+        higherRatedHotel = hotelRepository.save(higherRatedHotel);
+        Room higherRatedRoom = createRoom(higherRatedHotel, "Higher Rated Room", 1);
+        initInventory(higherRatedRoom);
+
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
                         .param("adults", "2")
-                        .param("rooms", "1"))
+                        .param("rooms", "1")
+                        .param("sort", "rating_desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.items[0].hotelId").value(higherRatedHotel.getId()))
+                .andExpect(jsonPath("$.data.items[0].ratingAvg").value(4.8))
+                .andExpect(jsonPath("$.data.items[1].hotelId").value(lowerRatedHotel.getId()))
+                .andExpect(jsonPath("$.data.items[1].ratingAvg").value(4.2))
+                .andExpect(jsonPath("$.data.sort").value("rating_desc"));
+    }
+
+    @Test
+    void searchShouldReturnBadRequestWhenSortIsInvalid() throws Exception {
+        // Contract:
+        // sort ngoai whitelist product phai bi chan o boundary validation.
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("sort", "recommended"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details[0].field").value("sort"));
     }
+
+    @Test
+    void searchShouldReturnBadRequestWhenHotelAmenityIsInvalid() throws Exception {
+        // Contract:
+        // hotel amenity ngoai catalog phai fail o boundary validation, khong duoc silently ignore.
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("hotelAmenities", "INVALID_AMENITY"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details[0].field", containsString("hotelAmenities")));
+    }
+
+    @Test
+    void searchShouldReturnBadRequestWhenRoomAmenityIsInvalid() throws Exception {
+        // Contract:
+        // room amenity ngoai catalog phai fail o boundary validation de contract query param ro rang.
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("roomAmenities", "INVALID_AMENITY"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details[0].field", containsString("roomAmenities")));
+    }
+
+    @Test
+    void searchShouldReturnBadRequestWhenSizeExceedsLimit() throws Exception {
+        // Contract:
+        // size > 50 phai bi chan o boundary validation de tranh query product qua lon.
+        mockMvc.perform(get("/api/hotels/search")
+                        .param("province", "Bangkok")
+                        .param("district", "District 1")
+                        .param("checkIn", checkIn.toString())
+                        .param("checkOut", checkOut.toString())
+                        .param("adults", "2")
+                        .param("rooms", "1")
+                        .param("size", "51"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details[0].field").value("size"));
+    }
+
 }

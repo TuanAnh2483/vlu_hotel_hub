@@ -15,6 +15,11 @@ public interface DailyInventoryRepository
             LocalDate start,
             LocalDate end
     );
-}
 
+    List<DailyInventory> findByIdRoomIdInAndIdDateBetween(
+            List<Long> roomIds,
+            LocalDate start,
+            LocalDate end
+    );
+}
 

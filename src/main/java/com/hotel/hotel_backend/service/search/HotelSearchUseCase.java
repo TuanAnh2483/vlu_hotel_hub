@@ -1,9 +1,7 @@
 package com.hotel.hotel_backend.service.search;
 
-import com.hotel.hotel_backend.dto.response.HotelSearchItemResponse;
-
-import java.util.List;
+import com.hotel.hotel_backend.dto.response.HotelSearchPageResponse;
 
 public interface HotelSearchUseCase {
-    List<HotelSearchItemResponse> search(HotelSearchCriteria criteria);
+    HotelSearchPageResponse search(HotelSearchCriteria criteria);
 }

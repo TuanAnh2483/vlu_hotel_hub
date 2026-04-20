@@ -12,5 +12,6 @@ import java.util.List;
 public interface DailyRateRepository extends JpaRepository<DailyRate, DailyRateId> {
     List<DailyRate> findByIdRoomIdAndIdDateBetween(Long roomId, LocalDate from, LocalDate to);
 
+    List<DailyRate> findByIdRoomIdInAndIdDateBetween(List<Long> roomIds, LocalDate from, LocalDate to);
 
 }

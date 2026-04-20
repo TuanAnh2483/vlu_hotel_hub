@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 
 @Service
@@ -35,6 +36,9 @@ public class RoomService {
         room.setQuantity(request.quantity());
         room.setPrice(request.price());
         room.setHotel(hotel);
+        room.setRoomCategory(request.roomCategory());
+        room.setBedType(request.bedType());
+        room.setAmenities(request.amenities() == null ? new HashSet<>() : new HashSet<>(request.amenities()));
 
         roomRepository.save(room);
         inventoryService.generateInventory(room);
@@ -61,6 +65,9 @@ public class RoomService {
         room.setCapacity(request.capacity());
         room.setQuantity(request.quantity());
         room.setPrice(request.price());
+        room.setRoomCategory(request.roomCategory());
+        room.setBedType(request.bedType());
+        room.setAmenities(request.amenities() == null ? new HashSet<>() : new HashSet<>(request.amenities()));
 
         return mapToResponse(room);
     }
@@ -107,7 +114,10 @@ public class RoomService {
                 room.getCapacity(),
                 room.getQuantity(),
                 room.getPrice(),
-                room.getHotel().getId()
+                room.getHotel().getId(),
+                room.getRoomCategory(),
+                room.getBedType(),
+                room.getAmenities()
         );
     }
 }

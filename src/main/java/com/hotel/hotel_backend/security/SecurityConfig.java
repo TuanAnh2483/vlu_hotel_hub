@@ -73,6 +73,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/hotels/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/hotels/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/hotels/*/available-rooms").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
                         // còn lại bắt buộc phải login

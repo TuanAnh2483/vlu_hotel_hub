@@ -1,9 +1,13 @@
 package com.hotel.hotel_backend.service.impl;
 
-import com.hotel.hotel_backend.dto.request.BookingContactItem;
 import com.hotel.hotel_backend.dto.request.BookingContactRequest;
+import com.hotel.hotel_backend.dto.request.BookingPaymentRequest;
+import com.hotel.hotel_backend.dto.request.BookingQuoteRequest;
 import com.hotel.hotel_backend.dto.request.BookingRoomRequest;
 import com.hotel.hotel_backend.dto.request.CreateBookingRequest;
+import com.hotel.hotel_backend.dto.response.BookingItemResponse;
+import com.hotel.hotel_backend.dto.response.BookingPaymentTransactionResponse;
+import com.hotel.hotel_backend.dto.response.BookingQuoteResponse;
 import com.hotel.hotel_backend.dto.response.BookingResponse;
 import com.hotel.hotel_backend.entity.*;
 import com.hotel.hotel_backend.exeption.ApiException;
@@ -11,39 +15,72 @@ import com.hotel.hotel_backend.exeption.ErrorCode;
 import com.hotel.hotel_backend.mapper.BookingMapper;
 import com.hotel.hotel_backend.repository.BookingItemRepository;
 import com.hotel.hotel_backend.repository.BookingRepository;
+import com.hotel.hotel_backend.repository.PaymentTransactionRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
+import com.hotel.hotel_backend.service.BookingExpirationService;
 import com.hotel.hotel_backend.service.BookingService;
 import com.hotel.hotel_backend.service.InventoryService;
+import com.hotel.hotel_backend.service.search.HotelAvailabilityService;
+import com.hotel.hotel_backend.service.search.HotelStayCriteria;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
+    private static final long PAYMENT_TTL_MINUTES = 15;
+
     private final BookingRepository bookingRepository;
     private final BookingItemRepository bookingItemRepository;
     private final InventoryService inventoryService;
     private final RoomRepository roomRepository;
+    private final PaymentTransactionRepository paymentTransactionRepository;
     private final BookingMapper bookingMapper;
+    private final HotelAvailabilityService hotelAvailabilityService;
+    private final BookingExpirationService bookingExpirationService;
 
     /**
-     * Tạo booking mới
+     * Quote booking: check room có book được không và tính total price, chưa giữ chỗ.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public BookingQuoteResponse quoteBooking(BookingQuoteRequest request) {
+        List<BookingRoomRequest> roomRequests = requireRoomRequests(request.getRoom());
+        BookingPreparation preparation = prepareBooking(
+                request.getCheckIn(),
+                request.getCheckOut(),
+                roomRequests
+        );
+
+        return toQuoteResponse(preparation, request.getCheckIn(), request.getCheckOut());
+    }
+
+    /**
+     * Confirm booking v1: giữ inventory, tạo booking PENDING_PAYMENT và persist contact/items.
      */
     @Override
     @Transactional
     public BookingResponse createBooking(Long userId, CreateBookingRequest bookingRequest) {
         validateUserId(userId);
 
-        List<BookingRoomRequest> roomRequests = requireRoomRequests(bookingRequest);
+        List<BookingRoomRequest> roomRequests = requireRoomRequests(bookingRequest.getRoom());
         BookingContactRequest bookingContactRequest = requirePrimaryContact(bookingRequest);
-
-        List<RoomReservation> reservations = loadRoomReservations(roomRequests, bookingRequest);
-        reserveInventory(reservations, bookingRequest);
+        BookingPreparation preparation = prepareBooking(
+                bookingRequest.getCheckIn(),
+                bookingRequest.getCheckOut(),
+                roomRequests
+        );
+        reserveInventory(preparation.reservations(), bookingRequest.getCheckIn(), bookingRequest.getCheckOut());
 
         Booking booking = createBookingEntity(userId, bookingRequest);
         bookingRepository.save(booking);
@@ -51,7 +88,7 @@ public class BookingServiceImpl implements BookingService {
         BookingContact contact = createBookingContact(bookingContactRequest, booking);
         booking.setContact(contact);
 
-        double totalPrice = createBookingItems(booking, reservations, bookingRequest);
+        double totalPrice = createBookingItems(booking, preparation.reservations());
         booking.setTotalPrice(totalPrice);
 
         bookingRepository.save(booking);
@@ -59,42 +96,113 @@ public class BookingServiceImpl implements BookingService {
         return bookingMapper.toBookingResponse(booking);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<Booking> getMyBookings(Long userId) {
-        return bookingRepository.findByUserIdOrderByCreatedAtDesc(userId);
-    }
-
+    /**
+     * Lấy lịch sử booking của user theo thứ tự mới nhất trước.
+     */
     @Override
     @Transactional
-    public Booking cancelBooking(Long userId, Long bookingId) {
-        Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Booking not found"));
+    public List<BookingResponse> getMyBookings(Long userId) {
+        return bookingRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(bookingExpirationService::expirePendingBookingIfNeeded)
+                .map(bookingMapper::toBookingResponse)
+                .toList();
+    }
+
+    /**
+     * Booking detail cho màn hình customer, luôn trả trạng thái mới nhất sau passive expiration.
+     */
+    @Override
+    @Transactional
+    public BookingResponse getMyBooking(Long userId, Long bookingId) {
+        Booking booking = loadOwnedBooking(userId, bookingId);
+        booking = bookingExpirationService.expirePendingBookingIfNeeded(booking);
+        return bookingMapper.toBookingResponse(booking);
+    }
+
+    /**
+     * Payment placeholder v1: success thì CONFIRMED, fail thì giữ nguyên PENDING_PAYMENT để retry.
+     */
+    @Override
+    @Transactional(noRollbackFor = ApiException.class)
+    public BookingResponse payBooking(Long userId, Long bookingId, BookingPaymentRequest request) {
+        Booking booking = loadOwnedBooking(userId, bookingId);
+        PaymentTransaction existingTransaction = paymentTransactionRepository
+                .findByBookingIdAndClientRequestId(bookingId, request.clientRequestId())
+                .orElse(null);
+        if (existingTransaction != null) {
+            return replayPaymentResult(booking, existingTransaction);
+        }
+
+        booking = bookingExpirationService.expirePendingBookingIfNeeded(booking);
+
+        if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+            recordPaymentAttempt(
+                    booking,
+                    request.clientRequestId(),
+                    PaymentTransactionStatus.FAILED,
+                    "Booking is not waiting for payment"
+            );
+            throw new ApiException(ErrorCode.CONFLICT, "Booking is not waiting for payment");
+        }
+
+        if (Boolean.FALSE.equals(request.simulateSuccess())) {
+            recordPaymentAttempt(
+                    booking,
+                    request.clientRequestId(),
+                    PaymentTransactionStatus.FAILED,
+                    "Payment failed"
+            );
+            throw new ApiException(ErrorCode.CONFLICT, "Payment failed");
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setExpiresAt(null);
+        Booking savedBooking = bookingRepository.save(booking);
+        recordPaymentAttempt(
+                savedBooking,
+                request.clientRequestId(),
+                PaymentTransactionStatus.SUCCESS,
+                null
+        );
+        return bookingMapper.toBookingResponse(savedBooking);
+    }
+
+    /**
+     * Payment history là read-model cho frontend, chỉ đọc transaction của booking thuộc owner hiện tại.
+     */
+    @Override
+    @Transactional
+    public List<BookingPaymentTransactionResponse> getMyBookingPayments(Long userId, Long bookingId) {
+        Booking booking = loadOwnedBooking(userId, bookingId);
+        bookingExpirationService.expirePendingBookingIfNeeded(booking);
+
+        return paymentTransactionRepository.findByBookingIdOrderByCreatedAtAsc(bookingId).stream()
+                .map(this::toPaymentTransactionResponse)
+                .toList();
+    }
+
+    /**
+     * Hủy booking và release toàn bộ inventory đã reserve.
+     */
+    @Override
+    @Transactional
+    public BookingResponse cancelBooking(Long userId, Long bookingId) {
+        Booking booking = loadOwnedBooking(userId, bookingId);
+        booking = bookingExpirationService.expirePendingBookingIfNeeded(booking);
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
-            return booking;
+            return bookingMapper.toBookingResponse(booking);
         }
 
         if (booking.getStatus() == BookingStatus.COMPLETED) {
             throw new ApiException(ErrorCode.CONFLICT, "Completed booking cannot be cancelled");
         }
 
-        List<BookingItem> items = bookingItemRepository.findByBookingId(booking.getId());
-        if (items.isEmpty()) {
-            throw new ApiException(ErrorCode.CONFLICT, "Booking items are missing");
-        }
-
-        for (BookingItem item : items) {
-            inventoryService.releaseInventory(
-                    item.getRoom().getId(),
-                    booking.getCheckIn(),
-                    booking.getCheckOut(),
-                    item.getQuantity()
-            );
-        }
+        bookingExpirationService.releaseReservedInventory(booking);
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setExpiresAt(null);
 
-        return bookingRepository.save(booking);
+        return bookingMapper.toBookingResponse(bookingRepository.save(booking));
     }
 
     private void validateUserId(Long userId) {
@@ -103,8 +211,12 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
-    private List<BookingRoomRequest> requireRoomRequests(CreateBookingRequest bookingRequest) {
-        List<BookingRoomRequest> roomRequests = bookingRequest.getRoom();
+    private Booking loadOwnedBooking(Long userId, Long bookingId) {
+        return bookingRepository.findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Booking not found"));
+    }
+
+    private List<BookingRoomRequest> requireRoomRequests(List<BookingRoomRequest> roomRequests) {
         if (roomRequests == null || roomRequests.isEmpty()) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "Room is required");
         }
@@ -112,12 +224,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private BookingContactRequest requirePrimaryContact(CreateBookingRequest bookingRequest) {
-        List<BookingContactItem> contactItems = bookingRequest.getContact();
-        if (contactItems == null || contactItems.isEmpty()) {
-            throw new ApiException(ErrorCode.VALIDATION_ERROR, "Contact is required");
-        }
-
-        BookingContactRequest bookingContactRequest = contactItems.get(0).contact();
+        BookingContactRequest bookingContactRequest = bookingRequest.getContact();
         if (bookingContactRequest == null) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "Contact is required");
         }
@@ -125,11 +232,36 @@ public class BookingServiceImpl implements BookingService {
         return bookingContactRequest;
     }
 
+    private BookingPreparation prepareBooking(
+            LocalDate checkIn,
+            LocalDate checkOut,
+            List<BookingRoomRequest> roomRequests
+    ) {
+        // Quote và confirm dùng chung bước evaluate này để pricing luôn khớp availability service.
+        List<RoomReservation> reservations = loadRoomReservations(roomRequests, checkIn, checkOut);
+        ensureSingleHotel(reservations);
+        return new BookingPreparation(resolveHotel(reservations), reservations);
+    }
+
     private List<RoomReservation> loadRoomReservations(
             List<BookingRoomRequest> roomRequests,
-            CreateBookingRequest bookingRequest
+            LocalDate checkIn,
+            LocalDate checkOut
     ) {
+        // Booking v1 chỉ nhận room cụ thể, nên filter stay-level khác để trống và reuse thẳng evaluator.
+        HotelStayCriteria stayCriteria = new HotelStayCriteria(
+                checkIn,
+                checkOut,
+                1,
+                1,
+                java.util.Set.of(),
+                java.util.Set.of(),
+                java.util.Set.of()
+        );
+
         List<RoomReservation> reservations = new ArrayList<>(roomRequests.size());
+        Map<Long, Room> roomsById = new LinkedHashMap<>();
+        Map<Long, Integer> quantitiesByRoomId = new LinkedHashMap<>();
         for (BookingRoomRequest roomRequest : roomRequests) {
             Room room = roomRepository.findById(roomRequest.roomTypeId())
                     .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Room not found"));
@@ -138,37 +270,50 @@ public class BookingServiceImpl implements BookingService {
                 throw new ApiException(ErrorCode.CONFLICT, "Room is not available for booking");
             }
 
-            inventoryService.initInventory(
-                    room.getId(),
-                    bookingRequest.getCheckIn(),
-                    bookingRequest.getCheckOut(),
-                    room.getQuantity()
-            );
+            roomsById.put(room.getId(), room);
+            quantitiesByRoomId.merge(room.getId(), roomRequest.quantity(), Integer::sum);
+        }
 
-            reservations.add(new RoomReservation(room, roomRequest.quantity()));
+        Map<Long, HotelAvailabilityService.BookableRoomStay> bookableRooms =
+                hotelAvailabilityService.findBookableRoomStays(new ArrayList<>(roomsById.values()), stayCriteria);
+
+        for (Room room : roomsById.values()) {
+            HotelAvailabilityService.BookableRoomStay bookableRoom = bookableRooms.get(room.getId());
+            Integer requestedQuantity = quantitiesByRoomId.get(room.getId());
+            if (bookableRoom == null) {
+                throw new ApiException(ErrorCode.CONFLICT, "Room is not bookable for this stay");
+            }
+            if (requestedQuantity > bookableRoom.availableUnits()) {
+                throw new ApiException(ErrorCode.CONFLICT, "Not enough rooms available");
+            }
+
+            reservations.add(new RoomReservation(room, requestedQuantity, (double) bookableRoom.stayPrice()));
         }
 
         return reservations;
     }
 
-    private void reserveInventory(List<RoomReservation> reservations, CreateBookingRequest bookingRequest) {
+    private void reserveInventory(List<RoomReservation> reservations, LocalDate checkIn, LocalDate checkOut) {
+        // Chỉ reserve ở bước create/confirm. Quote không được block inventory.
         for (RoomReservation reservation : reservations) {
             inventoryService.reserveInventory(
                     reservation.room().getId(),
-                    bookingRequest.getCheckIn(),
-                    bookingRequest.getCheckOut(),
+                    checkIn,
+                    checkOut,
                     reservation.quantity()
             );
         }
     }
 
     private Booking createBookingEntity(Long userId, CreateBookingRequest bookingRequest) {
-        Booking booking = bookingMapper.toBooking(bookingRequest);
+        Booking booking = new Booking();
         booking.setUserId(userId);
         booking.setCheckIn(bookingRequest.getCheckIn());
         booking.setCheckOut(bookingRequest.getCheckOut());
         booking.setTotalPrice(0.0);
-        booking.setStatus(BookingStatus.PENDING);
+        // Sau confirm booking đã được giữ chỗ nhưng vẫn chờ bước pay placeholder.
+        booking.setStatus(BookingStatus.PENDING_PAYMENT);
+        booking.setExpiresAt(LocalDateTime.now().plusMinutes(PAYMENT_TTL_MINUTES));
         return booking;
     }
 
@@ -183,11 +328,10 @@ public class BookingServiceImpl implements BookingService {
 
     private double createBookingItems(
             Booking booking,
-            List<RoomReservation> reservations,
-            CreateBookingRequest bookingRequest
+            List<RoomReservation> reservations
     ) {
         double totalPrice = 0.0;
-        long nights = bookingRequest.getCheckOut().toEpochDay() - bookingRequest.getCheckIn().toEpochDay();
+        List<BookingItem> items = new ArrayList<>();
 
         for (RoomReservation reservation : reservations) {
             Room room = reservation.room();
@@ -197,23 +341,119 @@ public class BookingServiceImpl implements BookingService {
                     .booking(booking)
                     .room(room)
                     .quantity(quantity)
-                    .price((double) room.getPrice())
+                    .price(reservation.stayPrice())
                     .build();
 
-            bookingItemRepository.save(item);
-            totalPrice += nights * item.getPrice() * item.getQuantity();
+            items.add(item);
+            totalPrice += item.getPrice() * item.getQuantity();
         }
 
+        bookingItemRepository.saveAll(items);
+        booking.setItems(items);
+
         return totalPrice;
+    }
+
+    private BookingQuoteResponse toQuoteResponse(BookingPreparation preparation, LocalDate checkIn, LocalDate checkOut) {
+        // Quote response chỉ phản ánh giá và room đã evaluate, không tạo side effect nào trong DB.
+        Hotel hotel = preparation.hotel();
+        List<BookingItemResponse> items = preparation.reservations().stream()
+                .map(reservation -> new BookingItemResponse(
+                        reservation.room().getId(),
+                        reservation.room().getName(),
+                        reservation.quantity(),
+                        reservation.stayPrice()
+                ))
+                .toList();
+
+        double totalPrice = preparation.reservations().stream()
+                .mapToDouble(reservation -> reservation.stayPrice() * reservation.quantity())
+                .sum();
+
+        return new BookingQuoteResponse(
+                hotel.getId(),
+                hotel.getName(),
+                checkIn,
+                checkOut,
+                totalPrice,
+                items
+        );
+    }
+
+    private Hotel resolveHotel(List<RoomReservation> reservations) {
+        if (reservations.isEmpty()) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "Room is required");
+        }
+        return reservations.get(0).room().getHotel();
+    }
+
+    private void ensureSingleHotel(List<RoomReservation> reservations) {
+        if (reservations.isEmpty()) {
+            return;
+        }
+
+        Long hotelId = reservations.get(0).room().getHotel().getId();
+        boolean mixedHotels = reservations.stream()
+                .anyMatch(reservation -> !reservation.room().getHotel().getId().equals(hotelId));
+
+        if (mixedHotels) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "All booked rooms must belong to the same hotel");
+        }
+    }
+
+    private BookingResponse replayPaymentResult(Booking booking, PaymentTransaction existingTransaction) {
+        if (existingTransaction.getStatus() == PaymentTransactionStatus.SUCCESS) {
+            return bookingMapper.toBookingResponse(booking);
+        }
+
+        throw new ApiException(
+                ErrorCode.CONFLICT,
+                existingTransaction.getFailureReason() != null
+                        ? existingTransaction.getFailureReason()
+                        : "Payment failed"
+        );
+    }
+
+    private void recordPaymentAttempt(
+            Booking booking,
+            String clientRequestId,
+            PaymentTransactionStatus status,
+            String failureReason
+    ) {
+        PaymentTransaction paymentTransaction = PaymentTransaction.builder()
+                .booking(booking)
+                .method(PaymentMethod.SIMULATED)
+                .status(status)
+                .amount(booking.getTotalPrice())
+                .providerReference("SIM-" + UUID.randomUUID())
+                .failureReason(failureReason)
+                .clientRequestId(clientRequestId)
+                .build();
+        paymentTransactionRepository.save(paymentTransaction);
+    }
+
+    private BookingPaymentTransactionResponse toPaymentTransactionResponse(PaymentTransaction paymentTransaction) {
+        return new BookingPaymentTransactionResponse(
+                paymentTransaction.getId(),
+                paymentTransaction.getMethod().name(),
+                paymentTransaction.getStatus().name(),
+                paymentTransaction.getAmount(),
+                paymentTransaction.getProviderReference(),
+                paymentTransaction.getFailureReason(),
+                paymentTransaction.getClientRequestId(),
+                paymentTransaction.getCreatedAt()
+        );
     }
 
     private static final class RoomReservation {
         private final Room room;
         private final Integer quantity;
+        private final Double stayPrice;
 
-        private RoomReservation(Room room, Integer quantity) {
+        private RoomReservation(Room room, Integer quantity, Double stayPrice) {
             this.room = room;
             this.quantity = quantity;
+            this.stayPrice = stayPrice;
         }
 
         private Room room() {
@@ -223,5 +463,14 @@ public class BookingServiceImpl implements BookingService {
         private Integer quantity() {
             return quantity;
         }
+
+        private Double stayPrice() {
+            return stayPrice;
+        }
     }
+
+    private record BookingPreparation(
+            Hotel hotel,
+            List<RoomReservation> reservations
+    ) {}
 }

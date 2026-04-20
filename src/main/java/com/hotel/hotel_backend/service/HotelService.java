@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 
 @Service
@@ -38,6 +39,8 @@ public class HotelService {
         hotel.setProvince(request.province());
         hotel.setOwner(owner);
         hotel.setDescription(request.description());
+        hotel.setHotelType(request.hotelType());
+        hotel.setAmenities(request.amenities() == null ? new HashSet<>() : new HashSet<>(request.amenities()));
         hotelRepository.save(hotel);
 
         return mapToResponse(hotel);
@@ -63,6 +66,8 @@ public class HotelService {
         hotel.setDistrict(request.district());
         hotel.setProvince(request.province());
         hotel.setDescription(request.description());
+        hotel.setHotelType(request.hotelType());
+        hotel.setAmenities(request.amenities() == null ? new HashSet<>() : new HashSet<>(request.amenities()));
 
         return mapToResponse(hotel);
     }
@@ -108,7 +113,9 @@ public class HotelService {
                 hotel.getAddress(),
                 hotel.getDistrict(),
                 hotel.getProvince(),
-                hotel.getDescription()
+                hotel.getDescription(),
+                hotel.getHotelType(),
+                hotel.getAmenities()
         );
     }
 }

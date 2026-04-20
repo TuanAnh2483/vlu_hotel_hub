@@ -107,14 +107,54 @@ Chua them `nightlyBreakdown` o giai doan nay.
 - Da dung `Daily Rates` de tinh `minPrice` theo ky o
 - Da fallback ve `Room.price` khi thieu `DailyRate`
 - Integration test cho core search va pricing contract
+- Da co `GET /api/hotels/{id}`
+- Da co `GET /api/hotels/{id}/available-rooms`
+- Da co integration test cho hotel detail va available rooms
+- Da tach `HotelStayCriteria` khoi `HotelSearchCriteria`
+- Da co pagination cho search
+- Da co sorting cho search:
+  - `price_asc`
+  - `price_desc`
+  - `rating_desc`
+- Da co spec rieng o `docs/search-api-spec.md`
+- Da giam N+1 query lon nhat trong search availability/pricing bang batch load:
+  - active rooms
+  - daily inventory
+  - daily rates
+- Da tach file integration test:
+  - `HotelSearchIntegrationTest`
+  - `HotelDetailIntegrationTest`
+- Da chuan hoa error contract theo `ApiResponse.fail(error)` voi:
+  - `code`
+  - `message`
+  - `details[field, message]`
+- Da bo sung edge-case test cho:
+  - empty result
+  - validation field detail
+  - `404 NOT_FOUND`
+- Da ra soat inventory model cho search v1:
+  - `daily_inventory` la source of truth cho stay availability
+  - `availableRooms - blockedRooms` la so phong ban duoc moi ngay
+  - whole-stay availability lay theo muc thap nhat cua cac ngay trong stay
+- Da co amenity filter cho search:
+  - `hotelAmenities` loc o muc hotel
+  - `roomAmenities` loc room pool truoc availability/pricing
+  - `minPrice` tinh tren room da pass `roomAmenities`
+- Da co type filter cho search:
+  - `hotelTypes` loc o muc hotel
+  - `roomCategories` loc room pool truoc availability/pricing
+  - `bedTypes` loc room pool truoc availability/pricing
+- Partner create/update da chuyen sang type catalogs:
+  - `hotelType`
+  - `roomCategory`
+  - `bedType`
+- Da co public catalog API cho frontend/partner form:
+  - `GET /api/catalog/options`
+  - tra ve hotel types, room categories, bed types va amenity catalogs trong 1 call
 
 ### Chua xong
 
-- Chua co pagination
-- Chua co sorting
-- Chua co hotel detail endpoint dung nghia product
-- Chua co available room types endpoint dung nghia product
-- Chua toi uu N+1 inventory query
+- Chua co sorting/ranking nang cao hon nhu `recommended`
 
 ## Search Contract v1
 
@@ -130,6 +170,11 @@ Query params:
 - `checkOut`: required
 - `adults`: optional, default `1`
 - `rooms`: optional, default `1`
+- `hotelTypes`: optional, comma-separated
+- `roomCategories`: optional, comma-separated
+- `bedTypes`: optional, comma-separated
+- `hotelAmenities`: optional, comma-separated
+- `roomAmenities`: optional, comma-separated
 
 ### Response summary
 
@@ -226,12 +271,12 @@ Muc tieu: tach summary search va hotel detail.
 
 Tasks:
 
-- [ ] Thiet ke `GET /api/hotels/{id}`
-- [ ] Thiet ke `GET /api/hotels/{id}/available-rooms`
-- [ ] Tra thong tin tinh cua hotel
-- [ ] Tra room types available theo khoang ngay
-- [ ] Tra `stayPrice` cho tung room type
-- [ ] Viet test cho 2 endpoint detail
+- [x] Thiet ke `GET /api/hotels/{id}`
+- [x] Thiet ke `GET /api/hotels/{id}/available-rooms`
+- [x] Tra thong tin tinh cua hotel
+- [x] Tra room types available theo khoang ngay
+- [x] Tra `stayPrice` cho tung room type
+- [x] Viet test cho 2 endpoint detail
 
 Definition of done:
 
@@ -245,13 +290,13 @@ Muc tieu: de frontend co the dung that.
 
 Tasks:
 
-- [ ] Them `page`
-- [ ] Them `size`
-- [ ] Them `sort`
-- [ ] Ho tro `price_asc`
-- [ ] Ho tro `price_desc`
-- [ ] Ho tro `rating_desc`
-- [ ] Viet test pagination va sorting
+- [x] Them `page`
+- [x] Them `size`
+- [x] Them `sort`
+- [x] Ho tro `price_asc`
+- [x] Ho tro `price_desc`
+- [x] Ho tro `rating_desc`
+- [x] Viet test pagination va sorting
 
 Definition of done:
 
@@ -263,15 +308,55 @@ Muc tieu: giam rui ro khi du lieu tang.
 
 Tasks:
 
-- [ ] Giam N+1 query trong availability
-- [ ] Ra soat lai inventory model so voi de cuong
-- [ ] Chuan hoa error contract
-- [ ] Bo sung test edge cases con thieu
+- [x] Giam N+1 query trong availability
+- [x] Ra soat lai inventory model so voi de cuong
+- [x] Chuan hoa error contract
+- [x] Bo sung test edge cases con thieu
 
 Definition of done:
 
 - Search on dinh hon khi du lieu lon
 - Contract ro rang va test cover tot hon
+
+### Phase 6 - Amenities refinement
+
+Muc tieu: cho user refine ket qua search theo nhu cau product.
+
+Tasks:
+
+- [x] Chot amenity catalog cho hotel va room
+- [x] Ho tro `hotelAmenities` tren search endpoint
+- [x] Ho tro `roomAmenities` tren search endpoint
+- [x] Tinh `minPrice` tren room pool da loc amenity
+- [x] Viet integration test cho hotel amenity, room amenity va combined filter
+
+Definition of done:
+
+- Search nhan amenity filters tu query params
+- Hotel chi xuat hien khi pass dung semantics hotel + room amenity
+- `minPrice` khong bi lech voi room amenity filter
+
+### Phase 7 - Typed hotel/room filters
+
+Muc tieu: chuan hoa cac dimension filter cho hotel va room thay vi dua vao free-text name.
+
+Tasks:
+
+- [x] Them `HotelType`
+- [x] Them `RoomCategory`
+- [x] Them `BedType`
+- [x] Partner create/update gui type catalogs thay vi free-text
+- [x] Search filter theo `hotelTypes`
+- [x] Search filter theo `roomCategories`
+- [x] Search filter theo `bedTypes`
+- [x] Viet integration test cho search type filters va partner create contract
+
+Definition of done:
+
+- Partner tao hotel/room bang type catalogs
+- User filter duoc hotel va room theo type dimensions
+- Search pricing van dung sau khi room pool bi loc theo type
+- Frontend co API de render tick options, khong can hardcode catalog
 
 ## Thu tu lam tiep theo
 
@@ -287,7 +372,6 @@ Lam dung thu tu nay:
 
 Task tiep theo duoc chon:
 
-- [ ] Kiem tra `Hotel` entity hien tai da co `description` chua
-- [ ] Thiet ke DTO response cho `GET /api/hotels/{id}`
-- [ ] Thiet ke DTO response cho `GET /api/hotels/{id}/available-rooms`
-- [ ] Chot service nao se tai su dung pricing + availability logic hien co
+- [ ] Can nhac them `recommended` ranking sau khi co scoring model ro rang
+- [x] Thiet ke feature amenities filter cho hotel va room theo nhu cau user
+- [x] Chuan hoa hotel/room type de phuc vu filter product

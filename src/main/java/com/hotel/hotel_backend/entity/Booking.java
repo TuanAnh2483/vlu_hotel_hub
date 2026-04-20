@@ -5,12 +5,15 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Builder.Default;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "bookings")
@@ -36,8 +39,6 @@ public class Booking {
     // ngày checkout
     @Column(name = "check_out", nullable = false)
     private LocalDate checkOut;
-
-    // tổng tiền booking
     @Column(name = "total_price", nullable = false)
     private Double totalPrice;
 
@@ -50,11 +51,22 @@ public class Booking {
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL)
     private BookingContact contact;
 
+    @Default
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BookingItem> items = new ArrayList<>();
+
+    @Default
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PaymentTransaction> paymentTransactions = new ArrayList<>();
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
 
     @PrePersist
     void prePersist() {

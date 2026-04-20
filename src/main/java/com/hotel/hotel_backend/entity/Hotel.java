@@ -7,7 +7,9 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "hotels")
@@ -33,6 +35,16 @@ public class  Hotel {
     private String province;
     private String district;
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private HotelType hotelType = HotelType.HOTEL;
+
+    @ElementCollection(targetClass = HotelAmenity.class, fetch = FetchType.EAGER)
+    @CollectionTable(name = "hotel_amenities", joinColumns = @JoinColumn(name = "hotel_id"))
+    @Column(name = "amenity", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Set<HotelAmenity> amenities = new HashSet<>();
 
 
     @Column(nullable = false, precision = 3, scale = 2)

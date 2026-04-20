@@ -1,10 +1,13 @@
 package com.hotel.hotel_backend.controller;
 
 import com.hotel.hotel_backend.dto.request.CreateHotelRequest;
+import com.hotel.hotel_backend.dto.request.PartnerBookingSearchRequest;
 import com.hotel.hotel_backend.dto.request.UpdateHotelRequest;
 import com.hotel.hotel_backend.dto.request.CreateRoomRequest;
 import com.hotel.hotel_backend.dto.response.ApiResponse;
 import com.hotel.hotel_backend.dto.response.HotelResponse;
+import com.hotel.hotel_backend.dto.response.PartnerBookingDetailResponse;
+import com.hotel.hotel_backend.dto.response.PartnerBookingPageResponse;
 import com.hotel.hotel_backend.dto.response.RoomResponse;
 import com.hotel.hotel_backend.service.*;
 import com.hotel.hotel_backend.service.RoomService;
@@ -21,11 +24,24 @@ public class PartnerController {
 
     private final HotelService hotelService;
     private final RoomService roomService;
+    private final PartnerBookingService partnerBookingService;
 
     @GetMapping("/hotels")
     @PreAuthorize("hasRole('PARTNER')")
     public ApiResponse<List<HotelResponse>> getMyHotels() {
         return ApiResponse.ok(hotelService.getMyHotels());
+    }
+
+    @GetMapping("/bookings")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ApiResponse<PartnerBookingPageResponse> getMyBookings(@Valid @ModelAttribute PartnerBookingSearchRequest request) {
+        return ApiResponse.ok(partnerBookingService.getPartnerBookings(request));
+    }
+
+    @GetMapping("/bookings/{bookingId}")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ApiResponse<PartnerBookingDetailResponse> getMyBooking(@PathVariable Long bookingId) {
+        return ApiResponse.ok(partnerBookingService.getPartnerBooking(bookingId));
     }
 
     @PostMapping("/hotels")

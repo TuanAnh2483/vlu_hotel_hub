@@ -1,6 +1,5 @@
 package com.hotel.hotel_backend.service;
 
-import com.hotel.hotel_backend.dto.request.BookingContactItem;
 import com.hotel.hotel_backend.dto.request.BookingContactRequest;
 import com.hotel.hotel_backend.dto.request.BookingRoomRequest;
 import com.hotel.hotel_backend.dto.request.CreateBookingRequest;
@@ -110,10 +109,10 @@ class BookingServiceConcurrencyTest {
         request.setCheckIn(LocalDate.now().plusDays(1));
         request.setCheckOut(LocalDate.now().plusDays(2));
         request.setRoom(List.of(new BookingRoomRequest(room.getId(), 1)));
-        request.setContact(List.of(
-                new BookingContactItem(
-                        new BookingContactRequest("Concurrent Customer", "customer.concurrent@test.com", "0123456789")
-                )
+        request.setContact(new BookingContactRequest(
+                "Concurrent Customer",
+                "customer.concurrent@test.com",
+                "0123456789"
         ));
     }
 

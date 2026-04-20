@@ -29,8 +29,7 @@ public class  CreateBookingRequest {
 
      @Valid
      @NotNull(message = "contact is required")
-     @Size(min = 1, message = "contact must have at least 1 item")
-     private List<BookingContactItem> contact;
+     private BookingContactRequest contact;
 
      @AssertTrue(message = "checkOut must be after checkIn")
      public boolean isDateRangeValid() {

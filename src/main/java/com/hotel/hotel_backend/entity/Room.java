@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
+import java.util.HashSet;
+import java.util.Set;
 @Getter
 @Setter
 @Entity
@@ -32,6 +34,20 @@ public class Room {
 
     @Column(nullable = false)
     private Integer quantity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RoomCategory roomCategory = RoomCategory.STANDARD;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private BedType bedType = BedType.DOUBLE;
+
+    @ElementCollection(targetClass = RoomAmenity.class, fetch = FetchType.EAGER)
+    @CollectionTable(name = "room_amenities", joinColumns = @JoinColumn(name = "room_id"))
+    @Column(name = "amenity", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Set<RoomAmenity> amenities = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

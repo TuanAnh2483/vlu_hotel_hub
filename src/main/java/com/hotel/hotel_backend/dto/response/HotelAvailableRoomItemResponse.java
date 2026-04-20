@@ -1,5 +1,7 @@
 package com.hotel.hotel_backend.dto.response;
 
+
+
 public record HotelAvailableRoomItemResponse(
         Long roomId,
         String name,
