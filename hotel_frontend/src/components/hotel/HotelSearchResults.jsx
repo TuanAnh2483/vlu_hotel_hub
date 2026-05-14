@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { C } from "../auth/AuthShared";
-import { hotelService } from "../../services/hotelService";
+import { useHotelSearch } from "../../hooks/useHotelQueries";
 import { useLang } from "../../contexts/LanguageContext";
 
 function Img({ src, alt = "", h = 160, r = 0 }) {
@@ -386,26 +386,19 @@ export default function HotelSearchResults({ navigate, params = {}, hideBanner =
   const containerRef = useRef(null);
   const [filters, setFilters] = useState(() => createDefaultFilters(params));
   const [appliedFilters, setAppliedFilters] = useState(() => createDefaultFilters(params));
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const [page, setPage] = useState(1);
 
-  const fetchResults = useCallback((pg) => {
-    setLoading(true);
-    hotelService.searchHotels({ ...params, ...filtersToSearchParams(appliedFilters), page: pg, size: 10 })
-      .then(({ hotels, totalPages: tp, totalItems: ti }) => {
-        setResults(hotels);
-        setTotalPages(tp);
-        setTotalItems(ti || hotels.length);
-      })
-      .finally(() => setLoading(false));
-  }, [appliedFilters, params]);
+  const searchParams = {
+    ...params,
+    ...filtersToSearchParams(appliedFilters),
+    page,
+    size: 10,
+  };
 
-  useEffect(() => {
-    fetchResults(page);
-  }, [page, fetchResults]);
+  const { data: searchResult, isLoading: loading } = useHotelSearch(searchParams);
+  const results    = searchResult?.hotels     ?? [];
+  const totalPages = searchResult?.totalPages ?? 1;
+  const totalItems = searchResult?.totalItems ?? 0;
 
   useEffect(() => {
     const next = createDefaultFilters(params);
