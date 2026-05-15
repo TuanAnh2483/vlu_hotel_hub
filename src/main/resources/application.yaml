@@ -51,7 +51,7 @@ app:
 
   jwt:
     secret: ${JWT_SECRET}
-    exp-seconds: ${JWT_EXP_SECONDS:86400}
+    exp-seconds: ${JWT_EXP_SECONDS:1800}
 
   admin-seed:
     enabled: ${ADMIN_SEED_ENABLED:true}
