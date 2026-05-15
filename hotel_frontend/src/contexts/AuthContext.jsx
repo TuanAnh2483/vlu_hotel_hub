@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { authService } from "../services/authService";
 import {
-  authService,
   clearSession,
   getStoredUser,
   getToken,
   setSession,
   setStoredUser,
-} from "../services/authService";
+} from "../services/authStorage";
 
 const AuthContext = createContext(null);
 
@@ -44,9 +44,7 @@ export function AuthProvider({ children }) {
         if (!ignore) setLoading(false);
       });
 
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, []);
 
   function login(userData, token) {

@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
 import AdminLayout, { AP, Card } from "../../components/admin/AdminLayout";
-import { adminService } from "../../services/adminService";
+import { useAdminStats } from "../../hooks/useAdminQueries";
 import Skeleton from "../../components/ui/Skeleton";
 import { useLang } from "../../contexts/LanguageContext";
 import "../../styles/pages/AdminDashboard.css";
@@ -47,15 +46,7 @@ function QuickBtn({ icon, label, desc, onClick }) {
 
 export default function AdminDashboard({ navigate, user, onLogout }) {
   const { t } = useLang();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    adminService.getStats()
-      .then(setStats)
-      .catch(() => setStats(null))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: stats, isLoading: loading } = useAdminStats();
 
   const STATS = [
     { icon: "👥", label: t("adm_dash_customers"),      key: "totalUsers",     color: "#4361ee", page: "admin-users"    },

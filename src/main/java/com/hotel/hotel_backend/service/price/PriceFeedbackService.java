@@ -18,8 +18,12 @@ import java.util.Set;
 public class PriceFeedbackService {
     private final PriceFeedbackRepository feedbackRepository;
 
+    // APPLIED        : partner áp dụng đúng giá đề xuất
+    // APPLIED_PLUS5  : partner thấy giá đề xuất thấp, tự tăng thêm ~5%
+    // APPLIED_MINUS5 : partner thấy giá đề xuất cao, tự giảm ~5%
+    // SKIPPED        : partner bỏ qua, không áp dụng
     private static final Set<String> VALID_OUTCOMES =
-            Set.of("APPLIED", "APPLIED_MINUS5", "SKIPPED");
+            Set.of("APPLIED", "APPLIED_PLUS5", "APPLIED_MINUS5", "SKIPPED");
 
     public void record(
             Long roomId,
@@ -31,7 +35,7 @@ public class PriceFeedbackService {
     ) {
         if (!VALID_OUTCOMES.contains(outcome)) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
-                    "outcome phải là APPLIED, APPLIED_MINUS5 hoặc SKIPPED");
+                    "outcome phải là APPLIED, APPLIED_PLUS5, APPLIED_MINUS5 hoặc SKIPPED");
         }
 
         PriceFeedback priceFeedback = new PriceFeedback();

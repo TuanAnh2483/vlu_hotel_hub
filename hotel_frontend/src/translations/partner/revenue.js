@@ -21,7 +21,7 @@ export const vi = {
   pt_rev_col_revenue:   "Doanh thu",
   pt_rev_col_bookings:  "Số booking",
   pt_rev_col_avg:       "Trung bình",
-  pt_rev_empty_month:   "—",
+  pt_rev_empty_month:   "Chưa có dữ liệu giao dịch cho năm này",
 };
 
 export const en = {
@@ -44,5 +44,5 @@ export const en = {
   pt_rev_col_revenue:   "Revenue",
   pt_rev_col_bookings:  "Bookings",
   pt_rev_col_avg:       "Average",
-  pt_rev_empty_month:   "—",
+  pt_rev_empty_month:   "No transaction data for this year",
 };

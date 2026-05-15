@@ -8,9 +8,12 @@ import {
   Sun,
   Globe,
   ChevronDown,
-  ClipboardList
+  ClipboardList,
+  Menu,
+  X,
 } from "lucide-react";
 import { useLang } from "../contexts/LanguageContext";
+import "./MainNavbar.css";
 
 const BASE_LINK_PAGES = [
   { key: "nav_home",           page: "home"                                       },
@@ -46,6 +49,7 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
   const [hovBtn, setHovBtn]         = useState(null);
   const [hovLink, setHovLink]       = useState(null);
   const [showMenu, setShowMenu]     = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isDark, setIsDark]         = useState(() => localStorage.getItem("theme") === "dark");
   const menuRef                     = useRef(null);
   const { lang, toggleLang, t }     = useLang();
@@ -110,12 +114,12 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
   };
 
   return (
-    <nav style={S.nav}>
+    <nav style={S.nav} className="main-navbar-nav">
       <button style={S.navLogoWrap} onClick={() => navigate("home")}>
         <img src={LOGO_IMG} alt="VLU Hotel Hub" style={S.navLogo} />
       </button>
 
-      <ul style={{ ...S.navLinks, gap: isPartner ? 18 : 32 }}>
+      <ul style={{ ...S.navLinks, gap: isPartner ? 18 : 32 }} className="main-navbar-links">
         {navLinks.map(({ label, page }) => {
           const isActive = active === page;
           const isHov    = hovLink === page;
@@ -140,7 +144,7 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
         })}
       </ul>
 
-      <div style={{ ...S.navActions, gap: 10 }}>
+      <div style={{ ...S.navActions, gap: 10 }} className="main-navbar-actions">
         <button style={S.iconBtn} onClick={toggleDark} title={isDark ? "Chế độ sáng" : "Chế độ tối"}>
           {isDark ? <Sun size={20} color="#1a1a1a" /> : <Moon size={20} color="#1a1a1a" />}
         </button>
@@ -275,6 +279,119 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
               onMouseLeave={() => setHovBtn(null)}
             >{t("nav_register")}</button>
           </>
+        )}
+      </div>
+
+      {/* ── Mobile hamburger ─────────────────────────────────────── */}
+      <button
+        className="main-navbar-hamburger"
+        onClick={() => setMobileNavOpen(p => !p)}
+        aria-label={mobileNavOpen ? "Đóng menu" : "Mở menu"}
+      >
+        {mobileNavOpen ? <X size={22} /> : <Menu size={22} />}
+      </button>
+
+      {/* Mobile backdrop */}
+      {mobileNavOpen && (
+        <div className="main-navbar-overlay visible" onClick={() => setMobileNavOpen(false)} />
+      )}
+
+      {/* Mobile side drawer */}
+      <div className={`main-navbar-drawer${mobileNavOpen ? " open" : ""}`}>
+
+        {/* Nav links */}
+        <div className="main-navbar-drawer-nav">
+          {navLinks.map(({ label, page: p }) => (
+            <button
+              key={p}
+              className={`main-navbar-drawer-item${active === p ? " active" : ""}`}
+              onClick={() => { navigate(p); setMobileNavOpen(false); }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="main-navbar-drawer-divider" />
+
+        {/* Dark mode + language */}
+        <div className="main-navbar-drawer-tools">
+          <button style={S.iconBtn} onClick={toggleDark} title={isDark ? "Chế độ sáng" : "Chế độ tối"}>
+            {isDark ? <Sun size={20} color="#1a1a1a" /> : <Moon size={20} color="#1a1a1a" />}
+          </button>
+          <button
+            style={{ ...S.iconBtn, display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderRadius: 8 }}
+            onClick={toggleLang}
+            title={lang === "vi" ? "Switch to English" : "Chuyển sang tiếng Việt"}
+          >
+            <Globe size={16} color="#1a1a1a" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1a1a", letterSpacing: 0.5 }}>
+              {lang === "vi" ? "VI" : "EN"}
+            </span>
+          </button>
+        </div>
+
+        <div className="main-navbar-drawer-divider" />
+
+        {/* User section */}
+        {user ? (
+          <>
+            <div className="main-navbar-drawer-user-info">
+              <div className="main-navbar-drawer-user-email">{user.email}</div>
+              {user.userType && (
+                <span style={{ fontSize: 10, borderRadius: 6, padding: "2px 10px", fontWeight: 800, display: "inline-block", textTransform: "uppercase", ...(ROLE_STYLE[user.userType] || { background: "#f0f0f0", color: "#555" }) }}>
+                  {ROLE_LABEL[user.userType] || user.userType}
+                </span>
+              )}
+            </div>
+            <button
+              className="main-navbar-drawer-item"
+              onClick={() => { navigate("profile"); setMobileNavOpen(false); }}
+            >
+              <User size={16} color="#555" style={{ marginRight: 10, flexShrink: 0 }} />
+              {t("nav_profile")}
+            </button>
+            {user.userType === "PARTNER" && (
+              <button
+                className="main-navbar-drawer-item"
+                onClick={() => { navigate("partner-dashboard"); setMobileNavOpen(false); }}
+              >
+                <LayoutDashboard size={16} color="#555" style={{ marginRight: 10, flexShrink: 0 }} />
+                {t("nav_dashboard")}
+              </button>
+            )}
+            {user.userType === "ADMIN" && (
+              <button
+                className="main-navbar-drawer-item"
+                onClick={() => { navigate("admin-dashboard"); setMobileNavOpen(false); }}
+              >
+                <LayoutDashboard size={16} color="#555" style={{ marginRight: 10, flexShrink: 0 }} />
+                {t("nav_admin_sys")}
+              </button>
+            )}
+            <button
+              className="main-navbar-drawer-logout"
+              onClick={() => { if (onLogout) onLogout(); setMobileNavOpen(false); }}
+            >
+              <LogOut size={16} />
+              {t("nav_logout")}
+            </button>
+          </>
+        ) : (
+          <div className="main-navbar-drawer-auth">
+            <button
+              className="main-navbar-drawer-auth-btn primary"
+              onClick={() => { navigate("login"); setMobileNavOpen(false); }}
+            >
+              {t("nav_login")}
+            </button>
+            <button
+              className="main-navbar-drawer-auth-btn secondary"
+              onClick={() => { navigate("register"); setMobileNavOpen(false); }}
+            >
+              {t("nav_register")}
+            </button>
+          </div>
         )}
       </div>
     </nav>

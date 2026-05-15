@@ -1,7 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { partnerService } from "../services/partnerService";
+import {
+  useMyHotels, useCreateHotel, useUpdateHotel,
+  usePartnerRooms, useCreateRoom, useUpdateRoom, useUploadRoomImages,
+  usePartnerBookings,
+} from "../hooks/usePartnerQueries";
 import {
   Building2, Bed, Calendar, BarChart3, Pencil, Users, DoorOpen,
   AlertCircle, CircleDollarSign, ClipboardList, CheckCircle2, Inbox, Layers,
@@ -72,34 +76,33 @@ const AMENITIES = [
 const EMPTY_HOTEL = { name:"",province:"",district:"",address:"",hotelType:"HOTEL",description:"",amenities:[] };
 
 function HotelsTab() {
-  const [hotels, setHotels] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // null | 'create' | hotel obj
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState(EMPTY_HOTEL);
-  const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try { setHotels(await partnerService.getMyHotels() || []); }
-    catch { setHotels([]); }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
+  const { data: hotelsData, isLoading: loading } = useMyHotels();
+  const hotels = Array.isArray(hotelsData) ? hotelsData : [];
+  const createHotel = useCreateHotel();
+  const updateHotel = useUpdateHotel();
+  const saving = createHotel.isPending || updateHotel.isPending;
 
   function openCreate() { setForm(EMPTY_HOTEL); setErr(""); setModal("create"); }
   function openEdit(h) { setForm({ name: h.name||"", province: h.province||"", district: h.district||"", address: h.address||"", hotelType: h.hotelType||"HOTEL", description: h.description||"", amenities: h.amenities||[] }); setErr(""); setModal(h); }
 
-  async function handleSave() {
+  function handleSave() {
     if (!form.name.trim()) { setErr("Vui lòng nhập tên khách sạn"); return; }
-    setSaving(true); setErr("");
-    try {
-      if (modal === "create") await partnerService.createHotel(form);
-      else await partnerService.updateHotel(modal.id, form);
-      setModal(null); load();
-    } catch (e) { setErr(e.message); }
-    finally { setSaving(false); }
+    setErr("");
+    if (modal === "create") {
+      createHotel.mutate(form, {
+        onSuccess: () => setModal(null),
+        onError: (e) => setErr(e.message),
+      });
+    } else {
+      updateHotel.mutate({ id: modal.id, ...form }, {
+        onSuccess: () => setModal(null),
+        onError: (e) => setErr(e.message),
+      });
+    }
   }
 
   function toggleAmenity(key) {
@@ -205,79 +208,55 @@ const ROOM_AMENS  = [
 const EMPTY_ROOM = { name:"",capacity:2,quantity:1,price:500000,roomCategory:"STANDARD",bedType:"DOUBLE",amenities:[] };
 
 function RoomsTab() {
-  const [hotels, setHotels]   = useState([]);
   const [selHotel, setSelHotel] = useState(null);
-  const [rooms, setRooms]     = useState([]);
-  const [loadingH, setLoadingH] = useState(true);
-  const [loadingR, setLoadingR] = useState(false);
-  const [modal, setModal]     = useState(null);
-  const [form, setForm]       = useState(EMPTY_ROOM);
-  const [saving, setSaving]   = useState(false);
-  const [err, setErr]         = useState("");
+  const [modal, setModal]       = useState(null);
+  const [form, setForm]         = useState(EMPTY_ROOM);
+  const [err, setErr]           = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
 
-  useEffect(() => {
-    partnerService.getMyHotels().then(d => {
-      const list = Array.isArray(d) ? d : [];
-      setHotels(list);
-      if (list.length) setSelHotel(list[0]);
-    }).catch(() => {}).finally(() => setLoadingH(false));
-  }, []);
+  const { data: hotelsData, isLoading: loadingH } = useMyHotels();
+  const hotels = Array.isArray(hotelsData) ? hotelsData : [];
+
+  const { data: roomsData, isLoading: loadingR } = usePartnerRooms(selHotel?.id);
+  const rooms = Array.isArray(roomsData) ? roomsData : [];
+
+  const createRoom   = useCreateRoom();
+  const updateRoom   = useUpdateRoom();
+  const uploadImages = useUploadRoomImages();
+  const saving = createRoom.isPending || updateRoom.isPending || uploadImages.isPending;
 
   useEffect(() => {
-    if (!selHotel) return;
-    setLoadingR(true);
-    partnerService.getRooms(selHotel.id).then(d => setRooms(Array.isArray(d) ? d : [])).catch(() => setRooms([])).finally(() => setLoadingR(false));
-  }, [selHotel]);
+    if (hotels.length && !selHotel) setSelHotel(hotels[0]);
+  }, [hotels]);
 
   function openCreate() { setForm(EMPTY_ROOM); setSelectedFiles([]); setErr(""); setModal("create"); }
   function openEdit(r) { setForm({ name:r.name||"",capacity:r.capacity||2,quantity:r.quantity||1,price:r.price||500000,roomCategory:r.roomCategory||"STANDARD",bedType:r.bedType||"DOUBLE",amenities:r.amenities||[],imageUrls:Array.isArray(r.imageUrls)?r.imageUrls:[] }); setSelectedFiles([]); setErr(""); setModal(r); }
 
-
-
-  async function handleSave() {
-    if (!form.name.trim()) {
-      setErr("Vui lòng nhập tên loại phòng");
-      return;
-    }
-
-    setSaving(true);
+  function handleSave() {
+    if (!form.name.trim()) { setErr("Vui lòng nhập tên loại phòng"); return; }
     setErr("");
+    const imageUrls = modal !== "create" && form.imageUrls ? [...form.imageUrls] : [];
+    const newForm = { ...form, imageUrls };
 
-    try {
-      let imageUrls = [];
+    const onUpload = (savedRoomId, onDone) => {
+      if (selectedFiles?.length) {
+        uploadImages.mutate({ roomId: savedRoomId, hotelId: selHotel.id, files: selectedFiles }, {
+          onSuccess: () => { setModal(null); setSelectedFiles([]); },
+          onError: (e) => setErr(e.message),
+        });
+      } else { onDone(); }
+    };
 
-      // ✅ 1. Nếu edit → giữ ảnh cũ
-      if (modal !== "create" && form.imageUrls) {
-        imageUrls = [...form.imageUrls];
-      }
-
-      const newForm = {
-        ...form,
-        imageUrls
-      };
-
-      let savedRoom;
-      if (modal === "create") {
-        savedRoom = await partnerService.createRoom(selHotel.id, newForm);
-      } else {
-        savedRoom = await partnerService.updateRoom(modal.id, newForm);
-      }
-
-      if (selectedFiles && selectedFiles.length > 0) {
-        await partnerService.uploadRoomImages(savedRoom.id, selectedFiles);
-      }
-
-      setModal(null);
-      setSelectedFiles([]); // reset
-
-      const d = await partnerService.getRooms(selHotel.id);
-      setRooms(Array.isArray(d) ? d : []);
-
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setSaving(false);
+    if (modal === "create") {
+      createRoom.mutate({ hotelId: selHotel.id, ...newForm }, {
+        onSuccess: (savedRoom) => onUpload(savedRoom.id, () => { setModal(null); setSelectedFiles([]); }),
+        onError: (e) => setErr(e.message),
+      });
+    } else {
+      updateRoom.mutate({ roomId: modal.id, hotelId: selHotel.id, ...newForm }, {
+        onSuccess: (savedRoom) => onUpload(savedRoom?.id ?? modal.id, () => { setModal(null); setSelectedFiles([]); }),
+        onError: (e) => setErr(e.message),
+      });
     }
   }
   function toggleRoomAmen(key) {
@@ -428,46 +407,38 @@ function buildOccupied(bookings, year, month) {
 
 function CalendarTab() {
   const now = new Date();
-  const [hotels, setHotels]       = useState([]);
-  const [rooms, setRooms]         = useState([]);
   const [selHotel, setSelHotel]   = useState(null);
   const [selRoom, setSelRoom]     = useState(null);
   const [year, setYear]           = useState(now.getFullYear());
   const [month, setMonth]         = useState(now.getMonth());
-  const [bookings, setBookings]   = useState([]);
-  const [loadingB, setLoadingB]   = useState(false);
   const [priceForm, setPriceForm] = useState({ from: "", to: "", price: "" });
   const [availForm, setAvailForm] = useState({ from: "", to: "", count: "" });
   const [msg, setMsg]             = useState("");
 
-  useEffect(() => {
-    partnerService.getMyHotels().then(d => {
-      const list = Array.isArray(d) ? d : [];
-      setHotels(list);
-      if (list.length) setSelHotel(list[0]);
-    }).catch(() => {});
-  }, []);
+  const { data: hotelsData } = useMyHotels();
+  const hotels = Array.isArray(hotelsData) ? hotelsData : [];
+
+  const { data: roomsData } = usePartnerRooms(selHotel?.id);
+  const rooms = Array.isArray(roomsData) ? roomsData : [];
+
+  const calFrom = `${year}-${String(month + 1).padStart(2,"0")}-01`;
+  const calTo   = `${year}-${String(month + 1).padStart(2,"0")}-${new Date(year, month + 1, 0).getDate()}`;
+  const { data: bookingsData, isLoading: loadingB } = usePartnerBookings(
+    { hotelId: selHotel?.id, checkInFrom: calFrom, checkInTo: calTo, size: 100 },
+    { enabled: Boolean(selHotel) },
+  );
+  const bookings = bookingsData?.items || [];
+
+  const updateRoom = useUpdateRoom();
 
   useEffect(() => {
-    if (!selHotel) return;
-    partnerService.getRooms(selHotel.id).then(d => {
-      const list = Array.isArray(d) ? d : [];
-      setRooms(list);
-      setSelRoom(list[0] || null);
-    }).catch(() => { setRooms([]); setSelRoom(null); });
-  }, [selHotel]);
+    if (hotels.length && !selHotel) setSelHotel(hotels[0]);
+  }, [hotels]);
 
   useEffect(() => {
-    if (!selHotel) return;
-    setLoadingB(true);
-    const from = `${year}-${String(month + 1).padStart(2,"0")}-01`;
-    const last  = new Date(year, month + 1, 0).getDate();
-    const to    = `${year}-${String(month + 1).padStart(2,"0")}-${last}`;
-    partnerService.getBookings({ hotelId: selHotel.id, checkInFrom: from, checkInTo: to, size: 100 })
-      .then(d => setBookings((d?.items || [])))
-      .catch(() => setBookings([]))
-      .finally(() => setLoadingB(false));
-  }, [selHotel, year, month]);
+    if (rooms.length && !selRoom) setSelRoom(rooms[0]);
+    else if (!rooms.length) setSelRoom(null);
+  }, [rooms]);
 
   function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11); } else setMonth(m => m - 1); }
   function nextMonth() { if (month === 11) { setYear(y => y + 1); setMonth(0); } else setMonth(m => m + 1); }
@@ -477,21 +448,31 @@ function CalendarTab() {
   const today    = now.getDate();
   const isThisMonth = now.getFullYear() === year && now.getMonth() === month;
 
-  async function handleUpdatePrice() {
+  function handleUpdatePrice() {
     if (!selRoom || !priceForm.price) return;
-    try {
-      await partnerService.updateRoom(selRoom.id, { ...selRoom, price: Number(priceForm.price) });
-      setMsg(`✅ Đã cập nhật giá thành ${fmt(Number(priceForm.price))} cho "${selRoom.name}"`);
-      setPriceForm({ from: "", to: "", price: "" });
-    } catch (e) { setMsg(`❌ ${e.message}`); }
+    updateRoom.mutate(
+      { roomId: selRoom.id, hotelId: selHotel.id, ...selRoom, price: Number(priceForm.price) },
+      {
+        onSuccess: () => {
+          setMsg(`✅ Đã cập nhật giá thành ${fmt(Number(priceForm.price))} cho "${selRoom.name}"`);
+          setPriceForm({ from: "", to: "", price: "" });
+        },
+        onError: (e) => setMsg(`❌ ${e.message}`),
+      },
+    );
   }
-  async function handleUpdateAvail() {
+  function handleUpdateAvail() {
     if (!selRoom || !availForm.count) return;
-    try {
-      await partnerService.updateRoom(selRoom.id, { ...selRoom, quantity: Number(availForm.count) });
-      setMsg(`✅ Đã cập nhật số phòng thành ${availForm.count} cho "${selRoom.name}"`);
-      setAvailForm({ from: "", to: "", count: "" });
-    } catch (e) { setMsg(`❌ ${e.message}`); }
+    updateRoom.mutate(
+      { roomId: selRoom.id, hotelId: selHotel.id, ...selRoom, quantity: Number(availForm.count) },
+      {
+        onSuccess: () => {
+          setMsg(`✅ Đã cập nhật số phòng thành ${availForm.count} cho "${selRoom.name}"`);
+          setAvailForm({ from: "", to: "", count: "" });
+        },
+        onError: (e) => setMsg(`❌ ${e.message}`),
+      },
+    );
   }
 
   return (
@@ -620,37 +601,21 @@ function CalendarTab() {
 const MONTH_SHORT = ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12"];
 
 function StatsTab() {
-  const [hotels, setHotels]     = useState([]);
   const [selHotel, setSelHotel] = useState(null);
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading]   = useState(false);
   const [year, setYear]         = useState(new Date().getFullYear());
 
-  useEffect(() => {
-    partnerService.getMyHotels().then(d => {
-      const list = Array.isArray(d) ? d : [];
-      setHotels(list);
-      setSelHotel(list[0] || null);
-    }).catch(() => {});
-  }, []);
+  const { data: hotelsData } = useMyHotels();
+  const hotels = Array.isArray(hotelsData) ? hotelsData : [];
+
+  const { data: bookingsData, isLoading: loading } = usePartnerBookings(
+    { hotelId: selHotel?.id, size: 500 },
+    { enabled: Boolean(selHotel) },
+  );
+  const bookings = bookingsData?.items || [];
 
   useEffect(() => {
-    if (!selHotel) return;
-    setLoading(true);
-    (async () => {
-      try {
-        let all = [], page = 1;
-        while (true) {
-          const d = await partnerService.getBookings({ hotelId: selHotel.id, page, size: 50 });
-          all = all.concat(d?.items || []);
-          if (!d?.hasNext || page >= 20) break;
-          page++;
-        }
-        setBookings(all);
-      } catch { setBookings([]); }
-      finally { setLoading(false); }
-    })();
-  }, [selHotel]);
+    if (hotels.length && !selHotel) setSelHotel(hotels[0]);
+  }, [hotels]);
 
   const filtered = bookings.filter(b => {
     const d = new Date(b.checkIn || b.createdAt || "");

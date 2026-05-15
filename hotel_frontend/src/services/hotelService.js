@@ -1,7 +1,4 @@
-
-
-
-import { buildApiUrl } from "../config/apiConfig";
+import apiClient from "./apiClient";
 
 const AMENITY_MAP = {
   WIFI:        { icon: "📶", label: "WiFi miễn phí" },
@@ -22,8 +19,6 @@ const HOTEL_TYPE_MAP = {
   HOSTEL:      "Hostel",
   GUEST_HOUSE: "Nhà nghỉ",
 };
-
-
 
 function isoDate(dt) {
   return dt.toISOString().split("T")[0];
@@ -47,13 +42,6 @@ function nightsBetween(checkIn, checkOut) {
   return diff > 0 ? diff : 1;
 }
 
-async function apiFetch(path) {
-  const res = await fetch(buildApiUrl(path));
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  return json.data ?? json;
-}
-
 function buildQuery(params) {
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -75,18 +63,18 @@ function normalizeImageList(imageUrls, coverImageUrl) {
 function normalizeHotel(h) {
   const images = normalizeImageList(h.imageUrls, h.coverImageUrl);
   return {
-    id:         h.hotelId,
-    name:       h.name,
-    address:    h.address || [h.district, h.province].filter(Boolean).join(", "),
-    rating:     Number(h.ratingAvg) || 0,
-    ratingCount: h.ratingCount || 0,
-    price:      h.minPrice || 0,
+    id:                 h.hotelId,
+    name:               h.name,
+    address:            h.address || [h.district, h.province].filter(Boolean).join(", "),
+    rating:             Number(h.ratingAvg) || 0,
+    ratingCount:        h.ratingCount || 0,
+    price:              h.minPrice || 0,
     availableRoomTypes: Number(h.availableRoomTypes) || 0,
-    availableUnits: Number(h.availableUnits) || 0,
-    imageUrl:   h.coverImageUrl || images[0] || "",
-    imageUrls:  images,
-    amenities:  [],
-    hotelType:  HOTEL_TYPE_MAP[h.hotelType] || h.hotelType || "Khách sạn",
+    availableUnits:     Number(h.availableUnits) || 0,
+    imageUrl:           h.coverImageUrl || images[0] || "",
+    imageUrls:          images,
+    amenities:          [],
+    hotelType:          HOTEL_TYPE_MAP[h.hotelType] || h.hotelType || "Khách sạn",
   };
 }
 
@@ -95,18 +83,18 @@ function normalizeRoom(r, nights) {
   const images = normalizeImageList(r.imageUrls, r.coverImageUrl);
   const availableUnits = Number(r.availableUnits) || 0;
   return {
-    id:        r.roomId,
-    name:      r.name,
-    price:     pricePerNight,
-    stayPrice: r.stayPrice,
-    beds:      `${r.capacity} khách tối đa`,
-    size:      "",
-    tags:      [],
+    id:             r.roomId,
+    name:           r.name,
+    price:          pricePerNight,
+    stayPrice:      r.stayPrice,
+    beds:           `${r.capacity} khách tối đa`,
+    size:           "",
+    tags:           [],
     availableUnits,
-    available: availableUnits > 0,
-    capacity:  r.capacity,
-    imageUrl:  r.coverImageUrl || images[0] || "",
-    imageUrls: images,
+    available:      availableUnits > 0,
+    capacity:       r.capacity,
+    imageUrl:       r.coverImageUrl || images[0] || "",
+    imageUrls:      images,
   };
 }
 
@@ -116,7 +104,7 @@ function normalizeLocationOption(item) {
   return {
     province: (item.province || "").trim(),
     districts: Array.isArray(item.districts)
-      ? item.districts.map((district) => (district || "").trim()).filter(Boolean)
+      ? item.districts.map((d) => (d || "").trim()).filter(Boolean)
       : [],
   };
 }
@@ -124,7 +112,7 @@ function normalizeLocationOption(item) {
 export const hotelService = {
   async getLocations() {
     try {
-      const data = await apiFetch("/api/hotels/locations");
+      const data = await apiClient.get("/api/hotels/locations");
       return Array.isArray(data) ? data.map(normalizeLocationOption).filter((item) => item.province) : [];
     } catch {
       return [];
@@ -133,23 +121,23 @@ export const hotelService = {
 
   async searchHotels(params = {}) {
     const query = buildQuery({
-      province: params.province || "",
-      district: params.district || "",
-      checkIn:  params.checkIn  || defaultCheckIn(),
-      checkOut: params.checkOut || defaultCheckOut(),
-      adults:   params.guests   || params.adults || 2,
-      rooms:    params.rooms    || 1,
-      page:     params.page     || 1,
-      size:     params.size     || 10,
-      sort:     params.sort     || "price_asc",
-      hotelTypes: params.hotelTypes || params.hotelType || "",
+      province:       params.province  || "",
+      district:       params.district  || "",
+      checkIn:        params.checkIn   || defaultCheckIn(),
+      checkOut:       params.checkOut  || defaultCheckOut(),
+      adults:         params.guests    || params.adults || 2,
+      rooms:          params.rooms     || 1,
+      page:           params.page      || 1,
+      size:           params.size      || 10,
+      sort:           params.sort      || "price_asc",
+      hotelTypes:     params.hotelTypes || params.hotelType || "",
       roomCategories: params.roomCategories || "",
-      bedTypes: params.bedTypes || "",
+      bedTypes:       params.bedTypes  || "",
       hotelAmenities: params.hotelAmenities || "",
-      roomAmenities: params.roomAmenities || "",
+      roomAmenities:  params.roomAmenities  || "",
     });
     try {
-      const data = await apiFetch(`/api/hotels/search?${query}`);
+      const data = await apiClient.get(`/api/hotels/search?${query}`);
       const items = data.items || [];
       return {
         hotels:     items.map(normalizeHotel),
@@ -165,11 +153,11 @@ export const hotelService = {
   async getHotelDetail(id) {
     if (!id) return null;
     try {
-      const data = await apiFetch(`/api/hotels/${id}`);
+      const data = await apiClient.get(`/api/hotels/${id}`);
       if (!data || !data.hotelId) return null;
       const images = normalizeImageList(data.imageUrls, data.coverImageUrl);
       const rawAmenities = Array.isArray(data.amenities) ? data.amenities : [];
-      const amenities = rawAmenities.map(a => AMENITY_MAP[a]).filter(Boolean);
+      const amenities = rawAmenities.map((a) => AMENITY_MAP[a]).filter(Boolean);
       return {
         id:          data.hotelId,
         name:        data.name,
@@ -195,7 +183,7 @@ export const hotelService = {
     const nights = nightsBetween(checkIn, checkOut);
     const query  = buildQuery({ checkIn, checkOut, adults, rooms });
     try {
-      const data = await apiFetch(`/api/hotels/${hotelId}/available-rooms?${query}`);
+      const data = await apiClient.get(`/api/hotels/${hotelId}/available-rooms?${query}`);
       const list = Array.isArray(data) ? data : [];
       return list.map((r) => normalizeRoom(r, nights));
     } catch {

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import AdminLayout, { AP, PageHeader, Card, Badge, Btn, Table, Modal } from "../../components/admin/AdminLayout";
-import { adminService } from "../../services/adminService";
+import { useAdminRefunds, useUpdateRefundStatus } from "../../hooks/useAdminQueries";
 import { useLang } from "../../contexts/LanguageContext";
+import { SkeletonTableRows } from "../../components/ui/Skeleton";
 import "../../styles/pages/admin/AdminCommon.css";
 
 const STATUSES = ["", "PENDING", "APPROVED", "REJECTED"];
@@ -14,37 +15,23 @@ function fmt(n) {
 export default function AdminRefunds({ navigate, user, onLogout }) {
   const { t } = useLang();
   const STATUS_LABEL = { "": t("adm_rf_tab_all"), PENDING: t("adm_rf_tab_pending"), APPROVED: t("adm_rf_tab_approved"), REJECTED: t("adm_rf_tab_rejected") };
-  const [refunds, setRefunds] = useState([]);
   const [filter, setFilter]   = useState("");
-  const [loading, setLoading] = useState(true);
   const [detail, setDetail]   = useState(null);
-  const [acting, setActing]   = useState(null);
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  const load = useCallback(async (status = filter) => {
-    setLoading(true);
-    const data = await adminService.getRefunds(status);
-    setRefunds(data);
-    setLoading(false);
-  }, [filter]);
+  const { data: refunds = [], isLoading: loading } = useAdminRefunds(filter || null);
+  const updateRefund = useUpdateRefundStatus();
+  const acting = updateRefund.isPending ? updateRefund.variables?.refundId : null;
 
-  useEffect(() => { load(); }, [load]);
   const handleFilter = s => { setPage(1); setFilter(s); };
 
-  const handleAction = async (id, newStatus) => {
+  const handleAction = (id, newStatus) => {
     const actionKey = newStatus === "APPROVED" ? "adm_rf_confirm_approve" : "adm_rf_confirm_reject";
     if (!window.confirm(t("adm_rf_confirm_msg").replace("{action}", t(actionKey)))) return;
-    setActing(id);
-    try {
-      const updated = await adminService.updateRefundStatus(id, newStatus);
-      setRefunds(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r));
-      if (detail?.id === id) setDetail(d => ({ ...d, ...updated }));
-    } catch (e) {
-      alert(e.message || t("adm_rf_err_update"));
-    } finally {
-      setActing(null);
-    }
+    updateRefund.mutate({ refundId: id, newStatus }, {
+      onError: (e) => alert(e.message || t("adm_rf_err_update")),
+    });
   };
 
   const pending      = refunds.filter(r => r.status === "PENDING").length;
@@ -92,7 +79,9 @@ export default function AdminRefunds({ navigate, user, onLogout }) {
         </div>
 
         {loading ? (
-          <div className="admin-loading">{t("adm_loading")}</div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <tbody><SkeletonTableRows rows={5} cols={7} /></tbody>
+          </table>
         ) : (
           <>
             <Table

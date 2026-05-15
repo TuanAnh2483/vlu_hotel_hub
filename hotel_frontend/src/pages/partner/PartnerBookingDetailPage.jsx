@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { partnerService } from "../../services/partnerService";
+import { usePartnerBookingDetail, useCompleteBooking } from "../../hooks/usePartnerQueries";
 import { PageHeader, Card, Badge } from "../../components/admin/AdminLayout";
 import { useLang } from "../../contexts/LanguageContext";
 import { ArrowLeft, Calendar, User, Building2, CreditCard, Clock, CheckCircle2 } from "lucide-react";
@@ -33,46 +33,25 @@ export default function PartnerBookingDetailPage() {
   const { t } = useLang();
   const { bookingId } = useParams();
   const navigate = useNavigate();
-  const [booking, setBooking] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [actionError, setActionError] = useState("");
   const [actionMessage, setActionMessage] = useState("");
-  const [completing, setCompleting] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await partnerService.getBooking(bookingId);
-        setBooking(data);
-      } catch {
-        setError(t("pt_bk_err_detail"));
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [bookingId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { data: booking, isLoading: loading, error } = usePartnerBookingDetail(bookingId);
+  const completeBooking = useCompleteBooking();
+  const completing = completeBooking.isPending;
 
-  async function handleComplete() {
+  function handleComplete() {
     if (!booking || !window.confirm(t("pt_bk_confirm_checkout"))) return;
-    setCompleting(true);
     setActionError("");
     setActionMessage("");
-    try {
-      const updated = await partnerService.completeBooking(booking.bookingId);
-      setBooking(updated);
-      setActionMessage(t("pt_bk_checkout_done"));
-    } catch (e) {
-      setActionError(e.message || t("pt_bk_err_checkout"));
-    } finally {
-      setCompleting(false);
-    }
+    completeBooking.mutate(booking.bookingId, {
+      onSuccess: () => setActionMessage(t("pt_bk_checkout_done")),
+      onError: (e) => setActionError(e.message || t("pt_bk_err_checkout")),
+    });
   }
 
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>{t("pt_loading")}</div>;
-  if (error || !booking) return <div style={{ padding: 40, textAlign: "center", color: "#ef4444" }}>{error || t("pt_bk_err_detail")}</div>;
+  if (error || !booking) return <div style={{ padding: 40, textAlign: "center", color: "#ef4444" }}>{error?.message || t("pt_bk_err_detail")}</div>;
 
   const customerName = booking.customerName || booking.contact?.fullName || booking.contact?.email || "khách hàng";
 

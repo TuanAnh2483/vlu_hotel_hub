@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { partnerService } from "../../services/partnerService";
+import { useMyHotels, usePartnerBookings, useAnalyticsSummary } from "../../hooks/usePartnerQueries";
+import { useQueries } from "@tanstack/react-query";
 import { useLang } from "../../contexts/LanguageContext";
 import { 
   AlertCircle, Building2, ClipboardList, CircleDollarSign, BarChart3,
@@ -59,60 +60,33 @@ export default function PartnerDashboard() {
     };
     return STATUS_LABELS[status] || { label: status || t("pt_status_unknown"), color: "#475569", bg: "#f8fafc" };
   }
-  const [hotels, setHotels] = useState([]);
-  const [rooms, setRooms] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [bookingTotal, setBookingTotal] = useState(0);
-  const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const analyticsParams = {
+    checkInFrom: startOfCurrentMonth(),
+    checkInTo:   endOfCurrentMonth(),
+  };
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError("");
-      try {
-        const [hotelResult, bookingResult, analyticsResult] = await Promise.allSettled([
-          partnerService.getMyHotels(),
-          partnerService.getBookings({ size: 10, page: 1 }),
-          partnerService.getAnalyticsSummary({
-            checkInFrom: startOfCurrentMonth(),
-            checkInTo: endOfCurrentMonth(),
-          }),
-        ]);
+  const { data: hotelData,     isLoading: hotelsLoading  } = useMyHotels();
+  const { data: bookingData,   isLoading: bookingsLoading } = usePartnerBookings({ size: 10, page: 1 });
+  const { data: analyticsData, isLoading: analyticsLoading } = useAnalyticsSummary(analyticsParams);
 
-        const errors = [hotelResult, bookingResult, analyticsResult]
-          .filter((result) => result.status === "rejected")
-          .map((result) => result.reason?.message)
-          .filter(Boolean);
-        const hotelData = hotelResult.status === "fulfilled" ? hotelResult.value : [];
-        const bookingData = bookingResult.status === "fulfilled" ? bookingResult.value : null;
-        const analyticsData = analyticsResult.status === "fulfilled" ? analyticsResult.value : null;
-        const hotelList = Array.isArray(hotelData) ? hotelData : [];
-        const roomResults = await Promise.allSettled(
-          hotelList.map((hotel) => partnerService.getRooms(hotel.id)),
-        );
-        const roomLists = roomResults.map((result) => (result.status === "fulfilled" ? result.value : []));
+  const hotelList = Array.isArray(hotelData) ? hotelData : [];
 
-        setHotels(hotelList);
-        setRooms(roomLists.flat().filter(Boolean));
-        setBookings(Array.isArray(bookingData?.items) ? bookingData.items : []);
-        setBookingTotal(Number(bookingData?.totalItems ?? analyticsData?.totalBookings ?? bookingData?.items?.length ?? 0));
-        setAnalytics(analyticsData || null);
-        setError(errors[0] || "");
-      } catch (e) {
-        setHotels([]);
-        setRooms([]);
-        setBookings([]);
-        setBookingTotal(0);
-        setAnalytics(null);
-        setError(e.message || t("pt_loading"));
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  // Fetch rooms for each hotel in parallel
+  const roomQueries = useQueries({
+    queries: hotelList.map((hotel) => ({
+      queryKey: ["partner", "rooms", hotel.id],
+      queryFn:  () => import("../../services/partnerService").then((m) => m.partnerService.getRooms(hotel.id)),
+      staleTime: 2 * 60 * 1000,
+    })),
+  });
+
+  const hotels      = hotelList;
+  const rooms       = roomQueries.flatMap((q) => Array.isArray(q.data) ? q.data : []);
+  const bookings    = Array.isArray(bookingData?.items) ? bookingData.items : [];
+  const bookingTotal = Number(bookingData?.totalItems ?? analyticsData?.totalBookings ?? bookings.length ?? 0);
+  const analytics   = analyticsData || null;
+  const loading     = hotelsLoading || bookingsLoading || analyticsLoading;
+  const [error]     = useState("");
 
   const totalRoomTypes = rooms.length;
   const totalPhysicalRooms = rooms.reduce((sum, room) => sum + Number(room.quantity || 0), 0);

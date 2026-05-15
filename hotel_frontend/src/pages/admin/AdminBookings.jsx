@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import AdminLayout, { AP, PageHeader, Card, Badge, Btn, Table, Modal } from "../../components/admin/AdminLayout";
-import { adminService } from "../../services/adminService";
+import { useAdminBookings } from "../../hooks/useAdminQueries";
 import { useLang } from "../../contexts/LanguageContext";
+import { SkeletonTableRows } from "../../components/ui/Skeleton";
 import "../../styles/pages/admin/AdminCommon.css";
 
 const STATUSES = ["", "CONFIRMED", "PENDING_PAYMENT", "CANCELLED", "COMPLETED"];
@@ -20,22 +21,13 @@ export default function AdminBookings({ navigate, user, onLogout }) {
     CANCELLED:       t("adm_bk_tab_cancelled"),
     COMPLETED:       t("adm_bk_tab_completed"),
   };
-  const [bookings, setBookings] = useState([]);
   const [filter, setFilter]     = useState("");
-  const [loading, setLoading]   = useState(true);
   const [detail, setDetail]     = useState(null);
   const [search, setSearch]     = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  const load = useCallback(async (status = filter) => {
-    setLoading(true);
-    const data = await adminService.getBookings(status);
-    setBookings(data);
-    setLoading(false);
-  }, [filter]);
-
-  useEffect(() => { load(); }, [load]);
+  const { data: bookings = [], isLoading: loading } = useAdminBookings(filter || null);
   const handleFilter = s => { setPage(1); setFilter(s); };
 
   const filtered = bookings.filter(b => {
@@ -99,7 +91,9 @@ export default function AdminBookings({ navigate, user, onLogout }) {
         </div>
 
         {loading ? (
-          <div className="admin-loading">{t("adm_loading")}</div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <tbody><SkeletonTableRows rows={6} cols={9} /></tbody>
+          </table>
         ) : (
           <>
             <Table

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, LoaderCircle, XCircle } from "lucide-react";
 import { S, SubmitButton, ImgSide } from "../components/auth/AuthShared";
-import { authService } from "../services/authService";
+import { useVerifyEmail } from "../hooks/useAuthMutations";
 import { useLang } from "../contexts/LanguageContext";
 
 function formatVerifiedAt(value) {
@@ -25,18 +25,21 @@ export default function VerifyEmailPage({ setPage }) {
   const [verifiedAt, setVerifiedAt] = useState("");
   const hasRequested = useRef(false);
 
+  const verifyEmail = useVerifyEmail();
+
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("token");
     if (!token) { setStatus("error"); return; }
     if (hasRequested.current) return;
     hasRequested.current = true;
 
-    authService.verifyEmail({ token })
-      .then((data) => {
+    verifyEmail.mutate({ token }, {
+      onSuccess: (data) => {
         setStatus(mapVerifyResult(data));
         setVerifiedAt(formatVerifiedAt(data?.verifiedAt));
-      })
-      .catch(() => setStatus("error"));
+      },
+      onError: () => setStatus("error"),
+    });
   }, []);
 
   const statusCopy = {

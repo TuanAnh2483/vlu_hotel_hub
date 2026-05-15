@@ -15,3 +15,15 @@
   box-sizing: border-box;
   flex: 1;
 }
+
+@media (max-width: 768px) {
+  .partner-content {
+    padding: 16px 14px 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .partner-content {
+    padding: 12px 10px 32px;
+  }
+}

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { partnerService } from "../../services/partnerService";
+import {
+  useMyHotels, usePartnerRooms, useRoomCalendar, useUpdateRoomCalendar,
+  usePartnerRefunds, useApproveRefund, useRejectRefund, usePriceSuggestions,
+} from "../../hooks/usePartnerQueries";
 import { Badge, Btn, Card, Modal, PageHeader, Table } from "../../components/admin/AdminLayout";
 import {
   AlertCircle,
@@ -282,165 +285,84 @@ export default function PartnerCalendar() {
   const [activeTab, setActiveTab] = useState("CALENDAR");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const [hotels, setHotels] = useState([]);
-  const [rooms, setRooms] = useState([]);
   const [selectedHotelId, setSelectedHotelId] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
-  const [calendar, setCalendar] = useState(null);
-  const [calendarLoading, setCalendarLoading] = useState(false);
-  const [calendarReloadKey, setCalendarReloadKey] = useState(0);
   const [calendarError, setCalendarError] = useState("");
   const [rateModal, setRateModal] = useState(null);
   const [rateForm, setRateForm] = useState(EMPTY_RATE_FORM);
-  const [savingRate, setSavingRate] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState({ loading: false, data: null });
-  const [refunds, setRefunds] = useState([]);
-  const [refundsLoading, setRefundsLoading] = useState(false);
+  const [aiParams, setAiParams] = useState(null);
   const [refundStatusFilter, setRefundStatusFilter] = useState("");
   const [refundDetail, setRefundDetail] = useState(null);
-  const [actingRefundId, setActingRefundId] = useState(null);
   const [warnModal, setWarnModal] = useState(null);
 
+  const calFrom = toIsoDate(new Date(year, month, 1));
+  const calTo   = toIsoDate(new Date(year, month + 1, 0));
+
+  const { data: hotels = [] } = useMyHotels();
+  const { data: rooms = [] }  = usePartnerRooms(selectedHotelId, { enabled: Boolean(selectedHotelId) });
+  const { data: calendar, isLoading: calendarLoading, error: calendarQueryError } = useRoomCalendar(
+    selectedRoomId,
+    { from: calFrom, to: calTo },
+  );
+  const { data: refundsData, isLoading: refundsLoading } = usePartnerRefunds(
+    { hotelId: selectedHotelId || undefined, status: refundStatusFilter || undefined },
+    { enabled: activeTab === "REFUNDS" },
+  );
+  const refunds = Array.isArray(refundsData) ? refundsData : [];
+
+  const { data: aiRaw, isFetching: aiLoading } = usePriceSuggestions(
+    selectedRoomId,
+    aiParams?.from,
+    aiParams?.to,
+    { enabled: Boolean(aiParams && selectedRoomId) },
+  );
+
+  const aiSuggestionData = useMemo(() => {
+    if (!aiRaw) return null;
+    const items = (aiRaw?.items || []).filter((i) => i.suggestedPrice > 0);
+    if (!items.length) return null;
+    const avg = Math.round(items.reduce((s, i) => s + i.suggestedPrice, 0) / items.length / 1000) * 1000;
+    const low = Math.min(...items.map((i) => i.priceLow || i.suggestedPrice));
+    const high = Math.max(...items.map((i) => i.priceHigh || i.suggestedPrice));
+    return {
+      suggestedPrice: items.length === 1 ? items[0].suggestedPrice : avg,
+      priceLow: low,
+      priceHigh: high,
+      reason: items.length === 1 ? items[0].reason : null,
+      confidence: items[0].confidence,
+      aiGenerated: items.some((i) => i.aiGenerated),
+      count: items.length,
+    };
+  }, [aiRaw]);
+
+  const updateCalendar = useUpdateRoomCalendar();
+  const approveRefund  = useApproveRefund();
+  const rejectRefund   = useRejectRefund();
+
+  const savingRate    = updateCalendar.isPending;
+  const actingRefundId = (approveRefund.isPending && approveRefund.variables) ||
+                         (rejectRefund.isPending && rejectRefund.variables) || null;
+
   const selectedHotel = hotels.find((hotel) => String(hotel.id) === String(selectedHotelId)) || null;
-  const selectedRoom = rooms.find((room) => String(room.id) === String(selectedRoomId)) || null;
+  const selectedRoom  = rooms.find((room) => String(room.id) === String(selectedRoomId)) || null;
 
+  // Auto-select first hotel when hotels load
   useEffect(() => {
-    let ignore = false;
+    if (!hotels.length) return;
+    setSelectedHotelId((cur) => {
+      if (cur && hotels.some((h) => String(h.id) === String(cur))) return cur;
+      return String(hotels[0].id);
+    });
+  }, [hotels]);
 
-    async function loadHotels() {
-      try {
-        const data = await partnerService.getMyHotels();
-        if (ignore) {
-          return;
-        }
-        const list = Array.isArray(data) ? data : [];
-        setHotels(list);
-        setSelectedHotelId((current) => {
-          if (current && list.some((hotel) => String(hotel.id) === String(current))) {
-            return current;
-          }
-          return list[0] ? String(list[0].id) : "";
-        });
-      } catch {
-        if (!ignore) {
-          setHotels([]);
-          setSelectedHotelId("");
-        }
-      }
-    }
-
-    loadHotels();
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
+  // Auto-select first room when hotel changes or rooms load
   useEffect(() => {
-    let ignore = false;
-
-    async function loadRooms() {
-      if (!selectedHotelId) {
-        setRooms([]);
-        setSelectedRoomId("");
-        return;
-      }
-
-      try {
-        const data = await partnerService.getRooms(selectedHotelId);
-        if (ignore) {
-          return;
-        }
-        const list = Array.isArray(data) ? data : [];
-        setRooms(list);
-        setSelectedRoomId((current) => {
-          if (current && list.some((room) => String(room.id) === String(current))) {
-            return current;
-          }
-          return list[0] ? String(list[0].id) : "";
-        });
-      } catch {
-        if (!ignore) {
-          setRooms([]);
-          setSelectedRoomId("");
-        }
-      }
-    }
-
-    loadRooms();
-    return () => {
-      ignore = true;
-    };
-  }, [selectedHotelId]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadCalendar() {
-      if (!selectedRoomId) {
-        setCalendar(null);
-        return;
-      }
-
-      setCalendarLoading(true);
-      setCalendarError("");
-      try {
-        const from = toIsoDate(new Date(year, month, 1));
-        const to = toIsoDate(new Date(year, month + 1, 0));
-        const data = await partnerService.getRoomCalendar(selectedRoomId, { from, to });
-        if (!ignore) {
-          setCalendar(data);
-        }
-      } catch (error) {
-        if (!ignore) {
-          setCalendar(null);
-          setCalendarError(error.message || "Không thể tải lịch phòng.");
-        }
-      } finally {
-        if (!ignore) {
-          setCalendarLoading(false);
-        }
-      }
-    }
-
-    loadCalendar();
-    return () => {
-      ignore = true;
-    };
-  }, [selectedRoomId, year, month, calendarReloadKey]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadRefunds() {
-      if (activeTab !== "REFUNDS") {
-        return;
-      }
-
-      setRefundsLoading(true);
-      try {
-        const data = await partnerService.getRefunds({
-          hotelId: selectedHotelId || undefined,
-          status: refundStatusFilter || undefined,
-        });
-        if (!ignore) {
-          setRefunds(Array.isArray(data) ? data : []);
-        }
-      } catch {
-        if (!ignore) {
-          setRefunds([]);
-        }
-      } finally {
-        if (!ignore) {
-          setRefundsLoading(false);
-        }
-      }
-    }
-
-    loadRefunds();
-    return () => {
-      ignore = true;
-    };
-  }, [activeTab, selectedHotelId, refundStatusFilter]);
+    if (!selectedHotelId) { setSelectedRoomId(""); return; }
+    setSelectedRoomId((cur) => {
+      if (cur && rooms.some((r) => String(r.id) === String(cur))) return cur;
+      return rooms[0] ? String(rooms[0].id) : "";
+    });
+  }, [selectedHotelId, rooms]);
 
   const calendarItems = useMemo(() => calendar?.items || [], [calendar]);
 
@@ -496,60 +418,20 @@ export default function PartnerCalendar() {
     ];
   }, [refunds, selectedHotel]);
 
-  async function handleRefundAction(refundId, action) {
-    if (action === "approve" && !window.confirm("Duyệt yêu cầu hoàn tiền này?")) {
-      return;
-    }
-    if (action === "reject" && !window.confirm("Từ chối yêu cầu hoàn tiền này?")) {
-      return;
-    }
-
-    setActingRefundId(refundId);
-    try {
-      const updated =
-        action === "approve"
-          ? await partnerService.approveRefund(refundId)
-          : await partnerService.rejectRefund(refundId);
-
-      setRefunds((current) =>
-        current.map((refund) => (refund.id === refundId ? updated : refund)),
-      );
-      setRefundDetail((current) => (current?.id === refundId ? updated : current));
-    } finally {
-      setActingRefundId(null);
-    }
-  }
-
-  async function fetchAiSuggestion(startDate, endDate) {
-    if (!selectedRoomId) return;
-    setAiSuggestion({ loading: true, data: null });
-    try {
-      const result = await partnerService.getPriceSuggestions(selectedRoomId, startDate, endDate);
-      const items = (result?.items || []).filter((i) => i.suggestedPrice > 0);
-      if (!items.length) { setAiSuggestion({ loading: false, data: null }); return; }
-      const avg = Math.round(items.reduce((s, i) => s + i.suggestedPrice, 0) / items.length / 1000) * 1000;
-      const low = Math.min(...items.map((i) => i.priceLow || i.suggestedPrice));
-      const high = Math.max(...items.map((i) => i.priceHigh || i.suggestedPrice));
-      setAiSuggestion({
-        loading: false,
-        data: {
-          suggestedPrice: items.length === 1 ? items[0].suggestedPrice : avg,
-          priceLow: low,
-          priceHigh: high,
-          reason: items.length === 1 ? items[0].reason : null,
-          confidence: items[0].confidence,
-          aiGenerated: items.some((i) => i.aiGenerated),
-          count: items.length,
-        },
-      });
-    } catch {
-      setAiSuggestion({ loading: false, data: null });
-    }
+  function handleRefundAction(refundId, action) {
+    if (action === "approve" && !window.confirm("Duyệt yêu cầu hoàn tiền này?")) return;
+    if (action === "reject" && !window.confirm("Từ chối yêu cầu hoàn tiền này?")) return;
+    const mutate = action === "approve" ? approveRefund.mutate : rejectRefund.mutate;
+    mutate(refundId, {
+      onSuccess: (updated) => {
+        setRefundDetail((current) => (current?.id === refundId ? updated : current));
+      },
+    });
   }
 
   function closeRateModal() {
     setRateModal(null);
-    setAiSuggestion({ loading: false, data: null });
+    setAiParams(null);
   }
 
   function openDayRateModal(cell) {
@@ -577,7 +459,7 @@ export default function PartnerCalendar() {
       endDate: cell.iso,
       weekend: Boolean(cell.weekend),
     });
-    fetchAiSuggestion(cell.iso, cell.iso);
+    setAiParams({ from: cell.iso, to: cell.iso });
   }
 
   function openRangeRateModal() {
@@ -604,7 +486,7 @@ export default function PartnerCalendar() {
       endDate,
       weekend: false,
     });
-    fetchAiSuggestion(startDate, endDate);
+    setAiParams({ from: startDate, to: endDate });
   }
 
   function openMonthRateModal() {
@@ -631,7 +513,7 @@ export default function PartnerCalendar() {
       endDate,
       weekend: false,
     });
-    fetchAiSuggestion(startDate, endDate);
+    setAiParams({ from: startDate, to: endDate });
   }
 
   async function handleSaveRate() {
@@ -689,30 +571,21 @@ export default function PartnerCalendar() {
   }
 
   async function executeSave(payload) {
-    setSavingRate(true);
     setCalendarError("");
     try {
       if (rateForm.applyWeekendInMonth && rateModal?.weekend) {
         const weekendRanges = getWeekendDateRanges(year, month);
         await Promise.all(
           weekendRanges.map((range) =>
-            partnerService.updateRoomCalendar(selectedRoomId, {
-              ...payload,
-              startDate: range.startDate,
-              endDate: range.endDate,
-            }),
+            updateCalendar.mutateAsync({ roomId: selectedRoomId, ...payload, startDate: range.startDate, endDate: range.endDate }),
           ),
         );
       } else {
-        await partnerService.updateRoomCalendar(selectedRoomId, payload);
+        await updateCalendar.mutateAsync({ roomId: selectedRoomId, ...payload });
       }
-
       closeRateModal();
-      setCalendarReloadKey((value) => value + 1);
     } catch (error) {
       setCalendarError(error.message || "Không thể cập nhật giá phòng.");
-    } finally {
-      setSavingRate(false);
     }
   }
 
@@ -734,8 +607,8 @@ export default function PartnerCalendar() {
     setMonth((value) => value + 1);
   }
 
-  const calAiScheme = aiSuggestion.data
-    ? AI_DEMAND_SCHEME[getAiDemandKey(aiSuggestion.data.suggestedPrice, rateForm.price)]
+  const calAiScheme = aiSuggestionData
+    ? AI_DEMAND_SCHEME[getAiDemandKey(aiSuggestionData.suggestedPrice, rateForm.price)]
     : AI_DEMAND_SCHEME.MEDIUM;
 
   return (
@@ -840,9 +713,9 @@ export default function PartnerCalendar() {
             })}
           </div>
 
-          {calendarError && (
+          {(calendarError || calendarQueryError) && (
             <div className="partner-calendar-error">
-              {calendarError}
+              {calendarError || calendarQueryError?.message || "Không thể tải lịch phòng."}
             </div>
           )}
 
@@ -1334,9 +1207,9 @@ export default function PartnerCalendar() {
             </div>
 
             {/* AI Price Suggestion */}
-            {(aiSuggestion.loading || aiSuggestion.data) && (
+            {(aiLoading || aiSuggestionData) && (
               <div style={{ marginBottom: 16 }}>
-                {aiSuggestion.loading ? (
+                {aiLoading ? (
                   <div style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "11px 14px", background: "#f8fafc",
@@ -1346,7 +1219,7 @@ export default function PartnerCalendar() {
                     <Sparkles size={13} style={{ opacity: 0.4, flexShrink: 0 }} />
                     Đang tải đề xuất giá AI...
                   </div>
-                ) : aiSuggestion.data && (
+                ) : aiSuggestionData && (
                   <div style={{
                     borderRadius: 14,
                     background: calAiScheme.bg,
@@ -1361,13 +1234,13 @@ export default function PartnerCalendar() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <Sparkles size={13} color={calAiScheme.accent} />
                         <span style={{ fontSize: 11, fontWeight: 900, color: calAiScheme.accent, letterSpacing: 0.3 }}>
-                          {aiSuggestion.data.aiGenerated ? "GEMINI AI" : "THỐNG KÊ"}
-                          {aiSuggestion.data.count > 1 && ` · TB ${aiSuggestion.data.count} ngày`}
+                          {aiSuggestionData.aiGenerated ? "GEMINI AI" : "THỐNG KÊ"}
+                          {aiSuggestionData.count > 1 && ` · TB ${aiSuggestionData.count} ngày`}
                         </span>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setRateForm((f) => ({ ...f, price: String(aiSuggestion.data.suggestedPrice) }))}
+                        onClick={() => setRateForm((f) => ({ ...f, price: String(aiSuggestionData.suggestedPrice) }))}
                         style={{
                           padding: "5px 14px", borderRadius: 8, border: "none",
                           background: calAiScheme.accent, color: "#fff",
@@ -1381,7 +1254,7 @@ export default function PartnerCalendar() {
 
                     {/* Row 2: suggested price */}
                     <div style={{ padding: "8px 16px 4px", fontSize: 22, fontWeight: 900, color: calAiScheme.accent, lineHeight: 1.1 }}>
-                      {formatCurrency(aiSuggestion.data.suggestedPrice)}
+                      {formatCurrency(aiSuggestionData.suggestedPrice)}
                     </div>
 
                     {/* Row 3: range + demand label */}
@@ -1390,7 +1263,7 @@ export default function PartnerCalendar() {
                       display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
                     }}>
                       <span style={{ fontSize: 12, color: calAiScheme.textDark, opacity: 0.75 }}>
-                        Khoảng: {formatCompactCurrency(aiSuggestion.data.priceLow)} – {formatCompactCurrency(aiSuggestion.data.priceHigh)}
+                        Khoảng: {formatCompactCurrency(aiSuggestionData.priceLow)} – {formatCompactCurrency(aiSuggestionData.priceHigh)}
                       </span>
                       <span style={{
                         padding: "2px 8px", borderRadius: 99,

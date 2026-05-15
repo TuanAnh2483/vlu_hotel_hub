@@ -199,6 +199,101 @@
   box-shadow: 0 4px 12px rgba(190, 30, 46, 0.12);
 }
 
+/* ── Province Combobox ────────────────────────────────────────────────── */
+
+.province-combobox {
+  width: 100%;
+}
+
+.province-combobox-input {
+  cursor: text;
+}
+
+.province-combobox-input::placeholder {
+  color: #aaa;
+}
+
+/* Portal dropdown — rendered in document.body, position: fixed */
+.province-dropdown {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  border: 1px solid #f0e8e9;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #f0e8e9 transparent;
+}
+
+.province-dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+
+.province-dropdown::-webkit-scrollbar-thumb {
+  background: #f0e8e9;
+  border-radius: 4px;
+}
+
+.province-dropdown-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #999;
+  text-transform: uppercase;
+  border-bottom: 1px solid #f9f1f2;
+  margin-bottom: 2px;
+}
+
+.province-dropdown-item {
+  padding: 9px 14px;
+  font-size: 13.5px;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.province-dropdown-item:hover,
+.province-dropdown-item.active {
+  background: #fdf0f1;
+  color: #BE1E2E;
+}
+
+.province-dropdown-item.has-hotels {
+  font-weight: 500;
+}
+
+.province-hotel-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #BE1E2E;
+  flex-shrink: 0;
+}
+
+.province-dot-placeholder {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+}
+
+.province-dropdown-empty {
+  padding: 18px 14px;
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+}
+
 /* ── Sections ─────────────────────────────────────────────────────────── */
 
 .customer-homepage-section {
@@ -717,5 +812,63 @@
 
   .customer-homepage-destination-card {
     flex-basis: 190px;
+  }
+}
+
+@media (max-width: 480px) {
+  .customer-homepage-hero-title {
+    font-size: 24px;
+  }
+
+  .customer-homepage-hero-subtitle {
+    font-size: 13px;
+  }
+
+  /* Each search field takes full width on small phones */
+  .customer-homepage-field {
+    flex: 1 1 100% !important;
+    border-right: none;
+    border-bottom: 1px solid #f0e8e9;
+  }
+
+  /* Anchor pushed down further because fields stack taller */
+  .customer-homepage-searchbar-anchor {
+    bottom: -180px;
+  }
+
+  /* Section padding adjusted for extra searchbar height */
+  .customer-homepage-section {
+    padding: 200px 14px 24px;
+  }
+
+  .customer-homepage-section + .customer-homepage-section {
+    padding-top: 14px;
+  }
+
+  /* Destination mosaic grid becomes a scrollable strip */
+  .customer-homepage-dest-grid {
+    flex-direction: column;
+    height: auto;
+    gap: 10px;
+  }
+
+  .customer-homepage-dest-secondary-col {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 10px;
+  }
+
+  .customer-homepage-dest-card {
+    min-height: 160px;
+  }
+
+  /* Back button full width */
+  .customer-homepage-back-btn {
+    width: 100%;
+  }
+
+  /* Results padding */
+  .customer-homepage-results-header {
+    padding: 0 14px;
   }
 }

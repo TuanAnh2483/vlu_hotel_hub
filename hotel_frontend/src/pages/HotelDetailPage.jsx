@@ -2,20 +2,16 @@ import { useState, useEffect } from "react";
 import { C } from "../components/auth/AuthShared";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { hotelService } from "../services/hotelService";
-import { reviewService } from "../services/reviewService";
+import { useHotelDetail, useAvailableRooms } from "../hooks/useHotelQueries";
+import { useHotelReviews } from "../hooks/useReviewQueries";
 import { useLang } from "../contexts/LanguageContext";
 
 const PLACEHOLDER = "repeating-conic-gradient(#ccc 0% 25%,#e8e8e8 0% 50%) 0 0/20px 20px";
 
 function ReviewSection({ hotelId, rating, ratingCount }) {
   const { t } = useLang();
-  const [reviews, setReviews] = useState([]);
+  const { data: reviews = [] } = useHotelReviews(hotelId);
   const [showAll, setShowAll] = useState(false);
-
-  useEffect(() => {
-    if (hotelId) reviewService.getHotelReviews(hotelId).then(setReviews);
-  }, [hotelId]);
 
   const displayed = showAll ? reviews : reviews.slice(0, 2);
 
@@ -108,39 +104,32 @@ const DESC_LIMIT = 260;
 export default function HotelDetailPage({ navigate, params = {}, user, onLogout, requireAuth }) {
   const { t } = useLang();
   const ratingLabel = useRatingLabel();
-  const [hotel, setHotel]               = useState(null);
-  const [rooms, setRooms]               = useState([]);
-  const [loadingHotel, setLoadingHotel] = useState(true);
-  const [loadingRooms, setLoadingRooms] = useState(true);
   const [imgIdx, setImgIdx]             = useState(0);
   const [expanded, setExpanded]         = useState(false);
   const [checkin, setCheckin]           = useState(params.checkIn  || params.checkin  || "");
   const [checkout, setCheckout]         = useState(params.checkOut || params.checkout || "");
   const [guests, setGuests]             = useState(params.guests || 2);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  // Committed room search params — only update when user clicks Refresh
+  const [roomParams, setRoomParams]     = useState({
+    checkIn: params.checkIn || params.checkin || "",
+    checkOut: params.checkOut || params.checkout || "",
+    adults: params.guests || 2,
+    rooms: 1,
+  });
 
-  useEffect(() => {
-    setLoadingHotel(true);
-    hotelService.getHotelDetail(params.hotelId)
-      .then(setHotel)
-      .finally(() => setLoadingHotel(false));
-  }, [params.hotelId]);
+  const { data: hotel, isLoading: loadingHotel } = useHotelDetail(params.hotelId);
+  const { data: rooms = [], isLoading: loadingRooms, refetch: refetchRooms } =
+    useAvailableRooms(params.hotelId, roomParams);
 
   useEffect(() => {
     setImgIdx(0);
   }, [hotel?.id]);
 
-  const fetchRooms = (ci, co, g) => {
-    setLoadingRooms(true);
+  const refreshRooms = () => {
     setSelectedRoom(null);
-    hotelService.getAvailableRooms(params.hotelId, { checkIn: ci, checkOut: co, adults: g, rooms: 1 })
-      .then(setRooms)
-      .finally(() => setLoadingRooms(false));
+    setRoomParams({ checkIn: checkin, checkOut: checkout, adults: guests, rooms: 1 });
   };
-
-  useEffect(() => {
-    fetchRooms(checkin, checkout, guests);
-  }, [params.hotelId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nights = (() => {
     if (!checkin || !checkout) return 1;
@@ -294,7 +283,7 @@ export default function HotelDetailPage({ navigate, params = {}, user, onLogout,
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.dark }}>{t("detail_rooms")}</h2>
               <button
-                onClick={() => fetchRooms(checkin, checkout, guests)}
+                onClick={refreshRooms}
                 style={{ background: "none", border: `1px solid ${C.primary}`, color: C.primary, borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
               >
                 {t("detail_refresh")}

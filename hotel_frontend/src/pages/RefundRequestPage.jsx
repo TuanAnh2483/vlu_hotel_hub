@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { C } from "../components/auth/AuthShared";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { bookingService } from "../services/bookingService";
+import { useBookingDetail, useCreateRefundRequest } from "../hooks/useBookingQueries";
 import { 
   ChevronLeft, ArrowLeft, DollarSign, AlertCircle, 
   CheckCircle2, Clock, Info, HelpCircle, FileText,
@@ -32,35 +32,25 @@ function fmtDate(s) {
 export default function RefundRequestPage({ navigate, user, onLogout }) {
   const { bookingId } = useParams();
 
-  const [booking, setBooking]     = useState(null);
-  const [reason, setReason]       = useState("");
-  const [note, setNote]           = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess]     = useState(false);
-  const [error, setError]         = useState("");
-  const [loading, setLoading]     = useState(true);
+  const [reason, setReason]   = useState("");
+  const [note, setNote]       = useState("");
+  const [success, setSuccess] = useState(false);
+  const [error, setError]     = useState("");
 
-  useEffect(() => {
-    setLoading(true);
-    setError("");
-    bookingService.getBooking(bookingId)
-      .then(setBooking)
-      .catch((e) => setError(e.message || "Không thể tải dữ liệu đặt phòng."))
-      .finally(() => setLoading(false));
-  }, [bookingId]);
+  const { data: booking, isLoading: loading } = useBookingDetail(bookingId);
+  const createRefund = useCreateRefundRequest();
+  const submitting   = createRefund.isPending;
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!reason) { setError("Vui lòng chọn lý do để chúng tôi có thể hỗ trợ bạn tốt nhất."); return; }
     setError("");
-    setSubmitting(true);
-    try {
-      await bookingService.createRefundRequest(bookingId, { reason, note });
-      setSuccess(true);
-    } catch (e) {
-      setError(e.message || "Không thể gửi yêu cầu hoàn tiền.");
-    } finally {
-      setSubmitting(false);
-    }
+    createRefund.mutate(
+      { bookingId, reason, note },
+      {
+        onSuccess: () => setSuccess(true),
+        onError:   (e) => setError(e.message || "Không thể gửi yêu cầu hoàn tiền."),
+      }
+    );
   };
 
   if (!user) {

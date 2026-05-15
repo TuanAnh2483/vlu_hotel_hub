@@ -1,74 +1,69 @@
 import { useState } from "react";
-import { S, EyeOpen, EyeOff, SubmitButton, ImgSide } from "../components/auth/AuthShared";
-import { authService } from "../services/authService";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { C, S, EyeOpen, EyeOff, SubmitButton, ImgSide } from "../components/auth/AuthShared";
+import { useRegister } from "../hooks/useAuthMutations";
 import { useLang } from "../contexts/LanguageContext";
 
-const errStyle = { color: "#BE1E2E", fontSize: 12, margin: "4px 0 0" };
-
-function validateField(key, value, form, t) {
-  if (key === "email") {
-    if (!value) return t("register_err_email_empty");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t("register_err_email_invalid");
-  }
-  if (key === "pw") {
-    if (!value) return t("register_err_pw_empty");
-    if (value.length < 8) return t("register_err_pw_min");
-    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(value)) return t("register_err_pw_format");
-  }
-  if (key === "cf" && value !== form.pw) {
-    return t("register_err_cf");
-  }
-  return "";
-}
+const errStyle = { color: C.primary, fontSize: 12, margin: "4px 0 0" };
+const inputErr = { border: "1.5px solid #BE1E2E", background: "#fff5f5" };
 
 export default function Register({ setPage }) {
   const { t } = useLang();
   const [showPw, setShowPw] = useState(false);
   const [showCf, setShowCf] = useState(false);
   const [agreed, setAgreed] = useState(false);
-  const [f, setF] = useState({ email: "", pw: "", cf: "" });
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [serverError, setServerError] = useState("");
   const [registeredEmail, setRegisteredEmail] = useState("");
 
-  const upd = (k) => (e) => {
-    const val = e.target.value;
-    const next = { ...f, [k]: val };
-    setF(next);
-    setFieldErrors((prev) => ({ ...prev, [k]: validateField(k, val, next, t) }));
+  const schema = z.object({
+    email: z.string()
+      .min(1, t("register_err_email_empty"))
+      .email(t("register_err_email_invalid")),
+    pw: z.string()
+      .min(1, t("register_err_pw_empty"))
+      .min(8, t("register_err_pw_min"))
+      .regex(/(?=.*[A-Za-z])(?=.*\d)/, t("register_err_pw_format")),
+    cf: z.string().min(1, t("register_err_cf")),
+  }).refine((data) => data.pw === data.cf, {
+    message: t("register_err_cf"),
+    path: ["cf"],
+  });
+
+  const {
+    register,
+    handleSubmit,
+    setFocus,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(schema),
+    mode: "onBlur",
+  });
+
+  const registerMutation = useRegister();
+
+  const onSubmit = (data) => {
+    if (!agreed) return;
+    setServerError("");
+    registerMutation.mutate(
+      { email: data.email, password: data.pw, confirmPassword: data.cf },
+      {
+        onSuccess: (result) => {
+          if (result?.verificationToken) {
+            window.location.href = `/verify-email?token=${encodeURIComponent(result.verificationToken)}`;
+            return;
+          }
+          setRegisteredEmail(data.email);
+        },
+        onError: (err) => setServerError(err.message),
+      },
+    );
   };
 
-  const handleRegister = async () => {
-    const errs = {
-      email: validateField("email", f.email, f, t),
-      pw:    validateField("pw",    f.pw,    f, t),
-      cf:    validateField("cf",    f.cf,    f, t),
-    };
-    setFieldErrors(errs);
-    if (Object.values(errs).some(Boolean)) return;
-
-    setError("");
-    setLoading(true);
-    try {
-      const result = await authService.register({
-        email: f.email,
-        password: f.pw,
-        confirmPassword: f.cf,
-      });
-      // Dev mode: backend exposes token directly → auto-verify without email
-      if (result?.verificationToken) {
-        window.location.href = `/verify-email?token=${encodeURIComponent(result.verificationToken)}`;
-        return;
-      }
-      setRegisteredEmail(f.email);
-      setF({ email: "", pw: "", cf: "" });
-      setAgreed(false);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const onValidationError = (errs) => {
+    const first = Object.keys(errs)[0];
+    if (first) setFocus(first);
   };
 
   if (registeredEmail) {
@@ -79,7 +74,6 @@ export default function Register({ setPage }) {
           <div style={S.formBox}>
             <h1 style={S.title}>{t("register_success_title")}</h1>
             <p style={S.sub}>{t("register_success_sub").replace("{email}", registeredEmail)}</p>
-
             <div style={{
               background: "#eafaf1", border: "1.5px solid #27ae60",
               borderRadius: 10, padding: "16px 18px", marginBottom: 22,
@@ -87,7 +81,6 @@ export default function Register({ setPage }) {
             }}>
               {t("register_success_note")}
             </div>
-
             <SubmitButton label={t("register_goto_login")} onClick={() => setPage("login")} />
             <p style={S.bottomTxt}>
               {t("register_no_email")}{" "}
@@ -109,7 +102,7 @@ export default function Register({ setPage }) {
     <div style={S.authWrap}>
       <ImgSide />
       <div style={S.formSide}>
-        <div style={S.formBox}>
+        <form style={S.formBox} onSubmit={handleSubmit(onSubmit, onValidationError)} noValidate>
           <h1 style={S.title}>{t("register_title")}</h1>
           <p style={S.sub}>{t("register_sub")}</p>
 
@@ -117,63 +110,66 @@ export default function Register({ setPage }) {
             <div>
               <label style={S.label}>{t("register_email_label")}</label>
               <input
-                style={S.input}
+                {...register("email")}
+                style={{ ...S.input, ...(errors.email ? inputErr : {}) }}
                 type="email"
                 placeholder="example@email.com"
-                value={f.email}
-                onChange={upd("email")}
+                autoComplete="email"
               />
-              {fieldErrors.email && <p style={errStyle}>{fieldErrors.email}</p>}
+              {errors.email && <p style={errStyle}>{errors.email.message}</p>}
             </div>
 
             <div>
               <label style={S.label}>{t("auth_password")}</label>
               <div style={S.inputWrap}>
                 <input
-                  style={S.input}
+                  {...register("pw")}
+                  style={{ ...S.input, ...(errors.pw ? inputErr : {}) }}
                   type={showPw ? "text" : "password"}
                   placeholder={t("register_pw_ph")}
-                  value={f.pw}
-                  onChange={upd("pw")}
+                  autoComplete="new-password"
                 />
                 <button type="button" style={S.eyeBtn} onClick={() => setShowPw(!showPw)}>
                   {showPw ? <EyeOff /> : <EyeOpen />}
                 </button>
               </div>
-              {fieldErrors.pw && <p style={errStyle}>{fieldErrors.pw}</p>}
+              {errors.pw && <p style={errStyle}>{errors.pw.message}</p>}
             </div>
 
             <div>
               <label style={S.label}>{t("auth_password_cf")}</label>
               <div style={S.inputWrap}>
                 <input
-                  style={S.input}
+                  {...register("cf")}
+                  style={{ ...S.input, ...(errors.cf ? inputErr : {}) }}
                   type={showCf ? "text" : "password"}
                   placeholder={t("register_cf_ph")}
-                  value={f.cf}
-                  onChange={upd("cf")}
+                  autoComplete="new-password"
                 />
                 <button type="button" style={S.eyeBtn} onClick={() => setShowCf(!showCf)}>
                   {showCf ? <EyeOff /> : <EyeOpen />}
                 </button>
               </div>
-              {fieldErrors.cf && <p style={errStyle}>{fieldErrors.cf}</p>}
+              {errors.cf && <p style={errStyle}>{errors.cf.message}</p>}
             </div>
           </div>
 
           <div style={{ ...S.checkRow, marginTop: 0 }}>
             <input style={S.checkBox} type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
             <span style={S.checkLabel}>
-              {t("register_terms")} <a style={S.redLink}>{t("register_terms_link")}</a> {t("register_privacy")} <a style={S.redLink}>{t("register_privacy_link")}</a>
+              {t("register_terms")} <a style={S.redLink}>{t("register_terms_link")}</a>{" "}
+              {t("register_privacy")} <a style={S.redLink}>{t("register_privacy_link")}</a>
             </span>
           </div>
 
-          {error && <p style={{ color: "#BE1E2E", fontSize: 13, marginBottom: 10, textAlign: "center" }}>{error}</p>}
+          {serverError && (
+            <p style={{ ...errStyle, textAlign: "center", marginBottom: 10, fontSize: 13 }}>{serverError}</p>
+          )}
 
           <SubmitButton
-            label={loading ? t("register_loading") : t("register_submit")}
-            onClick={handleRegister}
-            disabled={!f.email || !f.pw || !f.cf || !agreed || loading || Object.values(fieldErrors).some(Boolean)}
+            label={registerMutation.isPending ? t("register_loading") : t("register_submit")}
+            onClick={undefined}
+            disabled={!agreed || registerMutation.isPending}
           />
 
           <p style={S.bottomTxt}>
@@ -186,7 +182,7 @@ export default function Register({ setPage }) {
               {t("register_login_link")}
             </button>
           </p>
-        </div>
+        </form>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { C } from "../auth/AuthShared";
-import { hotelService } from "../../services/hotelService";
+import { useHotelSearch } from "../../hooks/useHotelQueries";
 import { useLang } from "../../contexts/LanguageContext";
+import "./HotelSearchResults.css";
 
 function Img({ src, alt = "", h = 160, r = 0 }) {
   const [failed, setFailed] = useState(false);
@@ -192,9 +193,10 @@ function FilterSidebar({ filters, onChange, onApply }) {
 function HotelResultCard({ hotel, onView }) {
   const { t } = useLang();
   return (
-    <div 
-      style={{ 
-        background: "#fff", borderRadius: 24, display: "flex", border: "1px solid #f1f5f9", 
+    <div
+      className="hsr-result-card"
+      style={{
+        background: "#fff", borderRadius: 24, display: "flex", border: "1px solid #f1f5f9",
         overflow: "hidden", marginBottom: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
         transition: "all 0.3s ease", cursor: "pointer"
       }}
@@ -202,13 +204,13 @@ function HotelResultCard({ hotel, onView }) {
       onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.03)"; }}
       onClick={onView}
     >
-      <div style={{ flex: "0 0 260px", position: "relative" }}>
+      <div className="hsr-result-card-image" style={{ flex: "0 0 260px", position: "relative" }}>
         <Img src={hotel.imageUrl} alt={hotel.name} h={240} />
         <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,0.9)", backdropFilter: "blur(4px)", padding: "4px 10px", borderRadius: 100, fontSize: 12, fontWeight: 800, color: "#1e293b", display: "flex", alignItems: "center", gap: 4 }}>
            <span style={{ color: "#f59e0b" }}>★</span> {hotel.rating?.toFixed(1) || "5.0"}
         </div>
       </div>
-      <div style={{ flex: 1, padding: "24px 32px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <div className="hsr-result-card-body" style={{ flex: 1, padding: "24px 32px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
             <h3 style={{ fontSize: 20, fontWeight: 900, color: "#1e293b", margin: 0 }}>{hotel.name}</h3>
@@ -272,7 +274,7 @@ function Pagination({ page, totalPages, onPage }) {
 function FeaturedBanner() {
   const { t } = useLang();
   return (
-    <div style={{
+    <div className="hsr-featured-banner" style={{
       borderRadius: 20, marginBottom: 20, overflow: "hidden", position: "relative",
       background: "linear-gradient(120deg, #BE1E2E 0%, #7a0d1a 50%, #3d0009 100%)",
       padding: "36px 40px",
@@ -386,26 +388,20 @@ export default function HotelSearchResults({ navigate, params = {}, hideBanner =
   const containerRef = useRef(null);
   const [filters, setFilters] = useState(() => createDefaultFilters(params));
   const [appliedFilters, setAppliedFilters] = useState(() => createDefaultFilters(params));
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const [page, setPage] = useState(1);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
-  const fetchResults = useCallback((pg) => {
-    setLoading(true);
-    hotelService.searchHotels({ ...params, ...filtersToSearchParams(appliedFilters), page: pg, size: 10 })
-      .then(({ hotels, totalPages: tp, totalItems: ti }) => {
-        setResults(hotels);
-        setTotalPages(tp);
-        setTotalItems(ti || hotels.length);
-      })
-      .finally(() => setLoading(false));
-  }, [appliedFilters, params]);
+  const searchParams = {
+    ...params,
+    ...filtersToSearchParams(appliedFilters),
+    page,
+    size: 10,
+  };
 
-  useEffect(() => {
-    fetchResults(page);
-  }, [page, fetchResults]);
+  const { data: searchResult, isLoading: loading } = useHotelSearch(searchParams);
+  const results    = searchResult?.hotels     ?? [];
+  const totalPages = searchResult?.totalPages ?? 1;
+  const totalItems = searchResult?.totalItems ?? 0;
 
   useEffect(() => {
     const next = createDefaultFilters(params);
@@ -435,13 +431,50 @@ export default function HotelSearchResults({ navigate, params = {}, hideBanner =
     setPage(1);
   };
 
+  const activeFilterCount = [
+    appliedFilters.hotelTypes,
+    appliedFilters.stars,
+    appliedFilters.roomCategories,
+    ...(appliedFilters.hotelAmenities || []),
+    ...(appliedFilters.roomAmenities || []),
+  ].filter(Boolean).length + (appliedFilters.priceMax < 10000000 ? 1 : 0);
+
   return (
-    <div ref={containerRef} style={{ maxWidth: 1300, margin: "0 auto", width: "100%", padding: "24px 40px 40px", display: "flex", gap: 24, flex: 1, boxSizing: "border-box" }}>
-      <div style={{ flex: "0 0 280px" }}>
+    <div ref={containerRef} className="hsr-container" style={{ maxWidth: 1300, margin: "0 auto", width: "100%", padding: "24px 40px 40px", display: "flex", gap: 24, flex: 1, boxSizing: "border-box" }}>
+
+      {/* ── Mobile filter overlay + drawer ───────────────────────────── */}
+      {filterDrawerOpen && (
+        <div className="hsr-filter-overlay visible" onClick={() => setFilterDrawerOpen(false)} />
+      )}
+      <div className={`hsr-filter-drawer${filterDrawerOpen ? " open" : ""}`}>
+        <div className="hsr-filter-drawer-header">
+          <h3 className="hsr-filter-drawer-title">{t("filter_title")}</h3>
+          <button className="hsr-filter-close-btn" onClick={() => setFilterDrawerOpen(false)}>×</button>
+        </div>
+        <FilterSidebar
+          filters={filters}
+          onChange={setFilters}
+          onApply={() => { handleApplyFilters(); setFilterDrawerOpen(false); }}
+        />
+      </div>
+
+      {/* ── Desktop sidebar ───────────────────────────────────────────── */}
+      <div className="hsr-sidebar" style={{ flex: "0 0 280px" }}>
         <FilterSidebar filters={filters} onChange={setFilters} onApply={handleApplyFilters} />
       </div>
 
+      {/* ── Results area ─────────────────────────────────────────────── */}
       <div style={{ flex: 1, minWidth: 0 }}>
+
+        {/* Mobile filter toggle button */}
+        <button className="hsr-filter-toggle" onClick={() => setFilterDrawerOpen(true)}>
+          <FIcon k="layers" size={15} color="#BE1E2E" />
+          {t("filter_title")}
+          {activeFilterCount > 0 && (
+            <span className="hsr-filter-badge">{activeFilterCount}</span>
+          )}
+        </button>
+
         {!hideBanner && !params.province && !params.checkIn && !params.hotelTypes && <FeaturedBanner />}
 
         <SearchSummaryBar params={params} totalItems={totalItems} loading={loading} />

@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { C } from "../components/auth/AuthShared";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { bookingService } from "../services/bookingService";
+import {
+  useBookingDetail,
+  usePaymentHistory,
+  useRefundRequest,
+  useCancelBooking,
+} from "../hooks/useBookingQueries";
 import { useLang } from "../contexts/LanguageContext";
 import {
   AlertCircle,
@@ -100,93 +105,26 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
   const refundStatusMap  = useRefundStatusMap();
 
   const { bookingId, hotelName } = params;
-  const [booking, setBooking] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [cancelling, setCancelling] = useState(false);
-  const [payments, setPayments] = useState([]);
-  const [paymentsLoading, setPaymentsLoading] = useState(false);
-  const [paymentsError, setPaymentsError] = useState("");
-  const [refundRequest, setRefundRequest] = useState(null);
-  const [refundLoading, setRefundLoading] = useState(false);
-  const [refundError, setRefundError] = useState("");
+  const [cancelError, setCancelError] = useState("");
 
-  useEffect(() => {
-    let ignore = false;
+  const { data: booking,       isLoading: loading,         error: bookingError    } = useBookingDetail(bookingId);
+  const { data: rawPayments,   isLoading: paymentsLoading, error: paymentsErr     } = usePaymentHistory(bookingId);
+  const { data: refundRequest, isLoading: refundLoading,   error: refundErr       } = useRefundRequest(bookingId);
 
-    if (!bookingId) {
-      setError(t("bkd_load_error"));
-      setLoading(false);
-      return undefined;
-    }
+  const cancelBooking = useCancelBooking();
 
-    setLoading(true);
-    setPayments([]);
-    setRefundRequest(null);
-    setPaymentsError("");
-    setRefundError("");
-    bookingService.getBooking(bookingId)
-      .then((data) => {
-        if (ignore) return;
-        setBooking(data || null);
-        setError("");
-      })
-      .catch((err) => {
-        if (ignore) return;
-        setBooking(null);
-        setError(err.message || t("bkd_load_error"));
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
+  const payments     = Array.isArray(rawPayments) ? rawPayments : [];
+  const error        = bookingError?.message || cancelError || "";
+  const paymentsError = paymentsErr?.message || "";
+  const refundError  = refundErr?.message    || "";
+  const cancelling   = cancelBooking.isPending;
 
-    setPaymentsLoading(true);
-    bookingService.getPaymentHistory(bookingId)
-      .then((data) => {
-        if (ignore) return;
-        setPayments(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => {
-        if (ignore) return;
-        setPayments([]);
-        setPaymentsError(err.message || t("bkd_payment_loading"));
-      })
-      .finally(() => {
-        if (!ignore) setPaymentsLoading(false);
-      });
-
-    setRefundLoading(true);
-    bookingService.getRefundRequest(bookingId)
-      .then((data) => {
-        if (ignore) return;
-        setRefundRequest(data || null);
-      })
-      .catch((err) => {
-        if (ignore) return;
-        setRefundRequest(null);
-        setRefundError(err.message || t("bkd_refund_loading"));
-      })
-      .finally(() => {
-        if (!ignore) setRefundLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [bookingId]);
-
-  const handleCancel = async () => {
+  const handleCancel = () => {
     if (!booking || !window.confirm(t("bkd_confirm_cancel"))) return;
-    setCancelling(true);
-    try {
-      const updated = await bookingService.cancelBooking(booking.bookingId);
-      setBooking(updated);
-      setError("");
-    } catch (err) {
-      setError(err.message || t("bkd_load_error"));
-    } finally {
-      setCancelling(false);
-    }
+    setCancelError("");
+    cancelBooking.mutate(booking.bookingId, {
+      onError: (err) => setCancelError(err.message || t("bkd_load_error")),
+    });
   };
 
   if (!user) {

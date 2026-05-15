@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { MessageSquareReply, Star } from "lucide-react";
-import { partnerService } from "../../services/partnerService";
+import { useMyHotels, usePartnerReviews, useReplyReview } from "../../hooks/usePartnerQueries";
 import { PageHeader, Card, Btn, Modal, Table } from "../../components/admin/AdminLayout";
 import { useLang } from "../../contexts/LanguageContext";
 
@@ -35,47 +35,20 @@ export default function PartnerReviews() {
     { value: "false", label: t("pt_rv_reply_no") },
     { value: "true", label: t("pt_rv_reply_yes") },
   ];
-  const [hotels, setHotels] = useState([]);
-  const [reviews, setReviews] = useState([]);
   const [filters, setFilters] = useState({ hotelId: "", rating: "", hasReply: "" });
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedReview, setSelectedReview] = useState(null);
   const [reply, setReply] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    partnerService.getMyHotels()
-      .then((data) => setHotels(Array.isArray(data) ? data : []))
-      .catch(() => setHotels([]));
-  }, []);
-
-  useEffect(() => {
-    let ignore = false;
-    async function loadReviews() {
-      setLoading(true);
-      setError("");
-      try {
-        const data = await partnerService.getReviews({
-          hotelId: filters.hotelId || undefined,
-          rating: filters.rating || undefined,
-          hasReply: filters.hasReply === "" ? undefined : filters.hasReply,
-        });
-        if (!ignore) setReviews(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (!ignore) {
-          setReviews([]);
-          setError(e.message || "Không thể tải đánh giá.");
-        }
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    }
-    loadReviews();
-    return () => {
-      ignore = true;
-    };
-  }, [filters]);
+  const { data: hotels = [] } = useMyHotels();
+  const { data: reviewsData, isLoading: loading, error: loadError } = usePartnerReviews({
+    hotelId: filters.hotelId || undefined,
+    rating: filters.rating || undefined,
+    hasReply: filters.hasReply === "" ? undefined : filters.hasReply,
+  });
+  const reviews = Array.isArray(reviewsData) ? reviewsData : [];
+  const replyReview = useReplyReview();
+  const saving = replyReview.isPending;
 
   const hotelsById = useMemo(() => new Map(hotels.map((hotel) => [Number(hotel.id), hotel])), [hotels]);
 
@@ -85,20 +58,16 @@ export default function PartnerReviews() {
     setError("");
   }
 
-  async function handleSaveReply() {
+  function handleSaveReply() {
     if (!selectedReview || !reply.trim()) return;
-    setSaving(true);
     setError("");
-    try {
-      const updated = await partnerService.replyReview(selectedReview.reviewId, reply.trim());
-      setReviews((items) => items.map((item) => item.reviewId === updated.reviewId ? updated : item));
-      setSelectedReview(null);
-      setReply("");
-    } catch (e) {
-      setError(e.message || "Không thể lưu phản hồi.");
-    } finally {
-      setSaving(false);
-    }
+    replyReview.mutate(
+      { reviewId: selectedReview.reviewId, reply: reply.trim() },
+      {
+        onSuccess: () => { setSelectedReview(null); setReply(""); },
+        onError: (e) => setError(e.message || "Không thể lưu phản hồi."),
+      },
+    );
   }
 
   return (
@@ -153,9 +122,9 @@ export default function PartnerReviews() {
         </div>
       </Card>
 
-      {error && (
+      {(error || loadError) && (
         <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, color: "#b91c1c", fontSize: 13, fontWeight: 700, marginBottom: 16, padding: "12px 14px" }}>
-          {error}
+          {error || loadError?.message || "Không thể tải đánh giá."}
         </div>
       )}
 

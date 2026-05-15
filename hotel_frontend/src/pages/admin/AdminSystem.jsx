@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
 import AdminLayout, { AP, PageHeader, Card, Badge, Btn, Table } from "../../components/admin/AdminLayout";
-import { adminService } from "../../services/adminService";
+import { useAdminSystem } from "../../hooks/useAdminQueries";
 import { useLang } from "../../contexts/LanguageContext";
 
 const ERROR_COLORS = {
@@ -21,13 +20,7 @@ const SERVICES = [
 
 export default function AdminSystem({ navigate, user, onLogout }) {
   const { t } = useLang();
-  const [data, setData]         = useState(null);
-  const [loading, setLoading]   = useState(true);
-
-  useEffect(() => {
-    adminService.getSystemData()
-      .then(d => { setData(d); setLoading(false); });
-  }, []);
+  const { data, isLoading: loading } = useAdminSystem();
 
   const handleResolve = async flagId => {
     navigate("admin-refunds", { refundId: flagId });

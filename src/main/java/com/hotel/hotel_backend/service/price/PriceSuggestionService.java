@@ -19,6 +19,7 @@ import com.hotel.hotel_backend.repository.RoomRepository;
 import com.hotel.hotel_backend.service.SecurityService;
 import com.hotel.hotel_backend.service.price.ai.AiReasonService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class PriceSuggestionService {
 
     // =====================================================
@@ -83,6 +85,8 @@ public class PriceSuggestionService {
         // =================================================
         // validate input
         // =================================================
+
+        log.debug("[PriceSuggestion] roomId={} from={} to={}", roomId, from, to);
 
         pricingValidator.validateDateRange(
                 from,
@@ -143,6 +147,11 @@ public class PriceSuggestionService {
         PricingModel pricingModel =
                 modelTrainingService.getOrDefault(roomId);
 
+        log.debug("[PriceSuggestion] roomId={} model: round={} hasSufficientData={} agg={} acceptance={}%",
+                roomId, pricingModel.getTrainingRound(), pricingModel.isHasSufficientData(),
+                String.format("%.3f", pricingModel.getPriceAggressiveness()),
+                String.format("%.1f", pricingModel.getLastAcceptanceRate() * 100));
+
         // =================================================
         // occupancy forecast
         // =================================================
@@ -168,6 +177,9 @@ public class PriceSuggestionService {
                         ratesByDate
                 );
 
+        log.debug("[PriceSuggestion] roomId={} forecasts={} bookings={}",
+                roomId, forecasts.size(), allBookings.size());
+
         // =================================================
         // AI reasoning
         // =================================================
@@ -189,6 +201,10 @@ public class PriceSuggestionService {
                         pricing,
                         aiResults
                 );
+
+        long aiCount = items.stream().filter(PriceSuggestionItem::aiGenerated).count();
+        log.info("[PriceSuggestion] roomId={} items={} aiGenerated={} from={} to={}",
+                roomId, items.size(), aiCount, from, to);
 
         // =================================================
         // final response

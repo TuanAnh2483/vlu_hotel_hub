@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { C } from "../components/auth/AuthShared";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { hotelService } from "../services/hotelService";
+import { useHotelLocations, useHotelSearch, useDestinationCounts } from "../hooks/useHotelQueries";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { useLang } from "../contexts/LanguageContext";
 import {
@@ -11,6 +11,9 @@ import {
   IMG_DESTINATIONS,
   IMG_PROPERTY_TYPES,
 } from "../assets/images/index.js";
+import ProvinceCombobox from "../components/ui/ProvinceCombobox";
+import { useVietnamProvinces, useVietnamDistricts } from "../hooks/useVietnamAdmin";
+import { stripProvincePrefix, nfc } from "../services/vnAdminService";
 import "../styles/pages/customer/HomePage.css";
 
 const PLACEHOLDER_BG = "repeating-conic-gradient(#ccc 0% 25%,#e8e8e8 0% 50%) 0 0/20px 20px";
@@ -23,10 +26,6 @@ const DESTINATION_CARDS = [
   { id: "phu-quoc",  name: "Phú Quốc",  searchKey: "Phú Quốc",  image: IMG_DESTINATIONS.PHU_QUOC  },
 ];
 const DEFAULT_DESTINATIONS = DESTINATION_CARDS;
-const FALLBACK_LOCATION_OPTIONS = [
-  { province: "Hà Nội", districts: ["Quận Hoàn Kiếm", "Quận Ba Đình", "Quận Đống Đa", "Quận Cầu Giấy"] },
-  ...DESTINATION_CARDS.map((item) => ({ province: item.searchKey, districts: [] })),
-];
 const PROPERTY_TYPE_CARDS = [
   { id: "HOTEL",     image: IMG_PROPERTY_TYPES.HOTEL     },
   { id: "APARTMENT", image: IMG_PROPERTY_TYPES.APARTMENT },
@@ -98,7 +97,9 @@ const Field = ({ iconKey, label, children, flex }) => (
 
 function SearchBar({ initial = {}, onSearch }) {
   const { t } = useLang();
-  const [locations, setLocations] = useState(FALLBACK_LOCATION_OPTIONS);
+  const { data: fetchedLocations } = useHotelLocations();
+  const { data: adminProvinces } = useVietnamProvinces();
+
   const [q, setQ] = useState({
     province: initial.province || "",
     district: initial.district || "",
@@ -110,13 +111,45 @@ function SearchBar({ initial = {}, onSearch }) {
   });
   const [provinceErr, setProvinceErr] = useState(false);
   const [searchErr, setSearchErr] = useState("");
-  const selectedLocation = locations.find((item) => item.province === q.province);
-  const districtOptions = selectedLocation?.districts || [];
+
+  // Province code — set by combobox on select, or derived from admin list for URL-prefilled province
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState(null);
+  const effectiveProvinceCode = useMemo(() => {
+    if (selectedProvinceCode) return selectedProvinceCode;
+    if (!q.province || !adminProvinces) return null;
+    const match = adminProvinces.find(
+      (p) => stripProvincePrefix(p.name) === nfc(q.province) || nfc(p.name) === nfc(q.province)
+    );
+    return match?.code ?? null;
+  }, [selectedProvinceCode, q.province, adminProvinces]);
+  // Districts from hotel backend — try both stripped and full province names
+  const hotelLocation = useMemo(
+    () => fetchedLocations?.find((l) => {
+      const lNorm = nfc(l.province);
+      const qNorm = nfc(q.province);
+      return lNorm === qNorm || stripProvincePrefix(lNorm) === qNorm;
+    }),
+    [fetchedLocations, q.province]
+  );
+  const hotelDistricts = hotelLocation?.districts || [];
+
+  // Always fetch complete district list from admin API for the selected province
+  const { data: adminDistrictData, isLoading: adminDistrictLoading } = useVietnamDistricts(effectiveProvinceCode);
+  const adminDistricts = useMemo(
+    () => (adminDistrictData || []).map((d) => d.name),
+    [adminDistrictData]
+  );
+
+  // Admin districts are primary (complete list); fall back to hotel districts before admin loads
+  const districtOptions = adminDistricts.length > 0 ? adminDistricts : hotelDistricts;
+  const districtLoading = q.province && effectiveProvinceCode != null && adminDistrictLoading;
   const visibleDistrictOptions = q.district && !districtOptions.includes(q.district)
     ? [q.district, ...districtOptions]
     : districtOptions;
 
+  // Reset province code whenever initial props change (e.g. user navigates back with different URL)
   useEffect(() => {
+    setSelectedProvinceCode(null);
     setQ({
       province: initial.province || "",
       district: initial.district || "",
@@ -138,32 +171,15 @@ function SearchBar({ initial = {}, onSearch }) {
     initial.hotelTypes,
   ]);
 
-  useEffect(() => {
-    let active = true;
-    hotelService.getLocations().then((items) => {
-      if (active && items.length > 0) {
-        setLocations(items);
-      }
-    });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const upd = k => e => {
     if (k === "province") setProvinceErr(false);
     setSearchErr("");
     setQ(p => ({ ...p, [k]: e.target.value }));
   };
-  const updateProvince = e => {
-    setProvinceErr(false);
-    setSearchErr("");
-    setQ(p => ({ ...p, province: e.target.value, district: "" }));
-  };
   const clearAll = () => {
     setProvinceErr(false);
     setSearchErr("");
+    setSelectedProvinceCode(null);
     setQ({ province: "", district: "", checkIn: "", checkOut: "", guests: "", rooms: "", hotelTypes: "" });
   };
   const hasData = !!(q.province || q.district || q.checkIn || q.checkOut || q.guests || q.rooms || q.hotelTypes);
@@ -193,21 +209,26 @@ function SearchBar({ initial = {}, onSearch }) {
     <div className="customer-homepage-searchbar-wrap">
       <div className={`customer-homepage-searchbar${provinceErr || searchErr ? " has-error" : ""}`}>
         <Field iconKey="pin" label={t("search_province")}>
-          <select className="customer-homepage-field-input customer-homepage-field-select" value={q.province} onChange={updateProvince}>
-            <option value="">{t("search_prov_ph")}</option>
-            {locations.map((item) => (
-              <option key={item.province} value={item.province}>{item.province}</option>
-            ))}
-          </select>
+          <ProvinceCombobox
+            value={q.province}
+            onChange={({ name, code }) => {
+              setProvinceErr(false);
+              setSearchErr("");
+              setSelectedProvinceCode(code);
+              setQ((p) => ({ ...p, province: name, district: "" }));
+            }}
+            hotelLocations={fetchedLocations || []}
+            placeholder={t("search_prov_ph")}
+          />
         </Field>
         <Field iconKey="map" label={t("search_district")}>
           <select
             className="customer-homepage-field-input customer-homepage-field-select"
             value={q.district}
             onChange={upd("district")}
-            disabled={!q.province || visibleDistrictOptions.length === 0}
+            disabled={!q.province || districtLoading || (visibleDistrictOptions.length === 0)}
           >
-            <option value="">{t("search_dist_ph")}</option>
+            <option value="">{districtLoading ? "Đang tải quận/huyện..." : t("search_dist_ph")}</option>
             {visibleDistrictOptions.map((district) => (
               <option key={district} value={district}>{district}</option>
             ))}
@@ -326,9 +347,6 @@ function PropertyTypeCard({ item, onNavigate }) {
 
 export default function HomePage({ navigate, user, onLogout }) {
   const { t } = useLang();
-  const [hotels, setHotels] = useState([]);
-  const [destinations, setDestinations] = useState(DEFAULT_DESTINATIONS);
-  const [loadingHotels, setLoadingHotels] = useState(true);
   const [searchQuery, setSearchQuery] = useState(() => {
     try {
       const saved = sessionStorage.getItem("homeSearch");
@@ -337,6 +355,16 @@ export default function HomePage({ navigate, user, onLogout }) {
       return null;
     }
   });
+
+  const { data: searchResult, isLoading: loadingHotels } = useHotelSearch(
+    { size: 8, sort: "recommended" }
+  );
+  const hotels = searchResult?.hotels?.slice(0, 8) ?? [];
+
+  const destinationResults = useDestinationCounts(DESTINATION_CARDS);
+  const destinations = destinationResults.every((r) => r.data)
+    ? destinationResults.map((r) => r.data)
+    : DEFAULT_DESTINATIONS;
 
   const handleSearch = (q) => {
     setSearchQuery(q);
@@ -359,29 +387,6 @@ export default function HomePage({ navigate, user, onLogout }) {
     sessionStorage.setItem("homeSearch", JSON.stringify(next));
     navigate("hotels", { ...next, sort: "recommended" });
   };
-
-  useEffect(() => {
-    hotelService.searchHotels({ size: 8, sort: "recommended" })
-      .then(({ hotels: h }) => setHotels(h.slice(0, 8)))
-      .catch(() => {})
-      .finally(() => setLoadingHotels(false));
-
-    Promise.all(
-      DESTINATION_CARDS.map((destination) =>
-        hotelService.searchHotels({ province: destination.searchKey, size: 3, sort: "recommended" })
-          .then(({ totalItems }) => ({
-            ...destination,
-            count: totalItems > 0 ? totalItems : 0,
-          }))
-          .catch(() => destination)
-      )
-    ).then((items) => {
-      const nextDestinations = items.filter(Boolean);
-      if (nextDestinations.length > 0) {
-        setDestinations(nextDestinations);
-      }
-    });
-  }, []);
 
   return (
     <div className="customer-homepage">

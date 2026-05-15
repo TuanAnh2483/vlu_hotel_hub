@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AdminLayout, {
   AP, PageHeader, Card, Btn, SearchInput, Table, Modal,
 } from "../../components/admin/AdminLayout";
-import { adminService } from "../../services/adminService";
+import { useAdminReviews, useDeleteAdminReview } from "../../hooks/useAdminQueries";
 import { Star, Trash2, Eye } from "lucide-react";
 import { useLang } from "../../contexts/LanguageContext";
 
@@ -27,35 +27,21 @@ const RATING_LABEL   = { "": "Tất cả", "5": "⭐⭐⭐⭐⭐", "4": "⭐⭐�
 
 export default function AdminReviews({ navigate, user, onLogout }) {
   const { t } = useLang();
-  const [reviews, setReviews]       = useState([]);
   const [search, setSearch]         = useState("");
   const [ratingFilter, setRating]   = useState("");
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState("");
-  const [deleting, setDeleting]     = useState(null);
   const [detailModal, setDetail]    = useState(null);
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  const load = async () => {
-    setLoading(true); setError("");
-    try {
-      const data = await adminService.getReviews();
-      setReviews(Array.isArray(data) ? data : []);
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  };
+  const { data: reviewsData, isLoading: loading, error } = useAdminReviews();
+  const reviews = Array.isArray(reviewsData) ? reviewsData : [];
+  const deleteReview = useDeleteAdminReview();
 
-  useEffect(() => { load(); }, []);
-
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (!window.confirm(t("adm_rv_del_confirm"))) return;
-    setDeleting(id);
-    try {
-      await adminService.deleteReview(id);
-      setReviews(prev => prev.filter(r => r.id !== id));
-    } catch (e) { alert(e.message); }
-    setDeleting(null);
+    deleteReview.mutate(id, {
+      onError: (e) => alert(e.message),
+    });
   };
 
   const filtered = reviews.filter(r => {
@@ -139,7 +125,7 @@ export default function AdminReviews({ navigate, user, onLogout }) {
 
         {error && (
           <div style={{ background: "#ffebee", color: "#c62828", padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
-            ⚠️ {error}
+            ⚠️ {error.message}
           </div>
         )}
 
@@ -167,9 +153,9 @@ export default function AdminReviews({ navigate, user, onLogout }) {
                 <Btn small variant="action" onClick={() => setDetail(r)}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}><Eye size={13} /> {t("adm_view")}</div>
                 </Btn>
-                <Btn small variant="danger" disabled={deleting === r.id} onClick={() => handleDelete(r.id)}>
+                <Btn small variant="danger" disabled={deleteReview.isPending && deleteReview.variables === r.id} onClick={() => handleDelete(r.id)}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <Trash2 size={13} /> {deleting === r.id ? t("adm_rv_deleting") : t("adm_rv_delete")}
+                    <Trash2 size={13} /> {deleteReview.isPending && deleteReview.variables === r.id ? t("adm_rv_deleting") : t("adm_rv_delete")}
                   </div>
                 </Btn>
               </div>,
@@ -235,7 +221,7 @@ export default function AdminReviews({ navigate, user, onLogout }) {
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
-            <Btn variant="danger" disabled={deleting === detailModal.id} onClick={() => { handleDelete(detailModal.id); setDetail(null); }}>
+            <Btn variant="danger" disabled={deleteReview.isPending && deleteReview.variables === detailModal.id} onClick={() => { handleDelete(detailModal.id); setDetail(null); }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Trash2 size={14} /> {t("adm_rv_del_btn")}</div>
             </Btn>
             <Btn variant="ghost" onClick={() => setDetail(null)}>{t("adm_close")}</Btn>

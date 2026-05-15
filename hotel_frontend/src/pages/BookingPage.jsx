@@ -2,7 +2,7 @@ import { useState } from "react";
 import { C, ActionBtn } from "../components/auth/AuthShared";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { bookingService } from "../services/bookingService";
+import { useCreateBooking } from "../hooks/useBookingQueries";
 import { useLang } from "../contexts/LanguageContext";
 import { ChevronLeft } from "lucide-react";
 import "../styles/pages/BookingPage.css";
@@ -124,9 +124,10 @@ export default function BookingPage({ navigate, user, params = {}, onLogout }) {
   const { hotelId, hotelName, room, checkin, checkout, guests = 1, nights = 1 } = params;
 
   const [contact, setContact] = useState({ fullName: "", email: user?.email || "", phone: "" });
-  const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
   const [focusField, setFocusField] = useState(null);
+
+  const createBooking = useCreateBooking();
 
   const upd = k => e => setContact(p => ({ ...p, [k]: e.target.value }));
 
@@ -140,22 +141,21 @@ export default function BookingPage({ navigate, user, params = {}, onLogout }) {
   const handleConfirm = async () => {
     if (!hasContact) { setError("Vui lòng điền đầy đủ thông tin liên hệ."); return; }
     if (!room?.id)   { setError("Thiếu thông tin phòng. Vui lòng quay lại và chọn phòng."); return; }
-    setLoading(true);
     setError("");
-    try {
-      const res = await bookingService.createBooking({
+    createBooking.mutate(
+      {
         checkIn:  checkin,
         checkOut: checkout,
         rooms:    [{ roomTypeId: room.id, quantity: 1 }],
         contact:  { fullName: contact.fullName, email: contact.email, phone: contact.phone },
-      });
-      navigate("booking-detail", { bookingId: res.bookingId, hotelName });
-    } catch (err) {
-      setError(err.message || "Đặt phòng thất bại. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
+      },
+      {
+        onSuccess: (res) => navigate("booking-detail", { bookingId: res.bookingId, hotelName }),
+        onError:   (err) => setError(err.message || "Đặt phòng thất bại. Vui lòng thử lại."),
+      }
+    );
   };
+  const loading = createBooking.isPending;
 
   const inp = focused => ({
     border: `1.5px solid ${focused ? P : "#e8e8e8"}`,

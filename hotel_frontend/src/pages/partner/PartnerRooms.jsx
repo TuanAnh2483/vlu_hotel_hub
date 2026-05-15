@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
+import {
+  useMyHotels, useCatalogOptions, usePartnerRooms, partnerKeys,
+  useCreateRoom, useUpdateRoom, useDeleteRoom,
+  useUploadRoomImages, useDeleteRoomImage,
+} from "../../hooks/usePartnerQueries";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { partnerService } from "../../services/partnerService";
+import { partnerService } from "../../services/partnerService"; // only used in queryClient.fetchQuery below
 import {
   createExistingImageItems,
   createPendingImageItems,
@@ -370,65 +376,49 @@ export default function PartnerRooms() {
   const [sp] = useSearchParams();
   const initialHotelId = sp.get("hotelId") || "";
 
-  const [hotels, setHotels] = useState([]);
+  const queryClient = useQueryClient();
   const [selectedHotelId, setSelectedHotelId] = useState(initialHotelId);
-  const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [modal, setModal] = useState(null);
+  const [modal, setModal]       = useState(null);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-  const [page, setPage] = useState(1);
-  const [catalog, setCatalog] = useState({
-    roomCategories: CATEGORIES.map(c => c.key),
-    bedTypes: BED_TYPES.map(b => b.key),
-    roomAmenities: ROOM_AMENITIES.map(a => a.key),
-  });
-  const [error, setError] = useState("");
-  const [searchText, setSearchText] = useState("");
+  const [form, setForm]         = useState(EMPTY_FORM);
+  const [saving, setSaving]     = useState(false);
+  const [page, setPage]         = useState(1);
+  const [error, setError]       = useState("");
+  const [searchText, setSearchText]     = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [roomAiSuggestion, setRoomAiSuggestion] = useState({ loading: false, data: null });
   const pageSize = 8;
 
-  useEffect(() => {
-    partnerService.getMyHotels()
-      .then(data => {
-        const list = Array.isArray(data) ? data : [];
-        setHotels(list);
-        if (!initialHotelId && list.length > 0) setSelectedHotelId(String(list[0].id));
-      })
-      .catch((e) => {
-        setHotels([]);
-        setSelectedHotelId("");
-        setError(e.message || "Không thể tải danh sách khách sạn.");
-      });
+  const { data: hotelData }   = useMyHotels();
+  const { data: catalogData } = useCatalogOptions();
+  const { data: roomData, isLoading: loading } = usePartnerRooms(selectedHotelId);
 
-    partnerService.getCatalogOptions()
-      .then((data) => setCatalog({
-        roomCategories: Array.isArray(data?.roomCategories) && data.roomCategories.length ? data.roomCategories : CATEGORIES.map(c => c.key),
-        bedTypes: Array.isArray(data?.bedTypes) && data.bedTypes.length ? data.bedTypes : BED_TYPES.map(b => b.key),
-        roomAmenities: Array.isArray(data?.roomAmenities) && data.roomAmenities.length ? data.roomAmenities : ROOM_AMENITIES.map(a => a.key),
-      }))
-      .catch(() => {});
-  }, [initialHotelId]);
+  const createRoom     = useCreateRoom();
+  const updateRoom     = useUpdateRoom();
+  const deleteRoomMut  = useDeleteRoom();
+  const uploadImages   = useUploadRoomImages();
+  const deleteImageMut = useDeleteRoomImage();
+
+  const hotels = Array.isArray(hotelData) ? hotelData : [];
+  const rooms  = Array.isArray(roomData)  ? roomData  : [];
+
+  // Auto-select first hotel when list loads
+  useEffect(() => {
+    if (!initialHotelId && hotels.length > 0 && !selectedHotelId) {
+      setSelectedHotelId(String(hotels[0].id));
+    }
+  }, [hotels, initialHotelId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const catalog = {
+    roomCategories: Array.isArray(catalogData?.roomCategories) && catalogData.roomCategories.length ? catalogData.roomCategories : CATEGORIES.map(c => c.key),
+    bedTypes:       Array.isArray(catalogData?.bedTypes)       && catalogData.bedTypes.length       ? catalogData.bedTypes       : BED_TYPES.map(b => b.key),
+    roomAmenities:  Array.isArray(catalogData?.roomAmenities)  && catalogData.roomAmenities.length  ? catalogData.roomAmenities  : ROOM_AMENITIES.map(a => a.key),
+  };
 
   const categoryOptions = catalog.roomCategories.map((key) => CATEGORIES.find((item) => item.key === key) || { key, label: key });
   const bedTypeOptions = catalog.bedTypes.map((key) => BED_TYPES.find((item) => item.key === key) || { key, label: key });
   const roomAmenityOptions = catalog.roomAmenities
     .map((key) => ROOM_AMENITIES.find((item) => item.key === key) || { key, label: key, Icon: Box });
-
-  useEffect(() => {
-    if (!selectedHotelId) { setRooms([]); return; }
-    setLoading(true);
-    setError("");
-    partnerService.getRooms(selectedHotelId)
-      .then(data => setRooms(Array.isArray(data) ? data : []))
-      .catch((e) => {
-        setRooms([]);
-        setError(e.message || "Không thể tải dữ liệu phòng.");
-      })
-      .finally(() => setLoading(false));
-  }, [selectedHotelId]);
 
   const filteredRooms = rooms.filter(r => {
     const matchCategory = !categoryFilter || r.roomCategory === categoryFilter;
@@ -459,20 +449,23 @@ export default function PartnerRooms() {
     });
     setModal("edit");
     setRoomAiSuggestion({ loading: true, data: null });
-    try {
-      const today = new Date();
-      const end = new Date(today.getTime() + 14 * 86400000);
-      const result = await partnerService.getPriceSuggestions(room.id, toIsoDateLocal(today), toIsoDateLocal(end));
-      const items = (result?.items || []).filter((i) => i.suggestedPrice > 0);
+    const today = new Date();
+    const end = new Date(today.getTime() + 14 * 86400000);
+    const from = toIsoDateLocal(today);
+    const to   = toIsoDateLocal(end);
+    queryClient.fetchQuery({
+      queryKey: partnerKeys.priceSugs(room.id, from, to),
+      queryFn:  () => partnerService.getPriceSuggestions(room.id, from, to),
+      staleTime: 5 * 60 * 1000,
+    }).then(result => {
+      const items = (result?.items || []).filter(i => i.suggestedPrice > 0);
       if (items.length > 0) {
         const avg = Math.round(items.reduce((s, i) => s + i.suggestedPrice, 0) / items.length / 1000) * 1000;
-        setRoomAiSuggestion({ loading: false, data: { suggestedPrice: avg, aiGenerated: items.some((i) => i.aiGenerated) } });
+        setRoomAiSuggestion({ loading: false, data: { suggestedPrice: avg, aiGenerated: items.some(i => i.aiGenerated) } });
       } else {
         setRoomAiSuggestion({ loading: false, data: null });
       }
-    } catch {
-      setRoomAiSuggestion({ loading: false, data: null });
-    }
+    }).catch(() => setRoomAiSuggestion({ loading: false, data: null }));
   }
   function openDelete(room) { setSelected(room); setModal("delete"); }
 
@@ -484,14 +477,6 @@ export default function PartnerRooms() {
     setRoomAiSuggestion({ loading: false, data: null });
   }
 
-  async function deleteRemovedRoomImages(room, remainingImageUrls) {
-    const remaining = new Set(remainingImageUrls);
-    const removed = getRoomImageUrls(room).filter((url) => !remaining.has(url));
-    for (const imageUrl of removed) {
-      await partnerService.deleteRoomImage(room.id, imageUrl);
-    }
-  }
-
   async function handleSave() {
     setSaving(true);
     try {
@@ -501,27 +486,31 @@ export default function PartnerRooms() {
       const payload = { ...form, imageUrls: existingImageUrls };
       delete payload.images;
       if (!payload.description) payload.description = null;
+
       if (modal === "add") {
-        const created = await partnerService.createRoom(selectedHotelId, payload);
+        const created = await createRoom.mutateAsync({ hotelId: selectedHotelId, ...payload });
         if (pendingFiles.length > 0) {
-          await partnerService.uploadRoomImages(created.id, pendingFiles);
+          await uploadImages.mutateAsync({ roomId: created.id, hotelId: selectedHotelId, files: pendingFiles });
         }
       } else {
-        await partnerService.updateRoom(selected.id, {
-          ...payload,
-          imageUrls: getRoomImageUrls(selected),
+        await updateRoom.mutateAsync({
+          roomId: selected.id, hotelId: selectedHotelId,
+          ...payload, imageUrls: getRoomImageUrls(selected),
         });
-        await deleteRemovedRoomImages(selected, existingImageUrls);
+        // Delete removed images
+        const remaining = new Set(existingImageUrls);
+        const removed = getRoomImageUrls(selected).filter(url => !remaining.has(url));
+        for (const imageUrl of removed) {
+          await deleteImageMut.mutateAsync({ roomId: selected.id, hotelId: selectedHotelId, imageUrl });
+        }
         if (pendingFiles.length > 0) {
-          await partnerService.uploadRoomImages(selected.id, pendingFiles);
+          await uploadImages.mutateAsync({ roomId: selected.id, hotelId: selectedHotelId, files: pendingFiles });
         }
       }
       revokePendingImageUrls(images);
       setModal(null);
       setSelected(null);
       setForm({ ...EMPTY_FORM, images: [] });
-      const data = await partnerService.getRooms(selectedHotelId);
-      setRooms(Array.isArray(data) ? data : []);
     } catch (e) { alert(e.message); }
     finally { setSaving(false); }
   }
@@ -529,10 +518,8 @@ export default function PartnerRooms() {
   async function handleDelete() {
     setSaving(true);
     try {
-      await partnerService.deleteRoom(selected.id);
+      await deleteRoomMut.mutateAsync({ roomId: selected.id, hotelId: selectedHotelId });
       setModal(null);
-      const data = await partnerService.getRooms(selectedHotelId);
-      setRooms(Array.isArray(data) ? data : []);
     } catch (e) { alert(e.message); }
     finally { setSaving(false); }
   }

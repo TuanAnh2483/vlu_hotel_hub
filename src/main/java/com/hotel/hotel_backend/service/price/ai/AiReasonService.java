@@ -27,10 +27,12 @@ public class AiReasonService {
     private final RuleBasedReasonService fallbackService;
     private final PriceFeedbackRepository feedbackRepository;
 
+    // Cache key: roomId + first date + count (stable across calls for the same room+range)
     @Cacheable(
-        value  = "geminiPricing",
-        key    = "#room.id + '_' + #pricing.hashCode()",
-        unless = "#result.isEmpty()"
+        value     = "geminiPricing",
+        key       = "#room.id + '_' + #pricing.get(0).date() + '_' + #pricing.size()",
+        condition = "!#pricing.isEmpty()",
+        unless    = "#result.isEmpty()"
     )
     @Transactional(readOnly = true)
     public Map<String, AiPricingResult> generateReasons(

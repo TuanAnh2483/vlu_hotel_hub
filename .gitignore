@@ -34,5 +34,31 @@ build/
 
 ### Local secrets ###
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 !.env.example
 !.env.*.example
+
+### User uploaded files ###
+uploads/
+
+### Frontend build output ###
+hotel_frontend/node_modules/
+hotel_frontend/dist/
+hotel_frontend/.env
+hotel_frontend/.env.local
+hotel_frontend/.env.development
+hotel_frontend/.env.production
+
+### Logs ###
+logs/
+*.log
+
+### Claude Code IDE files (not project source) ###
+.claude/
+.agents/
+skills-lock.json
+/package.json
+/package-lock.json

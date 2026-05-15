@@ -70,33 +70,35 @@ public class PricingModel {
     @Column(nullable = false)
     private boolean hasSufficientData = false;   // đủ data để đưa ra đề xuất giá
 
-//     ── Logistic Regression: P(partner chấp nhận giá) ────────────────────────
-//    Features: [bias, priceUplift, isWeekend, isHoliday, sin(dow), cos(dow)] // dow = day of week (0-6) để capture pattern theo tuần
-//    Dùng để tìm giá tối ưu: argmax_{price} (price × P(accept | price, context))
-//    Loss: binary cross-entropy | Optimizer: gradient descent + L2 regularization
-//    bias 	:  base probability xác xuất
-//    priceUplift  :  giá tăng bao nhiêu
-//    isWeekend	 :  có phải cuối tuần
-//    isHoliday	: có phải lễ
-//    sin/cos(dow)	: pattern theo thứ trong tuần
-
+    // ── Logistic Regression: P(partner chấp nhận giá) ────────────────────────
+    // Features (8): [bias, priceUplift, isWeekend, isHoliday,
+    //                sin(dow), cos(dow), leadTimeNorm, seasonalDeviation]
+    //
+    // leadTimeNorm   : thời gian đặt trước, chuẩn hóa 0–1 (0=đặt sát ngày, 1=60 ngày)
+    // seasonalDev    : độ lệch mùa vụ so với 1.0 (e.g. Tết=+0.18, thấp điểm=-0.08)
+    //
+    // Mục tiêu: argmax_{price} (price × P(accept | price, context))
 
     @Column(nullable = false)
-    private double lrW0 = 0.5;  // bias — prior 50%+ accept
+    private double lrW0 = 0.5;   // bias — xác suất nền ~50%
     @Column(nullable = false)
-    private double lrW1 = -2.0;  // priceUplift — giá cao → ít chấp nhận
+    private double lrW1 = -2.0;  // priceUplift — giá cao → ít chấp nhận hơn
     @Column(nullable = false)
-    private double lrW2 = 0.3;  // isWeekend  // cuối tuần → dễ chấp nhận hơn
+    private double lrW2 = 0.3;   // isWeekend — cuối tuần → dễ chấp nhận hơn
     @Column(nullable = false)
-    private double lrW3 = 0.5;  // isHoliday   // ngày lễ → dễ chấp nhận hơn
+    private double lrW3 = 0.5;   // isHoliday — ngày lễ → dễ chấp nhận hơn
     @Column(nullable = false)
-    private double lrW4 = 0.0;  // sin(dayOfWeek) // khởi tạo trung lập (chưa học)
+    private double lrW4 = 0.0;   // sin(dayOfWeek) — pattern theo thứ trong tuần
     @Column(nullable = false)
-    private double lrW5 = 0.0;  // cos(dayOfWeek)  // khởi tạo trung lập (chưa học)
+    private double lrW5 = 0.0;   // cos(dayOfWeek)
     @Column(nullable = false)
-    private int lrTrainingSamples = 0; // số phản hồi đã dùng để huấn luyện LR
+    private double lrW6 = 0.2;   // leadTimeNorm — đặt sớm → chấp nhận giá cao hơn
     @Column(nullable = false)
-    private double lrLastLoss = 1.0; // cross-entropy (thấp = tốt)
+    private double lrW7 = 0.5;   // seasonalDeviation — mùa cao điểm → chấp nhận tốt hơn
+    @Column(nullable = false)
+    private int lrTrainingSamples = 0;
+    @Column(nullable = false)
+    private double lrLastLoss = 1.0; // cross-entropy loss (thấp = tốt)
     @Column(nullable = false)
     private boolean lrReady = false;
 }

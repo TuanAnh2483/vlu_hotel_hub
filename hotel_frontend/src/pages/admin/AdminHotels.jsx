@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AdminLayout, {
   AP, PageHeader, Card, Badge, Btn, SearchInput,
   Table, Modal, FormField, Input, Select,
 } from "../../components/admin/AdminLayout";
-import { adminService } from "../../services/adminService";
+import { useAdminHotels, useUpdateAdminHotel, useDeleteAdminHotel } from "../../hooks/useAdminQueries";
 import { useLang } from "../../contexts/LanguageContext";
 
 const HOTEL_TYPES = ["HOTEL", "RESORT", "VILLA", "APARTMENT", "HOMESTAY", "HOSTEL", "GUEST_HOUSE"];
@@ -15,21 +15,19 @@ export default function AdminHotels({ navigate, user, onLogout }) {
     HOTEL: t("pt_type_hotel"), RESORT: t("pt_type_resort"), VILLA: t("pt_type_villa"),
     APARTMENT: t("pt_type_apartment"), HOMESTAY: t("pt_type_homestay"), HOSTEL: t("pt_type_hostel"), GUEST_HOUSE: t("pt_type_guesthouse"),
   };
-  const [hotels, setHotels]   = useState([]);
   const [search, setSearch]   = useState("");
-  const [loading, setLoading] = useState(true);
   const [modal, setModal]     = useState(null);
   const [selected, setSelected] = useState(null);
   const [form, setForm]       = useState(EMPTY_FORM);
-  const [acting, setActing]   = useState(false);
   const [error, setError]     = useState("");
   const [filterType, setFilterType] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  useEffect(() => {
-    adminService.getHotels().then(data => { setHotels(data); setLoading(false); });
-  }, []);
+  const { data: hotels = [], isLoading: loading } = useAdminHotels();
+  const updateHotel = useUpdateAdminHotel();
+  const deleteHotel = useDeleteAdminHotel();
+  const acting = updateHotel.isPending || deleteHotel.isPending;
 
   const filtered = hotels.filter(h => {
     const q = search.toLowerCase();
@@ -47,33 +45,21 @@ export default function AdminHotels({ navigate, user, onLogout }) {
   };
   const openDel = h => { setError(""); setSelected(h); setModal("delete"); };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!form.name.trim() || !form.province.trim() || !form.district.trim() || !form.address.trim() || !selected?.id) return;
-    setActing(true);
     setError("");
-    try {
-      const updated = await adminService.updateHotel(selected.id, form);
-      setHotels(prev => prev.map(h => h.id === selected.id ? updated : h));
-      setModal(null);
-    } catch (e) {
-      setError(e.message || t("adm_hotels_err_update"));
-    } finally {
-      setActing(false);
-    }
+    updateHotel.mutate({ hotelId: selected.id, ...form }, {
+      onSuccess: () => setModal(null),
+      onError: (e) => setError(e.message || t("adm_hotels_err_update")),
+    });
   };
 
-  const handleDelete = async () => {
-    setActing(true);
+  const handleDelete = () => {
     setError("");
-    try {
-      await adminService.deleteHotel(selected.id);
-      setHotels(prev => prev.filter(h => h.id !== selected.id));
-      setModal(null);
-    } catch (e) {
-      setError(e.message || t("adm_hotels_err_delete"));
-    } finally {
-      setActing(false);
-    }
+    deleteHotel.mutate(selected.id, {
+      onSuccess: () => setModal(null),
+      onError: (e) => setError(e.message || t("adm_hotels_err_delete")),
+    });
   };
 
   const counts = {

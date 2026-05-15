@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import AdminLayout, {
   AP, PageHeader, Card, Badge, Btn, SearchInput,
   Table, Modal, FormField, Input, Select,
 } from "../../components/admin/AdminLayout";
-import { adminService } from "../../services/adminService";
+import { useAdminUsers, useToggleUserStatus, useCreateAdminUser } from "../../hooks/useAdminQueries";
 import { Users, CheckCircle, Lock, Unlock, Handshake } from "lucide-react";
 import { useLang } from "../../contexts/LanguageContext";
 import "../../styles/pages/admin/AdminUsers.css";
@@ -28,27 +28,19 @@ export default function AdminUsers({ navigate, user, onLogout }) {
     }
     return "";
   }
-  const [users, setUsers]       = useState([]);
   const [search, setSearch]     = useState("");
-  const [loading, setLoading]   = useState(true);
-  const [toggling, setToggling] = useState(null);
   const [modal, setModal]       = useState(false);
   const [form, setForm]         = useState(EMPTY_FORM);
-  const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const avatarInputRef = useRef(null);
 
-  const load = async () => {
-    setLoading(true);
-    const data = await adminService.getUsers();
-    setUsers(data);
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
+  const { data: users = [], isLoading: loading } = useAdminUsers(search);
+  const toggleStatus  = useToggleUserStatus();
+  const createUser    = useCreateAdminUser();
+  const saving        = createUser.isPending;
 
   const filtered = users.filter(u =>
     !search || u.email.toLowerCase().includes(search.toLowerCase())
@@ -61,16 +53,13 @@ export default function AdminUsers({ navigate, user, onLogout }) {
     partners: users.filter(u => u.userType === "PARTNER").length,
   };
 
-  const handleToggle = async (userId) => {
-    setToggling(userId);
-    try {
-      const updated = await adminService.toggleUserStatus(userId);
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: updated.status } : u));
-    } catch (e) { alert(e.message); }
-    setToggling(null);
+  const handleToggle = (userId) => {
+    toggleStatus.mutate(userId, {
+      onError: (e) => alert(e.message),
+    });
   };
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     const errs = {
       email: validateField("email", form.email, form),
       password: validateField("password", form.password, form),
@@ -79,19 +68,14 @@ export default function AdminUsers({ navigate, user, onLogout }) {
     setFieldErrors(errs);
     if (Object.values(errs).some(Boolean)) return;
 
-    setSaving(true); setError("");
-    try {
-      const created = await adminService.createUser({
-        email: form.email,
-        password: form.password,
-        userType: form.userType
-      });
-      setUsers(prev => [created, ...prev]);
-      setModal(false); setForm(EMPTY_FORM); setFieldErrors({});
-    } catch (e) {
-      setError(e.message || t("adm_users_err_generic"));
-    }
-    setSaving(false);
+    setError("");
+    createUser.mutate(
+      { email: form.email, password: form.password, userType: form.userType },
+      {
+        onSuccess: () => { setModal(false); setForm(EMPTY_FORM); setFieldErrors({}); },
+        onError: (e) => setError(e.message || t("adm_users_err_generic")),
+      },
+    );
   };
 
   const upd = k => e => {
@@ -160,11 +144,11 @@ export default function AdminUsers({ navigate, user, onLogout }) {
               <Btn
                 small
                 variant="action"
-                disabled={toggling === u.id || u.userType === "ADMIN"}
+                disabled={toggleStatus.isPending && toggleStatus.variables === u.id || u.userType === "ADMIN"}
                 onClick={() => handleToggle(u.id)}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
-                  {toggling === u.id ? "..." : u.status === "ACTIVE" ? t("adm_users_lock") : t("adm_users_unlock")}
+                  {toggleStatus.isPending && toggleStatus.variables === u.id ? "..." : u.status === "ACTIVE" ? t("adm_users_lock") : t("adm_users_unlock")}
                 </div>
               </Btn>,
             ])}

@@ -1,12 +1,13 @@
 package com.hotel.hotel_backend.service.price.util;
 
-
 import com.hotel.hotel_backend.dto.OccupancyForecast;
 import com.hotel.hotel_backend.entity.PricingModel;
 import com.hotel.hotel_backend.service.price.ModelTrainingService;
+import com.hotel.hotel_backend.service.price.SeasonalPricingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
 
 import static com.hotel.hotel_backend.service.price.util.PricingUtils.roundK;
 
@@ -14,7 +15,8 @@ import static com.hotel.hotel_backend.service.price.util.PricingUtils.roundK;
 @RequiredArgsConstructor
 public class PricingFactorCalculator {
 
-    private final ModelTrainingService modelTrainingService;
+    private final ModelTrainingService  modelTrainingService;
+    private final SeasonalPricingService seasonalPricingService;
 
     public Long calculateSuggestedPrice(
             Long currentPrice,
@@ -76,13 +78,18 @@ public class PricingFactorCalculator {
 
         if (pricingModel.isLrReady()) {
 
+            double seasonalFactor = seasonalPricingService.getSeasonalFactor(
+                    LocalDate.parse(fc.date()), fc.holiday(), fc.weekend());
+
             Long lrPrice =
                     modelTrainingService.optimizePrice(
                             pricingModel,
                             basePrice,
                             fc.date(),
                             fc.weekend(),
-                            fc.holiday()
+                            fc.holiday(),
+                            fc.daysUntil(),
+                            seasonalFactor
                     );
 
             if (lrPrice != null) {

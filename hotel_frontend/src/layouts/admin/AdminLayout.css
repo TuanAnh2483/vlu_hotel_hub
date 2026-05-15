@@ -369,4 +369,23 @@
   .admin-menu-btn {
     display: flex;
   }
+
+  .admin-topbar {
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .admin-main {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-main {
+    padding: 12px 10px;
+  }
+
+  .admin-topbar-title {
+    font-size: 13px;
+  }
 }

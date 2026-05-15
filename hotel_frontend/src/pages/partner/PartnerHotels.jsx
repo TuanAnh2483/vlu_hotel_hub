@@ -1,6 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { partnerService } from "../../services/partnerService";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useMyHotels, useCatalogOptions, partnerKeys,
+  useCreateHotel, useUpdateHotel, useDeleteHotel,
+  useUploadHotelImages, useDeleteHotelImage,
+} from "../../hooks/usePartnerQueries";
 import {
   createExistingImageItems,
   createPendingImageItems,
@@ -185,40 +190,34 @@ export default function PartnerHotels() {
     { key: "RESTAURANT",  label: t("pt_am_restaurant"),  Icon: Utensils },
     { key: "PET_ALLOWED", label: t("pt_am_pet"),         Icon: Dog },
   ];
-  const [hotels, setHotels] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); 
+  const queryClient = useQueryClient();
+  const [modal, setModal]       = useState(null);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm]         = useState(EMPTY_FORM);
+  const [saving, setSaving]     = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(1);
-  const [catalog, setCatalog] = useState({ hotelTypes: HOTEL_TYPES, hotelAmenities: AMENITIES.map(a => a.key) });
-  const [error, setError] = useState("");
+  const [page, setPage]         = useState(1);
   const pageSize = 8;
 
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await partnerService.getMyHotels();
-      setHotels(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setHotels([]);
-      setError(e.message || "Không thể tải dữ liệu khách sạn.");
-    }
-    finally { setLoading(false); }
-  }
+  const { data: hotelData, isLoading: loading, error: queryError } = useMyHotels();
+  const { data: catalogData } = useCatalogOptions();
+  const error = queryError?.message || "";
 
-  useEffect(() => {
-    load();
-    partnerService.getCatalogOptions()
-      .then((data) => setCatalog({
-        hotelTypes: Array.isArray(data?.hotelTypes) && data.hotelTypes.length ? data.hotelTypes : HOTEL_TYPES,
-        hotelAmenities: Array.isArray(data?.hotelAmenities) && data.hotelAmenities.length ? data.hotelAmenities : AMENITIES.map(a => a.key),
-      }))
-      .catch(() => {});
-  }, []);
+  const createHotel      = useCreateHotel();
+  const updateHotel      = useUpdateHotel();
+  const deleteHotelMut   = useDeleteHotel();
+  const uploadImages     = useUploadHotelImages();
+  const deleteImageMut   = useDeleteHotelImage();
+
+  const hotels  = Array.isArray(hotelData) ? hotelData : [];
+  const catalog = {
+    hotelTypes:    Array.isArray(catalogData?.hotelTypes)    && catalogData.hotelTypes.length    ? catalogData.hotelTypes    : HOTEL_TYPES,
+    hotelAmenities: Array.isArray(catalogData?.hotelAmenities) && catalogData.hotelAmenities.length ? catalogData.hotelAmenities : AMENITIES.map(a => a.key),
+  };
+
+  function load() {
+    queryClient.invalidateQueries({ queryKey: partnerKeys.hotels() });
+  }
 
   const hotelTypeOptions = Array.isArray(catalog.hotelTypes) && catalog.hotelTypes.length ? catalog.hotelTypes : HOTEL_TYPES;
   const amenityOptions = AMENITIES.filter((amenity) => catalog.hotelAmenities?.includes(amenity.key));
@@ -254,14 +253,6 @@ export default function PartnerHotels() {
     setForm({ ...EMPTY_FORM, images: [] });
   }
 
-  async function deleteRemovedHotelImages(hotel, remainingImageUrls) {
-    const remaining = new Set(remainingImageUrls);
-    const removed = getHotelImageUrls(hotel).filter((url) => !remaining.has(url));
-    for (const imageUrl of removed) {
-      await partnerService.deleteHotelImage(hotel.id, imageUrl);
-    }
-  }
-
   async function handleSave() {
     setSaving(true);
     try {
@@ -270,19 +261,26 @@ export default function PartnerHotels() {
       const pendingFiles = pendingImageFilesFromItems(images);
       const payload = { ...form, imageUrls: existingImageUrls };
       delete payload.images;
+
       if (modal === "add") {
-        const created = await partnerService.createHotel(payload);
+        const created = await createHotel.mutateAsync(payload);
         if (pendingFiles.length > 0) {
-          await partnerService.uploadHotelImages(created.id, pendingFiles);
+          await uploadImages.mutateAsync({ id: created.id, files: pendingFiles });
         }
       } else {
-        await partnerService.updateHotel(selected.id, {
+        await updateHotel.mutateAsync({
+          id: selected.id,
           ...payload,
           imageUrls: getHotelImageUrls(selected),
         });
-        await deleteRemovedHotelImages(selected, existingImageUrls);
+        // Delete removed images
+        const remaining = new Set(existingImageUrls);
+        const removed = getHotelImageUrls(selected).filter(url => !remaining.has(url));
+        for (const imageUrl of removed) {
+          await deleteImageMut.mutateAsync({ id: selected.id, imageUrl });
+        }
         if (pendingFiles.length > 0) {
-          await partnerService.uploadHotelImages(selected.id, pendingFiles);
+          await uploadImages.mutateAsync({ id: selected.id, files: pendingFiles });
         }
       }
       revokePendingImageUrls(images);
@@ -297,7 +295,7 @@ export default function PartnerHotels() {
   async function handleDelete() {
     setSaving(true);
     try {
-      await partnerService.deleteHotel(selected.id);
+      await deleteHotelMut.mutateAsync(selected.id);
       setModal(null);
       load();
     } catch (e) { alert(e.message); }

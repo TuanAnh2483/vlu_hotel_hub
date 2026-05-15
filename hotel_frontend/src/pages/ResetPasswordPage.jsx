@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { C, S, SubmitButton, ImgSide } from "../components/auth/AuthShared";
-import { authService } from "../services/authService";
+import { useResetPassword } from "../hooks/useAuthMutations";
 import { useLang } from "../contexts/LanguageContext";
 
 export default function ResetPasswordPage({ setPage }) {
@@ -9,10 +9,11 @@ export default function ResetPasswordPage({ setPage }) {
   const [sp] = useSearchParams();
   const token = sp.get("token") || "";
 
-  const [form, setForm]       = useState({ password: "", confirm: "" });
-  const [loading, setLoading] = useState(false);
+  const [form, setForm]   = useState({ password: "", confirm: "" });
   const [success, setSuccess] = useState(false);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
+
+  const resetMutation = useResetPassword();
 
   const upd = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -26,37 +27,20 @@ export default function ResetPasswordPage({ setPage }) {
     return message || t("reset_err_generic");
   };
 
-  const handleReset = async () => {
+  const handleReset = () => {
     setError("");
-    if (!form.password || form.password.length < 8) {
-      setError(t("reset_err_min"));
-      return;
-    }
-    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(form.password)) {
-      setError(t("reset_err_format"));
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError(t("reset_err_cf"));
-      return;
-    }
-    if (!token) {
-      setError(t("reset_err_no_token"));
-      return;
-    }
-    setLoading(true);
-    try {
-      await authService.resetPassword({
-        token,
-        newPassword: form.password,
-        confirmPassword: form.confirm,
-      });
-      setSuccess(true);
-    } catch (err) {
-      setError(resetErrorMessage(err.message));
-    } finally {
-      setLoading(false);
-    }
+    if (!form.password || form.password.length < 8) { setError(t("reset_err_min")); return; }
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(form.password)) { setError(t("reset_err_format")); return; }
+    if (form.password !== form.confirm) { setError(t("reset_err_cf")); return; }
+    if (!token) { setError(t("reset_err_no_token")); return; }
+
+    resetMutation.mutate(
+      { token, newPassword: form.password, confirmPassword: form.confirm },
+      {
+        onSuccess: () => setSuccess(true),
+        onError: (err) => setError(resetErrorMessage(err.message)),
+      },
+    );
   };
 
   const inp = {
@@ -153,9 +137,9 @@ export default function ResetPasswordPage({ setPage }) {
           )}
 
           <SubmitButton
-            label={loading ? t("reset_loading") : t("reset_submit")}
+            label={resetMutation.isPending ? t("reset_loading") : t("reset_submit")}
             onClick={handleReset}
-            disabled={loading}
+            disabled={resetMutation.isPending}
           />
 
           <div style={{ textAlign: "center", marginTop: 18, fontSize: 13, color: "#888" }}>

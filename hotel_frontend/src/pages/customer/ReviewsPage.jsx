@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Calendar, Edit3, MessageSquare, Plus, Star, Trash2 } from "lucide-react";
-import { bookingService } from "../../services/bookingService";
-import { reviewService } from "../../services/reviewService";
+import { useMyBookings } from "../../hooks/useBookingQueries";
+import { useMyReviews, useCreateReview, useUpdateReview, useDeleteReview } from "../../hooks/useReviewQueries";
 import { useLang } from "../../contexts/LanguageContext";
 
 function fmtDate(value) {
@@ -28,49 +28,26 @@ function Stars({ value }) {
 
 export default function ReviewsPage() {
   const { t } = useLang();
-  const [reviews, setReviews] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deleting, setDeleting] = useState(null);
+  const [error, setError]           = useState("");
   const [reviewModal, setReviewModal] = useState(null);
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
-  const [saving, setSaving] = useState(false);
+  const [reviewForm, setReviewForm]  = useState({ rating: 5, comment: "" });
 
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const [reviewData, bookingData] = await Promise.all([
-        reviewService.getMyReviews(),
-        bookingService.getMyBookings(),
-      ]);
-      setReviews(Array.isArray(reviewData) ? reviewData : []);
-      setBookings(Array.isArray(bookingData) ? bookingData : []);
-    } catch (e) {
-      setError(e.message || t("rv_load_error"));
-      setReviews([]);
-      setBookings([]);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: reviews = [],  isLoading: reviewsLoading  } = useMyReviews();
+  const { data: bookings = [], isLoading: bookingsLoading } = useMyBookings();
 
-  useEffect(() => {
-    load();
-  }, []);
+  const loading   = reviewsLoading || bookingsLoading;
+  const delReview = useDeleteReview();
+  const crtReview = useCreateReview();
+  const updReview = useUpdateReview();
+  const saving    = crtReview.isPending || updReview.isPending;
+  const deleting  = delReview.variables ?? null;
 
-  async function handleDelete(reviewId) {
+  function handleDelete(reviewId) {
     if (!window.confirm(t("rv_confirm_delete"))) return;
-    setDeleting(reviewId);
-    try {
-      await reviewService.deleteReview(reviewId);
-      setReviews((items) => items.filter((item) => item.reviewId !== reviewId));
-    } catch (e) {
-      setError(e.message || t("rv_delete_error"));
-    } finally {
-      setDeleting(null);
-    }
+    setError("");
+    delReview.mutate(reviewId, {
+      onError: (e) => setError(e.message || t("rv_delete_error")),
+    });
   }
 
   function openCreateReview(booking) {
@@ -85,31 +62,26 @@ export default function ReviewsPage() {
     setError("");
   }
 
-  async function handleSaveReview() {
+  function handleSaveReview() {
     if (!reviewModal) return;
     const normalizedComment = reviewForm.comment.trim() || null;
-    setSaving(true);
     setError("");
-    try {
-      if (reviewModal.mode === "create") {
-        await reviewService.createReview({
-          bookingId: reviewModal.booking.bookingId,
-          rating: Number(reviewForm.rating),
-          comment: normalizedComment,
-        });
-      } else {
-        await reviewService.updateReview(reviewModal.review.reviewId, {
-          rating: Number(reviewForm.rating),
-          comment: normalizedComment,
-        });
-      }
-      setReviewModal(null);
-      setReviewForm({ rating: 5, comment: "" });
-      await load();
-    } catch (e) {
-      setError(e.message || t("rv_save_error"));
-    } finally {
-      setSaving(false);
+    if (reviewModal.mode === "create") {
+      crtReview.mutate(
+        { bookingId: reviewModal.booking.bookingId, rating: Number(reviewForm.rating), comment: normalizedComment },
+        {
+          onSuccess: () => { setReviewModal(null); setReviewForm({ rating: 5, comment: "" }); },
+          onError: (e) => setError(e.message || t("rv_save_error")),
+        }
+      );
+    } else {
+      updReview.mutate(
+        { reviewId: reviewModal.review.reviewId, rating: Number(reviewForm.rating), comment: normalizedComment },
+        {
+          onSuccess: () => { setReviewModal(null); setReviewForm({ rating: 5, comment: "" }); },
+          onError: (e) => setError(e.message || t("rv_save_error")),
+        }
+      );
     }
   }
 

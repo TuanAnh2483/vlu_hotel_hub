@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import AdminLayout, {
   AP, PageHeader, Card, Badge, Btn, Table, Modal, FormField,
 } from "../../components/admin/AdminLayout";
-import { adminService } from "../../services/adminService";
+import { usePartnerApplications, useApprovePartner, useRejectPartner } from "../../hooks/useAdminQueries";
 import { Clock, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
 import { SkeletonRow } from "../../components/ui/Skeleton";
@@ -16,53 +16,40 @@ const isReviewable = status => REVIEWABLE_STATUSES.has(status);
 export default function AdminPartners({ navigate, user, onLogout }) {
   const { t } = useLang();
   const STATUS_LABEL = { "": t("adm_partners_tab_all"), SUBMITTED: t("adm_partners_tab_pending"), APPROVED: t("adm_partners_tab_approved"), REJECTED: t("adm_partners_tab_rejected") };
-  const [apps, setApps]         = useState([]);
   const [filter, setFilter]     = useState("");
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState("");
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [acting, setActing]     = useState(null);
   const [detailModal, setDetailModal] = useState(null);
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const toast = useToast();
 
-  const load = useCallback(async (status = filter) => {
-    setLoading(true); setError("");
-    try {
-      const data = await adminService.getPartnerApplications(status || null);
-      setApps(Array.isArray(data) ? data : []);
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  }, [filter]);
-
-  useEffect(() => { load(); }, [load]);
+  const { data: appsData, isLoading: loading, error: loadError } = usePartnerApplications(filter || null);
+  const apps = Array.isArray(appsData) ? appsData : [];
+  const approvePartner = useApprovePartner();
+  const rejectPartner  = useRejectPartner();
+  const acting = (approvePartner.isPending && approvePartner.variables) ||
+                 (rejectPartner.isPending && rejectPartner.variables?.applicationId) || null;
 
   const handleFilter = s => { setPage(1); setFilter(s); };
 
-  const handleApprove = async id => {
+  const handleApprove = (id) => {
     if (!window.confirm(t("adm_partners_confirm_approve"))) return;
-    setActing(id);
-    try {
-      await adminService.approvePartner(id);
-      toast.success(t("adm_partners_toast_approved"));
-      await load();
-    }
-    catch (e) { toast.error(e.message); }
-    setActing(null);
+    approvePartner.mutate(id, {
+      onSuccess: () => toast.success(t("adm_partners_toast_approved")),
+      onError: (e) => toast.error(e.message),
+    });
   };
 
-  const handleReject = async () => {
+  const handleReject = () => {
     if (!rejectReason.trim()) { toast.warning(t("adm_partners_err_reason")); return; }
-    setActing(rejectModal.id);
-    try {
-      await adminService.rejectPartner(rejectModal.id, rejectReason);
-      toast.success(t("adm_partners_toast_rejected"));
-      setRejectModal(null); setRejectReason("");
-      await load();
-    } catch (e) { toast.error(e.message); }
-    setActing(null);
+    rejectPartner.mutate(
+      { applicationId: rejectModal.id, reason: rejectReason },
+      {
+        onSuccess: () => { toast.success(t("adm_partners_toast_rejected")); setRejectModal(null); setRejectReason(""); },
+        onError: (e) => toast.error(e.message),
+      },
+    );
   };
 
   const counts = {
@@ -109,7 +96,7 @@ export default function AdminPartners({ navigate, user, onLogout }) {
           ))}
         </div>
 
-        {error && <div className="admin-error-alert">⚠️ {error}</div>}
+        {loadError && <div className="admin-error-alert">⚠️ {loadError.message}</div>}
 
         {loading ? (
           <Table

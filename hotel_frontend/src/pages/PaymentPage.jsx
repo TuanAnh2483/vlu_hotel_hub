@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { bookingService } from "../services/bookingService";
+import { useBookingDetail, useCreatePaymentSession } from "../hooks/useBookingQueries";
 import { 
   ChevronLeft, CreditCard, Wallet, 
   ShieldCheck, Lock, ArrowRight, Check,
@@ -101,8 +101,8 @@ const METHODS = [
 export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
   const { bookingId, hotelName } = params;
 
-  const [booking, setBooking]       = useState(null);
-  const [loading, setLoading]       = useState(true);
+  const isPending = (data) => data?.status === "PENDING_PAYMENT";
+
   const [method, setMethod]         = useState("bank");
   const [card, setCard]             = useState({ number: "", name: "", expiry: "", cvv: "" });
   const [paying, setPaying]         = useState(false);
@@ -112,74 +112,41 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
   const [sessionError, setSessionError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
 
-  useEffect(() => {
-    let ignore = false;
+  // Poll every 5 s while booking is PENDING_PAYMENT
+  const { data: booking, isLoading: loading, refetch: refetchBooking } = useBookingDetail(
+    bookingId,
+    {
+      refetchInterval: (query) =>
+        isPending(query.state.data) ? 5000 : false,
+      onError: (err) => setError(err.message || "Không thể tải đơn đặt phòng để thanh toán."),
+    }
+  );
 
-    setLoading(true);
-    setPaymentSession(null);
+  const createPaymentSession = useCreatePaymentSession();
+
+  // Create payment session once when booking arrives and is PENDING_PAYMENT
+  useEffect(() => {
+    if (!booking || !isPending(booking) || paymentSession || sessionLoading) return;
+    setSessionLoading(true);
     setSessionError("");
-    setStatusMessage("");
-    bookingService.getBooking(bookingId)
-      .then(async (data) => {
-        if (ignore) return;
-        setBooking(data);
-        if (data?.status === "PENDING_PAYMENT") {
-          /*
-           * Booking vừa tạo chỉ đang giữ chỗ, chưa được xác nhận.
-           * Bước này xin backend cấp payment session để lấy paymentCode riêng
-           * cho booking hiện tại. Customer phải nhập đúng paymentCode này trong
-           * nội dung chuyển khoản để webhook SePay match được giao dịch.
-           */
-          setSessionLoading(true);
-          try {
-            const session = await bookingService.createPaymentSession(bookingId);
-            if (!ignore) setPaymentSession(session);
-          } catch (err) {
-            if (!ignore) setSessionError(err.message || "Không thể tạo phiên thanh toán chuyển khoản.");
-          } finally {
-            if (!ignore) setSessionLoading(false);
-          }
-        }
-      })
-      .catch((err) => {
-        if (ignore) return;
-        setBooking(null);
-        setError(err.message || "Không thể tải đơn đặt phòng để thanh toán.");
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
+    createPaymentSession.mutate(bookingId, {
+      onSuccess: (session) => setPaymentSession(session),
+      onError:   (err)     => setSessionError(err.message || "Không thể tạo phiên thanh toán chuyển khoản."),
+      onSettled: ()        => setSessionLoading(false),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking?.status, bookingId]);
 
-    return () => {
-      ignore = true;
-    };
-  }, [bookingId]);
-
+  // Navigate when status changes from poll
   useEffect(() => {
-    if (!bookingId || booking?.status !== "PENDING_PAYMENT") return undefined;
-
-    /*
-     * Frontend không biết chính xác khi nào SePay gọi webhook xong.
-     * Vì vậy trang payment poll booking định kỳ. Khi backend đổi status sang
-     * CONFIRMED từ webhook, UI tự chuyển sang màn thanh toán thành công.
-     */
-    const timer = window.setInterval(async () => {
-      try {
-        const latest = await bookingService.getBooking(bookingId);
-        setBooking(latest);
-        if (latest?.status === "CONFIRMED") {
-          navigate("payment-success", { bookingId, amount: latest.totalPrice, hotelName });
-        }
-        if (latest?.status === "CANCELLED") {
-          navigate("payment-failed", { bookingId, errorMessage: "Phiên thanh toán đã hết hạn." });
-        }
-      } catch (err) {
-        setStatusMessage(err.message || "Chưa thể kiểm tra trạng thái thanh toán.");
-      }
-    }, 5000);
-
-    return () => window.clearInterval(timer);
-  }, [bookingId, booking?.status, hotelName, navigate]);
+    if (!booking) return;
+    if (booking.status === "CONFIRMED") {
+      navigate("payment-success", { bookingId, amount: booking.totalPrice, hotelName });
+    }
+    if (booking.status === "CANCELLED") {
+      navigate("payment-failed", { bookingId, errorMessage: "Phiên thanh toán đã hết hạn." });
+    }
+  }, [booking?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nights = booking ? nightsBetween(booking.checkIn, booking.checkOut) : 0;
   const total  = booking?.totalPrice || 0;
@@ -193,8 +160,7 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
        * Không gọi API giả lập /pay và không tự đổi booking sang CONFIRMED,
        * vì nguồn xác nhận thật phải là webhook SePay ở backend.
        */
-      const latest = await bookingService.getBooking(bookingId);
-      setBooking(latest);
+      const { data: latest } = await refetchBooking();
       if (latest?.status === "CONFIRMED") {
         navigate("payment-success", { bookingId, amount: latest.totalPrice, hotelName });
         return;

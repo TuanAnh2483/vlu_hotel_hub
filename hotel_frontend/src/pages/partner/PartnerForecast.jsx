@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { partnerService } from "../../services/partnerService";
+import { useState, useEffect } from "react";
+import {
+  useMyHotels, usePartnerRooms, usePriceSuggestions, useRevenueAnalytics,
+  useSubmitPriceFeedback, useUpdateRoomCalendar, useTriggerTraining,
+} from "../../hooks/usePartnerQueries";
 import { PageHeader, Card } from "../../components/admin/AdminLayout";
 import { useLang } from "../../contexts/LanguageContext";
 import {
@@ -120,90 +123,69 @@ export default function PartnerForecast() {
     MEDIUM: { ...CONF_STYLE.MEDIUM, label: t("pt_fc_conf_medium") },
     LOW:    { ...CONF_STYLE.LOW,    label: t("pt_fc_conf_low") },
   };
-  const [hotels, setHotels] = useState([]);
-  const [rooms, setRooms] = useState([]);
   const [selectedHotelId, setSelectedHotelId] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [daysCount, setDaysCount] = useState(14);
-
-  const [suggestions, setSuggestions] = useState(null);
-  const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [feedbackLoading, setFeedbackLoading] = useState({});
   const [applied, setApplied] = useState({});
-  const [trainLoading, setTrainLoading] = useState(false);
   const [trainMsg, setTrainMsg] = useState("");
+  const [feedbackPending, setFeedbackPending] = useState({});
 
-  // hotels
+  const today = new Date();
+  const from = toIso(today);
+  const to   = toIso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysCount));
+
+  const { data: hotels = [] } = useMyHotels();
+  const { data: rooms = [] }  = usePartnerRooms(selectedHotelId, { enabled: Boolean(selectedHotelId) });
+  const {
+    data: suggestions,
+    isLoading: sugLoading,
+    error: sugError,
+  } = usePriceSuggestions(selectedRoomId, from, to);
+  const {
+    data: analytics,
+    isLoading: anaLoading,
+    error: anaError,
+  } = useRevenueAnalytics(selectedRoomId);
+
+  const loading = sugLoading || anaLoading;
+  const error = (sugError && anaError)
+    ? t("pt_fc_err_load")
+    : sugError ? t("pt_fc_err_suggestions")
+    : anaError ? t("pt_fc_err_analytics")
+    : "";
+
+  const triggerTraining   = useTriggerTraining();
+  const submitFeedback    = useSubmitPriceFeedback();
+  const updateCalendar    = useUpdateRoomCalendar();
+  const trainLoading      = triggerTraining.isPending;
+
+  // Auto-select first hotel
   useEffect(() => {
-    partnerService.getMyHotels()
-      .then(data => {
-        const list = Array.isArray(data) ? data : [];
-        setHotels(list);
-        if (list.length > 0) setSelectedHotelId(String(list[0].id));
-      })
-      .catch(() => {});
-  }, []);
+    if (!hotels.length) return;
+    setSelectedHotelId((cur) => {
+      if (cur && hotels.some((h) => String(h.id) === String(cur))) return cur;
+      return String(hotels[0].id);
+    });
+  }, [hotels]);
 
-  // rooms
+  // Auto-select first room when hotel/rooms change
   useEffect(() => {
-    if (!selectedHotelId) { setRooms([]); setSelectedRoomId(""); return; }
-    partnerService.getRooms(selectedHotelId)
-      .then(data => {
-        const list = Array.isArray(data) ? data : [];
-        setRooms(list);
-        setSelectedRoomId(list[0] ? String(list[0].id) : "");
-      })
-      .catch(() => { setRooms([]); setSelectedRoomId(""); });
-  }, [selectedHotelId]);
+    if (!selectedHotelId) { setSelectedRoomId(""); return; }
+    setSelectedRoomId((cur) => {
+      if (cur && rooms.some((r) => String(r.id) === String(cur))) return cur;
+      return rooms[0] ? String(rooms[0].id) : "";
+    });
+  }, [selectedHotelId, rooms]);
 
-  // suggestions + analytics
-  const load = useCallback(async () => {
-    if (!selectedRoomId) { setSuggestions(null); setAnalytics(null); return; }
-    setLoading(true);
-    setError("");
-    setApplied({});
-    const today = new Date();
-    const from = toIso(today);
-    const to = toIso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysCount));
-
-    const [sugResult, anaResult] = await Promise.allSettled([
-      partnerService.getPriceSuggestions(selectedRoomId, from, to),
-      partnerService.getRevenueAnalytics(selectedRoomId),
-    ]);
-
-    setSuggestions(sugResult.status === "fulfilled" ? sugResult.value : null);
-    setAnalytics(anaResult.status === "fulfilled" ? anaResult.value : null);
-
-    if (sugResult.status === "rejected" && anaResult.status === "rejected") {
-      setError(t("pt_fc_err_load"));
-    } else if (sugResult.status === "rejected") {
-      setError(t("pt_fc_err_suggestions"));
-    } else if (anaResult.status === "rejected") {
-      setError(t("pt_fc_err_analytics"));
-    }
-
-    setLoading(false);
-  }, [selectedRoomId, daysCount, t]);
-
-  useEffect(() => { load(); }, [load]);
-
-  async function handleTrain() {
+  function handleTrain() {
     if (!selectedRoomId) return;
-    setTrainLoading(true);
     setTrainMsg("");
-    try {
-      const result = await partnerService.triggerTraining(selectedRoomId);
-      setTrainMsg(result.hasSufficientData
+    triggerTraining.mutate(selectedRoomId, {
+      onSuccess: (result) => setTrainMsg(result.hasSufficientData
         ? t("pt_fc_train_done").replace("{round}", result.trainingRound).replace("{n}", result.trainingDataPoints)
-        : t("pt_fc_train_no_data"));
-      load();
-    } catch (e) {
-      setTrainMsg(e.message || t("pt_fc_train_err"));
-    } finally {
-      setTrainLoading(false);
-    }
+        : t("pt_fc_train_no_data")),
+      onError: (e) => setTrainMsg(e.message || t("pt_fc_train_err")),
+    });
   }
 
   async function handleFeedback(item, outcome) {
@@ -212,17 +194,18 @@ export default function PartnerForecast() {
       : outcome === "APPLIED_MINUS5" ? Math.round(item.suggestedPrice * 0.95)
       : null;
 
-    setFeedbackLoading(prev => ({ ...prev, [item.date]: true }));
+    setFeedbackPending((prev) => ({ ...prev, [item.date]: true }));
     try {
-      await partnerService.submitPriceFeedback(selectedRoomId, {
-        roomId: Number(selectedRoomId),
+      await submitFeedback.mutateAsync({
+        roomId: selectedRoomId,
         date: item.date,
         suggested: item.suggestedPrice,
         appliedPrice,
         outcome,
       });
       if (appliedPrice != null) {
-        await partnerService.updateRoomCalendar(selectedRoomId, {
+        await updateCalendar.mutateAsync({
+          roomId: selectedRoomId,
           startDate: item.date,
           endDate: item.date,
           price: appliedPrice,
@@ -231,11 +214,11 @@ export default function PartnerForecast() {
           availableRooms: null,
         });
       }
-      setApplied(prev => ({ ...prev, [item.date]: { outcome, appliedPrice } }));
+      setApplied((prev) => ({ ...prev, [item.date]: { outcome, appliedPrice } }));
     } catch (e) {
       alert(e.message || t("pt_fc_err_feedback"));
     } finally {
-      setFeedbackLoading(prev => ({ ...prev, [item.date]: false }));
+      setFeedbackPending((prev) => ({ ...prev, [item.date]: false }));
     }
   }
 
@@ -394,7 +377,7 @@ export default function PartnerForecast() {
               const d    = DEMAND_CFG[effectiveDemand(item.deltaPct)] ?? DEMAND_CFG.MEDIUM;
               const conf = CONF_CFG[item.confidence] ?? CONF_CFG.MEDIUM;
               const fb   = applied[item.date];
-              const busy = Boolean(feedbackLoading[item.date]);
+              const busy = Boolean(feedbackPending[item.date]);
               const minus5Price = item.suggestedPrice ? Math.round(item.suggestedPrice * 0.95) : null;
 
               return (

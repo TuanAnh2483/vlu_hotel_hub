@@ -3,7 +3,7 @@ app:
     provider: cloudinary
     cloudinary:
       enabled: true
-      cloud-name: ${UPLOAD_CLOUDINARY_CLOUD_NAME:disabled-cloud}
-      api-key: ${UPLOAD_CLOUDINARY_API_KEY:332893713659699}
-      api-secret: ${UPLOAD_CLOUDINARY_API_SECRET:aHn_CFkZNfAbrSIah4dejcYkCoU}
+      cloud-name: ${UPLOAD_CLOUDINARY_CLOUD_NAME}
+      api-key: ${UPLOAD_CLOUDINARY_API_KEY}
+      api-secret: ${UPLOAD_CLOUDINARY_API_SECRET}
       folder-prefix: ${UPLOAD_CLOUDINARY_FOLDER_PREFIX:hotel-backend-real-test}

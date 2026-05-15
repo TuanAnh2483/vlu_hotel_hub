@@ -1,139 +1,113 @@
-import { getToken } from "./authService";
-import { buildApiUrl } from "../config/apiConfig";
-
-async function adminFetch(path, options = {}) {
-  const token = getToken();
-  const { headers: extraHeaders, ...restOptions } = options;
-  const res = await fetch(buildApiUrl(path), {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...extraHeaders,
-    },
-    ...restOptions,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error?.message || json.message || `HTTP ${res.status}`);
-  return json.data ?? json;
-}
-
-// ── Service exports ─────────────────────────────────────────────────
+import apiClient from "./apiClient";
 
 export const adminService = {
   // Dashboard
   async getStats() {
     try {
-      const data = await adminFetch("/api/admin/stats");
+      const data = await apiClient.get("/api/admin/stats");
       return {
-        totalUsers: data.totalUsers ?? data.customerCount ?? 0,
-        totalPartners: data.totalPartners ?? data.partnerCount ?? 0,
-        totalHotels: data.totalHotels ?? data.hotelCount ?? 0,
-        totalBookings: data.totalBookings ?? data.bookingCount ?? 0,
+        totalUsers:     data.totalUsers    ?? data.customerCount   ?? 0,
+        totalPartners:  data.totalPartners ?? data.partnerCount    ?? 0,
+        totalHotels:    data.totalHotels   ?? data.hotelCount      ?? 0,
+        totalBookings:  data.totalBookings ?? data.bookingCount    ?? 0,
         pendingBookings: data.pendingBookings ?? data.pendingPaymentCount ?? 0,
       };
-    } catch { return { totalUsers: 0, totalPartners: 0, totalHotels: 0, totalBookings: 0, pendingBookings: 0 }; }
+    } catch {
+      return { totalUsers: 0, totalPartners: 0, totalHotels: 0, totalBookings: 0, pendingBookings: 0 };
+    }
   },
 
-  // Partner applications — real API
+  // Partner applications
   getPartnerApplications(status) {
-    const q = status ? `?status=${status}` : "";
-    return adminFetch(`/api/admin/partner-applications${q}`);
+    return apiClient.get("/api/admin/partner-applications", {
+      params: status ? { status } : {},
+    });
   },
   approvePartner(applicationId) {
-    return adminFetch(`/api/admin/partner-applications/${applicationId}/approve`, { method: "POST" });
+    return apiClient.post(`/api/admin/partner-applications/${applicationId}/approve`);
   },
   rejectPartner(applicationId, reason) {
-    return adminFetch(`/api/admin/partner-applications/${applicationId}/reject`, {
-      method: "POST",
-      body: JSON.stringify({ reason }),
-    });
+    return apiClient.post(`/api/admin/partner-applications/${applicationId}/reject`, { reason });
   },
 
-  // Users — real API
+  // Users
   async getUsers(search = "") {
     try {
-      const data = await adminFetch("/api/admin/users");
+      const data = await apiClient.get("/api/admin/users");
       const list = Array.isArray(data) ? data : [];
       const q = search.toLowerCase();
-      return q ? list.filter(u => u.email.toLowerCase().includes(q)) : list;
+      return q ? list.filter((u) => u.email.toLowerCase().includes(q)) : list;
     } catch { return []; }
   },
-  async toggleUserStatus(userId) {
-    return adminFetch(`/api/admin/users/${userId}/toggle-status`, { method: "POST" });
+  toggleUserStatus(userId) {
+    return apiClient.post(`/api/admin/users/${userId}/toggle-status`);
   },
-  async createUser({ email, password, userType }) {
-    return adminFetch("/api/admin/users", {
-      method: "POST",
-      body: JSON.stringify({ email, password, userType }),
-    });
+  createUser({ email, password, userType }) {
+    return apiClient.post("/api/admin/users", { email, password, userType });
   },
 
-  // Hotels — real API
+  // Hotels
   async getHotels() {
     try {
-      const data = await adminFetch("/api/admin/hotels");
+      const data = await apiClient.get("/api/admin/hotels");
       return Array.isArray(data) ? data : [];
     } catch { return []; }
   },
-  async updateHotel(hotelId, data) {
-    return adminFetch(`/api/admin/hotels/${hotelId}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
+  updateHotel(hotelId, data) {
+    return apiClient.put(`/api/admin/hotels/${hotelId}`, data);
   },
-  async deleteHotel(hotelId) {
-    return adminFetch(`/api/admin/hotels/${hotelId}`, { method: "DELETE" });
+  deleteHotel(hotelId) {
+    return apiClient.delete(`/api/admin/hotels/${hotelId}`);
   },
 
-  // Bookings — real API
+  // Bookings
   async getBookings(status = "") {
     try {
-      const data = await adminFetch("/api/admin/bookings");
+      const data = await apiClient.get("/api/admin/bookings");
       const list = Array.isArray(data) ? data : [];
-      return status ? list.filter(b => b.status === status) : list;
+      return status ? list.filter((b) => b.status === status) : list;
     } catch { return []; }
   },
 
-  // Refunds — real API
-  getRefunds: async (status = "") => {
+  // Refunds
+  async getRefunds(status = "") {
     try {
-      const q = status ? `?status=${encodeURIComponent(status)}` : "";
-      const data = await adminFetch(`/api/admin/refunds${q}`);
+      const data = await apiClient.get("/api/admin/refunds", {
+        params: status ? { status } : {},
+      });
       return Array.isArray(data) ? data : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   },
-  updateRefundStatus: async (refundId, newStatus) => {
+  updateRefundStatus(refundId, newStatus) {
     if (newStatus === "APPROVED") {
-      return adminFetch(`/api/admin/refunds/${refundId}/approve`, { method: "POST" });
+      return apiClient.post(`/api/admin/refunds/${refundId}/approve`);
     }
     if (newStatus === "REJECTED") {
-      return adminFetch(`/api/admin/refunds/${refundId}/reject`, { method: "POST" });
+      return apiClient.post(`/api/admin/refunds/${refundId}/reject`);
     }
     throw new Error("Unsupported refund status");
   },
 
-  // Reviews — real API
+  // Reviews
   async getReviews() {
     try {
-      const data = await adminFetch("/api/admin/reviews");
+      const data = await apiClient.get("/api/admin/reviews");
       return Array.isArray(data) ? data : [];
     } catch { return []; }
   },
-  async deleteReview(reviewId) {
-    return adminFetch(`/api/admin/reviews/${reviewId}`, { method: "DELETE" });
+  deleteReview(reviewId) {
+    return apiClient.delete(`/api/admin/reviews/${reviewId}`);
   },
 
-  // System — real API
-  getSystemData: async () => {
+  // System
+  async getSystemData() {
     try {
-      const data = await adminFetch("/api/admin/system");
+      const data = await apiClient.get("/api/admin/system");
       return {
         flaggedBookings: Array.isArray(data?.flaggedBookings)
           ? data.flaggedBookings.map((item) => ({
               ...item,
-              reason: item.reason || item.message || "Cần kiểm tra",
+              reason:     item.reason     || item.message     || "Cần kiểm tra",
               reportedAt: item.reportedAt || item.requestedAt || "—",
             }))
           : [],
@@ -144,11 +118,9 @@ export const adminService = {
             }))
           : [],
       };
-    } catch {
-      return { flaggedBookings: [], recentErrors: [] };
-    }
+    } catch { return { flaggedBookings: [], recentErrors: [] }; }
   },
-  resolveFlaggedBooking: async (flagId) => {
-    return { id: flagId };
+  resolveFlaggedBooking(flagId) {
+    return Promise.resolve({ id: flagId });
   },
 };

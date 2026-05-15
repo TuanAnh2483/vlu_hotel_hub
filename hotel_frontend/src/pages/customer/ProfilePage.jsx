@@ -1,8 +1,16 @@
-import { createElement, useCallback, useEffect, useState } from "react";
+import { createElement, useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import MainNavbar from "../../components/MainNavbar";
 import Footer from "../../components/Footer";
-import { profileService } from "../../services/profileService";
+import {
+  useProfile,
+  useBilling,
+  useNotifications,
+  useUpdateProfile,
+  useUploadAvatar,
+  useMarkNotificationRead,
+  useChangePassword,
+} from "../../hooks/useProfileQueries";
 import { 
   Camera, User, Mail, Phone, MapPin, Shield, CheckCircle2, 
   Save, Trash2, Bell, CreditCard, Lock, Eye, EyeOff,
@@ -85,55 +93,44 @@ function initialsFrom(value) {
 
 export default function ProfilePage({ navigate, onLogout }) {
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
+  const [editing, setEditing]   = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError]       = useState("");
+  const [message, setMessage]   = useState("");
+  const [form, setForm]         = useState(() => ({ ...EMPTY_FORM, email: user?.email || "" }));
+
+  // ── Queries ───────────────────────────────────────────────────────
+  const { data: profile, isLoading: pageLoading } = useProfile();
+  const { data: rawBilling }        = useBilling();
+  const { data: rawNotifications }  = useNotifications();
+
+  const billing       = Array.isArray(rawBilling)        ? rawBilling        : [];
+  const notifications = Array.isArray(rawNotifications)  ? rawNotifications  : [];
+  const avatar        = profile?.avatarUrl || "";
+
   const effectiveUserType = profile?.userType || user?.userType;
   const isPartner = effectiveUserType === "PARTNER";
-  const cfg = ROLE_CONFIG[effectiveUserType] || ROLE_CONFIG.CUSTOMER;
-  
-  const [activeTab, setActiveTab] = useState(isPartner ? "business" : "general");
-  const [editing, setEditing] = useState(false);
-  const [showPass, setShowPass] = useState(false);
-  const [avatar, setAvatar] = useState("");
-  const [billing, setBilling] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [avatarLoading, setAvatarLoading] = useState(false);
-  const [markingNotification, setMarkingNotification] = useState(null);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-
-  // Form state
-  const [form, setForm] = useState(() => ({ ...EMPTY_FORM, email: user?.email || "" }));
-
+  const cfg       = ROLE_CONFIG[effectiveUserType] || ROLE_CONFIG.CUSTOMER;
   const accentColor = cfg.accent;
+  const [activeTab, setActiveTab] = useState(isPartner ? "business" : "general");
 
-  const loadProfileData = useCallback(async () => {
-    setPageLoading(true);
-    setError("");
-    try {
-      const [profileData, billingData, notificationData] = await Promise.all([
-        profileService.getProfile(),
-        profileService.getBilling(),
-        profileService.getNotifications(),
-      ]);
-
-      setProfile(profileData);
-      setForm(mapProfileToForm(profileData, user));
-      setAvatar(profileData?.avatarUrl || "");
-      setBilling(Array.isArray(billingData) ? billingData : []);
-      setNotifications(Array.isArray(notificationData) ? notificationData : []);
-      setActiveTab(profileData?.userType === "PARTNER" ? "business" : "general");
-    } catch (e) {
-      setError(e.message || "Không thể tải hồ sơ.");
-    } finally {
-      setPageLoading(false);
-    }
-  }, [user]);
-
+  // Sync form when profile loads
   useEffect(() => {
-    loadProfileData();
-  }, [loadProfileData]);
+    if (profile) {
+      setForm(mapProfileToForm(profile, user));
+      setActiveTab(profile.userType === "PARTNER" ? "business" : "general");
+    }
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Mutations ─────────────────────────────────────────────────────
+  const updateProfile       = useUpdateProfile();
+  const uploadAvatar        = useUploadAvatar();
+  const markNotifRead       = useMarkNotificationRead();
+  const changePasswordMut   = useChangePassword();
+
+  const loading              = updateProfile.isPending;
+  const avatarLoading        = uploadAvatar.isPending;
+  const markingNotification  = markNotifRead.variables ?? null;
 
   const handleCancel = () => {
     setForm(mapProfileToForm(profile, user));
@@ -142,12 +139,11 @@ export default function ProfilePage({ navigate, onLogout }) {
     setError("");
   };
 
-  const handleSave = async () => {
-    setLoading(true);
+  const handleSave = () => {
     setError("");
     setMessage("");
-    try {
-      const updated = await profileService.updateProfile({
+    updateProfile.mutate(
+      {
         fullName: form.fullName,
         contactEmail: form.email,
         phone: form.phone,
@@ -160,70 +156,51 @@ export default function ProfilePage({ navigate, onLogout }) {
         businessType: form.businessType,
         foundedDate: form.foundedDate || null,
         website: form.website,
-      });
-      setProfile(updated);
-      setForm(mapProfileToForm(updated, user));
-      setAvatar(updated?.avatarUrl || "");
-      setLoading(false);
-      setEditing(false);
-      setMessage("Đã lưu hồ sơ vào dữ liệu thật.");
-    } catch (e) {
-      setError(e.message || "Không thể lưu hồ sơ.");
-      setLoading(false);
-    }
+      },
+      {
+        onSuccess: () => { setEditing(false); setMessage("Đã lưu hồ sơ vào dữ liệu thật."); },
+        onError:   (e) => setError(e.message || "Không thể lưu hồ sơ."),
+      }
+    );
   };
 
-  const handleAvatarChange = async (e) => {
+  const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    setAvatarLoading(true);
     setError("");
     setMessage("");
-    try {
-      const updated = await profileService.uploadAvatar(file);
-      setProfile(updated);
-      setAvatar(updated?.avatarUrl || "");
-      setMessage("Đã cập nhật ảnh đại diện.");
-    } catch (err) {
-      setError(err.message || "Không thể upload ảnh đại diện.");
-    } finally {
-      setAvatarLoading(false);
-    }
+    uploadAvatar.mutate(file, {
+      onSuccess: () => setMessage("Đã cập nhật ảnh đại diện."),
+      onError:   (err) => setError(err.message || "Không thể upload ảnh đại diện."),
+    });
   };
 
-  const handlePreferenceChange = async (key, value) => {
+  const handlePreferenceChange = (key, value) => {
     setError("");
     setMessage("");
-    try {
-      const updated = await profileService.updatePreferences({
-        loginAlertEnabled: key === "loginAlertEnabled" ? value : profile?.loginAlertEnabled,
+    // Build a plain preferences object and reuse updateProfile
+    updateProfile.mutate(
+      {
+        loginAlertEnabled:    key === "loginAlertEnabled"    ? value : profile?.loginAlertEnabled,
         bookingUpdateEnabled: key === "bookingUpdateEnabled" ? value : profile?.bookingUpdateEnabled,
-      });
-      setProfile(updated);
-      setMessage("Đã cập nhật tuỳ chọn thông báo.");
-    } catch (e) {
-      setError(e.message || "Không thể cập nhật tuỳ chọn.");
-    }
+      },
+      {
+        onSuccess: () => setMessage("Đã cập nhật tuỳ chọn thông báo."),
+        onError:   (e) => setError(e.message || "Không thể cập nhật tuỳ chọn."),
+      }
+    );
   };
 
-  const handleMarkNotificationRead = async (notificationId) => {
-    if (!notificationId) return false;
-    setMarkingNotification(notificationId);
+  const handleMarkNotificationRead = (notificationId) => {
+    if (!notificationId) return Promise.resolve(false);
     setError("");
     setMessage("");
-    try {
-      const updated = await profileService.markNotificationRead(notificationId);
-      setNotifications((items) =>
-        items.map((item) => item.id === notificationId ? { ...item, ...updated } : item),
-      );
-      return true;
-    } catch (e) {
-      setError(e.message || "Không thể cập nhật thông báo.");
-      return false;
-    } finally {
-      setMarkingNotification(null);
-    }
+    return new Promise((resolve) => {
+      markNotifRead.mutate(notificationId, {
+        onSuccess: () => resolve(true),
+        onError: (e) => { setError(e.message || "Không thể cập nhật thông báo."); resolve(false); },
+      });
+    });
   };
 
   const handleNotificationAction = async (notification) => {

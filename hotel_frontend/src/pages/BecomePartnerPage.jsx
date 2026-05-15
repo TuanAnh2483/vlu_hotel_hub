@@ -2,23 +2,9 @@ import { useState } from "react";
 import { C } from "../components/auth/AuthShared";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { getToken } from "../services/authService";
+import { useStartOnboarding, useSubmitOnboarding } from "../hooks/usePartnerQueries";
 import { useLang } from "../contexts/LanguageContext";
 import "../styles/pages/BecomePartnerPage.css";
-import { buildApiUrl } from "../config/apiConfig";
-async function onboardingFetch(path, options = {}) {
-  const token = getToken();
-  const res = await fetch(buildApiUrl(path), {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...options,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error?.message || json.message || `HTTP ${res.status}`);
-  return json.data ?? json;
-}
 
 function StepIndicator({ current }) {
   const { t } = useLang();
@@ -75,11 +61,14 @@ function Field({ label, required, children, hint }) {
 
 export default function BecomePartnerPage({ navigate, user, onLogout }) {
   const { t } = useLang();
-  const [step, setStep]       = useState(0);
-  const [form, setForm]       = useState({ businessName: "", email: user?.email || "", phone: "" });
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
-  const [appId, setAppId]     = useState(null);
+  const [step, setStep]   = useState(0);
+  const [form, setForm]   = useState({ businessName: "", email: user?.email || "", phone: "" });
+  const [error, setError] = useState("");
+  const [appId, setAppId] = useState(null);
+
+  const startOnboarding  = useStartOnboarding();
+  const submitOnboarding = useSubmitOnboarding();
+  const loading = startOnboarding.isPending || submitOnboarding.isPending;
 
   const upd = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -97,7 +86,7 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
     );
   }
 
-  async function handleStartAndSubmit() {
+  function handleStartAndSubmit() {
     setError("");
     if (!form.businessName.trim() || !form.email.trim() || !form.phone.trim()) {
       setError(t("bp_err_required"));
@@ -107,21 +96,19 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
       setError(t("bp_err_phone"));
       return;
     }
-    setLoading(true);
-    try {
-      const app = await onboardingFetch("/api/partner-onboarding/start", {
-        method: "POST",
-        body: JSON.stringify({ businessName: form.businessName, email: form.email, phone: form.phone }),
-      });
-      const id = app.applicationId || app.id;
-      await onboardingFetch(`/api/partner-onboarding/${id}/submit`, { method: "POST" });
-      setAppId(id);
-      setStep(2);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    startOnboarding.mutate(
+      { businessName: form.businessName, email: form.email, phone: form.phone },
+      {
+        onSuccess: (app) => {
+          const id = app.applicationId || app.id;
+          submitOnboarding.mutate(id, {
+            onSuccess: () => { setAppId(id); setStep(2); },
+            onError: (e) => setError(e.message),
+          });
+        },
+        onError: (e) => setError(e.message),
+      },
+    );
   }
 
   const benefits = [
