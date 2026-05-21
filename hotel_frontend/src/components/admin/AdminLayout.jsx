@@ -16,25 +16,31 @@ const SIDEBAR_ACT  = AP;
 const SIDEBAR_TEXT = "#5a1a22";
 const SIDEBAR_DIV  = "rgba(190,30,46,0.14)";
 
+// ── Icon sizes ────────────────────────────────────────────────────────
+const NAV_ICON      = 18;
+const NAV_CHILD_ICON = 15;
+const TOPBAR_ICON   = 18;
+const ACTION_ICON   = 16;
+
 // ── Sidebar ───────────────────────────────────────────────────────────
 function Sidebar({ page, navigate, user, onLogout, open, onClose }) {
   const { t } = useLang();
   const NAV = [
-    { key: "admin-dashboard", icon: <LayoutDashboard size={18} />, label: t("adm_nav_dashboard") },
+    { key: "admin-dashboard", icon: <LayoutDashboard size={NAV_ICON} />, label: t("adm_nav_dashboard") },
     {
       key: "admin-users-group",
-      icon: <Users size={18} />,
+      icon: <Users size={NAV_ICON} />,
       label: t("adm_users_title"),
       children: [
-        { key: "admin-users",    icon: <UserPlus size={15} />,   label: t("adm_users_add_btn").replace("+ ", "") },
-        { key: "admin-partners", icon: <Handshake size={15} />,  label: t("adm_dash_tile_partners") },
+        { key: "admin-users",    icon: <UserPlus size={NAV_CHILD_ICON} />,   label: t("adm_users_add_btn").replace("+ ", "") },
+        { key: "admin-partners", icon: <Handshake size={NAV_CHILD_ICON} />,  label: t("adm_dash_tile_partners") },
       ],
     },
-    { key: "admin-hotels",   icon: <Building2 size={18} />,        label: t("adm_hotels_title") },
-    { key: "admin-bookings", icon: <ClipboardList size={18} />,    label: t("adm_nav_bookings") },
-    { key: "admin-refunds",  icon: <CircleDollarSign size={18} />, label: t("adm_dash_tile_refunds") },
-    { key: "admin-reviews",  icon: <Star size={18} />,             label: t("adm_rv_title") },
-    { key: "admin-system",   icon: <Settings size={18} />,         label: t("adm_sys_title") },
+    { key: "admin-hotels",   icon: <Building2 size={NAV_ICON} />,        label: t("adm_hotels_title") },
+    { key: "admin-bookings", icon: <ClipboardList size={NAV_ICON} />,    label: t("adm_nav_bookings") },
+    { key: "admin-refunds",  icon: <CircleDollarSign size={NAV_ICON} />, label: t("adm_dash_tile_refunds") },
+    { key: "admin-reviews",  icon: <Star size={NAV_ICON} />,             label: t("adm_rv_title") },
+    { key: "admin-system",   icon: <Settings size={NAV_ICON} />,         label: t("adm_sys_title") },
   ];
   const initialOpen = NAV
     .filter(item => item.children?.some(c => c.key === page))
@@ -73,7 +79,7 @@ function Sidebar({ page, navigate, user, onLogout, open, onClose }) {
                     <span className="admin-nav-icon">{item.icon}</span>
                     <span style={{ flex: 1 }}>{item.label}</span>
                     <span className={`admin-nav-chevron ${isOpen ? "open" : "closed"}`}>
-                      <ChevronDown size={15} />
+                      <ChevronDown size={NAV_CHILD_ICON} />
                     </span>
                   </button>
                   {isOpen && (
@@ -113,7 +119,7 @@ function Sidebar({ page, navigate, user, onLogout, open, onClose }) {
           {/* Back to home */}
           <div className="admin-nav-divider">
             <button onClick={() => navigate("home")} className="admin-nav-home-btn">
-              <span className="admin-nav-icon"><Home size={18} /></span>
+              <span className="admin-nav-icon"><Home size={NAV_ICON} /></span>
               {t("adm_dash_home")}
             </button>
           </div>
@@ -131,7 +137,7 @@ function Sidebar({ page, navigate, user, onLogout, open, onClose }) {
             </div>
           </div>
           <button onClick={onLogout} className="admin-sidebar-logout-btn">
-            <LogOut size={14} /> {t("nav_logout")}
+            <LogOut size={ACTION_ICON} /> {t("nav_logout")}
           </button>
         </div>
       </aside>
@@ -214,39 +220,8 @@ export function Card({ children, style = {} }) {
   );
 }
 
-const BADGE_MAP = {
-  ACTIVE:          { bg: "#e8f5e9", color: "#2e7d32",  label: "Hoạt động"      },
-  LOCKED:          { bg: "#ffebee", color: "#c62828",  label: "Bị khóa"        },
-  INACTIVE:        { bg: "#fafafa", color: "#888",      label: "Vô hiệu"       },
-  DISABLED:        { bg: "#fafafa", color: "#888",      label: "Vô hiệu"       },
-  CONFIRMED:       { bg: "#e3f2fd", color: "#1565c0",  label: "Đã xác nhận"   },
-  PENDING_PAYMENT: { bg: "#fff3e0", color: "#e65100",  label: "Chờ thanh toán" },
-  CANCELLED:       { bg: "#f5f5f5", color: "#616161",  label: "Đã hủy"        },
-  COMPLETED:       { bg: "#e8f5e9", color: "#2e7d32",  label: "Hoàn thành"    },
-  PENDING:         { bg: "#fff8e1", color: "#f57f17",  label: "Chờ duyệt"     },
-  SUBMITTED:       { bg: "#fff8e1", color: "#f57f17",  label: "Chờ duyệt"     },
-  UNDER_REVIEW:    { bg: "#e3f2fd", color: "#1565c0",  label: "Đang xem xét"  },
-  APPROVED:        { bg: "#e8f5e9", color: "#2e7d32",  label: "Đã duyệt"      },
-  REJECTED:        { bg: "#ffebee", color: "#c62828",  label: "Từ chối"       },
-  HIGH:            { bg: "#ffebee", color: "#c62828",  label: "Cao"            },
-  MEDIUM:          { bg: "#fff3e0", color: "#e65100",  label: "Trung bình"    },
-  LOW:             { bg: "#e8f5e9", color: "#2e7d32",  label: "Thấp"          },
-  CUSTOMER:        { bg: "#e3f2fd", color: "#1565c0",  label: "Khách hàng"    },
-  PARTNER:         { bg: "#f3e5f5", color: "#6a1b9a",  label: "Đối tác"       },
-  ADMIN:           { bg: "#fce4ec", color: "#880e4f",  label: "Admin"         },
-};
-
-export function Badge({ status }) {
-  const s = BADGE_MAP[status] || { bg: "#f5f5f5", color: "#555", label: status };
-  return (
-    <span style={{
-      display: "inline-block", padding: "3px 10px", borderRadius: 20,
-      background: s.bg, color: s.color, fontSize: 11, fontWeight: 700,
-    }}>
-      {s.label}
-    </span>
-  );
-}
+export { default as Badge } from "../ui/Badge";
+export { default as Modal } from "../ui/Modal";
 
 export function Btn({ children, onClick, variant = "primary", disabled = false, small = false, loading = false, style: extraStyle = {} }) {
   const [hov, setHov] = useState(false);
@@ -297,7 +272,7 @@ export function Btn({ children, onClick, variant = "primary", disabled = false, 
 export function SearchInput({ value, onChange, placeholder = "Tìm kiếm..." }) {
   return (
     <div style={{ position: "relative" }}>
-      <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#aaa", display: "flex" }}><Search size={16} /></span>
+      <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#aaa", display: "flex" }}><Search size={ACTION_ICON} /></span>
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -359,34 +334,6 @@ export function Table({ headers, rows, empty = "Không có dữ liệu" }) {
   );
 }
 
-export function Modal({ title, children, onClose, width = 460 }) {
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-      zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 20,
-    }}>
-      <div style={{
-        background: "#fff", borderRadius: 16, padding: "28px 30px",
-        width, maxWidth: "100%", maxHeight: "90vh", overflowY: "auto",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#1a1a1a", userSelect: "none", cursor: "default" }}>{title}</h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: "#f5f5f5", border: "none", width: 30, height: 30,
-              borderRadius: "50%", fontSize: 16, cursor: "pointer", color: "#666",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-          >×</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export function FormField({ label, children, required }) {
   return (
