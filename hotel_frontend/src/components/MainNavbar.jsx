@@ -183,11 +183,8 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
               <ChevronDown size={14} color="#666" style={{ transform: showMenu ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
             </div>
             {showMenu && (
-              <div style={{ position: "absolute", right: 0, top: 46, background: "#fff", borderRadius: 14, boxShadow: "0 10px 40px rgba(0,0,0,0.12)", border: "1px solid rgba(0,0,0,0.06)", minWidth: 220, zIndex: 200, overflow: "hidden", animation: "fade-in-up 0.2s ease-out" }}>
-                <style>{`
-                  @keyframes fade-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-                  .menu-item:hover { background: #f8f9fa !important; }
-                `}</style>
+              <div className="navbar-dropdown" style={{ position: "absolute", right: 0, top: 46, background: "#fff", borderRadius: 14, boxShadow: "0 10px 40px rgba(0,0,0,0.12)", border: "1px solid rgba(0,0,0,0.06)", minWidth: 220, zIndex: 200, overflow: "hidden" }}>
+  
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0", background: "linear-gradient(to bottom, #fff, #fdfdfd)" }}>
                   <p style={{ fontSize: 10, color: "#aaa", margin: 0, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: 700 }}>{t("nav_account")}</p>
                   <p style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a", margin: "4px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
@@ -201,7 +198,7 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
                 <div style={{ padding: "6px 0" }}>
                   {user?.userType === "PARTNER" && (
                     <button
-                      className="menu-item"
+                      className="navbar-menu-item"
                       style={{ width: "100%", padding: "12px 20px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: "pointer", color: "#333", display: "flex", alignItems: "center", gap: 12, transition: "background 0.2s" }}
                       onClick={() => { navigate("partner-dashboard"); setShowMenu(false); }}
                     >
@@ -212,7 +209,7 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
 
                   {user?.userType === "ADMIN" && (
                     <button
-                      className="menu-item"
+                      className="navbar-menu-item"
                       style={{ width: "100%", padding: "12px 20px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: "pointer", color: "#333", display: "flex", alignItems: "center", gap: 12, transition: "background 0.2s" }}
                       onClick={() => { navigate("admin-dashboard"); setShowMenu(false); }}
                     >
@@ -223,7 +220,7 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
 
                   {user?.userType === "CUSTOMER" && (
                     <button
-                      className="menu-item"
+                      className="navbar-menu-item"
                       style={{ width: "100%", padding: "12px 20px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: "pointer", color: "#333", display: "flex", alignItems: "center", gap: 12, transition: "background 0.2s" }}
                       onClick={() => { navigate("become-partner"); setShowMenu(false); }}
                     >
@@ -233,7 +230,7 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
                   )}
 
                   <button
-                    className="menu-item"
+                    className="navbar-menu-item"
                     style={{ width: "100%", padding: "12px 20px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: "pointer", color: "#333", display: "flex", alignItems: "center", gap: 12, transition: "background 0.2s" }}
                     onClick={() => { navigate("profile"); setShowMenu(false); }}
                   >
@@ -243,7 +240,7 @@ export default function MainNavbar({ active, navigate, user, onLogout }) {
                 </div>
 
                 <button
-                  className="menu-item"
+                  className="navbar-menu-item"
                   style={{ width: "100%", padding: "14px 20px", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: "pointer", color: C.primary, fontWeight: 700, borderTop: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: 12, transition: "background 0.2s" }}
                   onClick={() => { if (onLogout) onLogout(); setShowMenu(false); }}
                 >

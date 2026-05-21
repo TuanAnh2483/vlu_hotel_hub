@@ -1,3 +1,18 @@
+/* ── MainNavbar ────────────────────────────────────────────────────────── */
+
+@keyframes navbar-fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.navbar-dropdown {
+  animation: navbar-fade-in-up 0.2s ease-out;
+}
+
+.navbar-menu-item:hover {
+  background: #f8f9fa;
+}
+
 /* ── MainNavbar Mobile Responsive ─────────────────────────────────────── */
 
 .main-navbar-hamburger {
