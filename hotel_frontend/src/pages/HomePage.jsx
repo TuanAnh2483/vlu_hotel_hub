@@ -14,7 +14,7 @@ import {
 import ProvinceCombobox from "../components/ui/ProvinceCombobox";
 import { useVietnamProvinces, useVietnamDistricts } from "../hooks/useVietnamAdmin";
 import { stripProvincePrefix, nfc } from "../services/vnAdminService";
-import { Bed, Calendar, ChevronRight, MapPin, Search, Users } from "lucide-react";
+import { Bed, Calendar, ChevronRight, MapPin, Search, Users, X as XIcon, AlertCircle } from "lucide-react";
 import "../styles/pages/customer/HomePage.css";
 
 const PLACEHOLDER_BG = "repeating-conic-gradient(#ccc 0% 25%,#e8e8e8 0% 50%) 0 0/20px 20px";
@@ -247,11 +247,8 @@ function SearchBar({ initial = {}, onSearch }) {
           <input className="customer-homepage-field-input" type="number" min="1" placeholder={t("search_rooms_ph")} value={q.rooms} onChange={upd("rooms")} />
         </Field>
         {hasData && (
-          <button onClick={clearAll} title={t("search_btn")} className="customer-homepage-clear-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+          <button onClick={clearAll} title={t("search_clear")} aria-label={t("search_clear")} className="customer-homepage-clear-btn">
+            <XIcon size={14} strokeWidth={2.5} />
           </button>
         )}
         <div className="customer-homepage-searchbar-divider" />
@@ -262,7 +259,7 @@ function SearchBar({ initial = {}, onSearch }) {
       </div>
       {(provinceErr || searchErr) && (
         <div className="customer-homepage-error-tip">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="#BE1E2E"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+          <AlertCircle size={13} color="var(--primary)" style={{ flexShrink: 0 }} />
           {searchErr || t("search_err_province")}
         </div>
       )}
@@ -411,9 +408,8 @@ export default function HomePage({ navigate, user, onLogout }) {
         </div>
       </div>
 
-      <>
-          {/* ── Featured Hotels ── */}
-          <div className="customer-homepage-section">
+      {/* ── Featured Hotels ── */}
+      <div className="customer-homepage-section">
             <p className="customer-homepage-section-eyebrow">{t("section_featured_eyebrow")}</p>
             <div className="customer-homepage-section-header">
               <div>
@@ -477,8 +473,7 @@ export default function HomePage({ navigate, user, onLogout }) {
                 />
               ))}
             </div>
-          </div>
-      </>
+      </div>
 
       <Footer />
     </div>
