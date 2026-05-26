@@ -51,7 +51,7 @@ public class PaymentTransaction {
     private PaymentTransactionStatus status;
 
     @Column(nullable = false)
-    private Double amount;
+    private Long amount;
 
     @Column(name = "provider_reference", nullable = false, length = 100)
     private String providerReference;

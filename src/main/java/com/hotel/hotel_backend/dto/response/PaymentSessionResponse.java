@@ -7,7 +7,7 @@ public record PaymentSessionResponse(
         Long bookingId,
         String method,
         String status,
-        Double amount,
+        Long amount,
         String paymentCode,
         String transferContent,
         String bankAccountNo,

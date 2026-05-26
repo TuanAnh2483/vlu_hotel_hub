@@ -4,5 +4,5 @@ public record BookingItemResponse(
         Long roomTypeId,
         String roomTypeName,
         Integer quantity,
-        Double stayPrice
+        Long stayPrice
 ) {}

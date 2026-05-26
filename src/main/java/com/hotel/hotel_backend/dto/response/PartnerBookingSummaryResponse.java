@@ -12,7 +12,7 @@ public record PartnerBookingSummaryResponse(
         String customerName,
         LocalDate checkIn,
         LocalDate checkOut,
-        Double totalPrice,
+        Long totalPrice,
         BookingStatus status,
         LocalDateTime createdAt,
         LocalDateTime expiresAt

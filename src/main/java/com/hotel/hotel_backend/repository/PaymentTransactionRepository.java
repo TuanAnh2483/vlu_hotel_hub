@@ -35,8 +35,8 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
                 b.id,
                 h.name,
                 case
-                    when pt.amount < 0 then concat('Hoàn tiền booking #', b.id, ' - ', h.name)
-                    else concat('Thanh toán booking #', b.id, ' - ', h.name)
+                    when pt.amount < 0 then concat('Hoàn tiền booking #', cast(b.id as String), ' - ', h.name)
+                    else concat('Thanh toán booking #', cast(b.id as String), ' - ', h.name)
                 end,
                 pt.amount,
                 pt.status,
@@ -59,8 +59,8 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
                 b.id,
                 h.name,
                 case
-                    when pt.amount < 0 then concat('Hoàn tiền booking #', b.id, ' - ', h.name)
-                    else concat('Doanh thu booking #', b.id, ' - ', h.name)
+                    when pt.amount < 0 then concat('Hoàn tiền booking #', cast(b.id as String), ' - ', h.name)
+                    else concat('Doanh thu booking #', cast(b.id as String), ' - ', h.name)
                 end,
                 pt.amount,
                 pt.status,

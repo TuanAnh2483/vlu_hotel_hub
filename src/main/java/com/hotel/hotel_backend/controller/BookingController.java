@@ -95,8 +95,7 @@ public class BookingController {
             @PathVariable Long bookingId,
             @AuthenticationPrincipal JwtPrincipal principal
     ) {
-        requireUserId(principal);
-        return ApiResponse.ok(refundRequestService.getMyRefundRequest(bookingId));
+        return ApiResponse.ok(refundRequestService.getMyRefundRequest(requireUserId(principal), bookingId));
     }
 
     @PostMapping("/{bookingId}/refund-request")
@@ -106,8 +105,7 @@ public class BookingController {
             @Valid @RequestBody CreateRefundRequest request,
             @AuthenticationPrincipal JwtPrincipal principal
     ) {
-        requireUserId(principal);
-        return ApiResponse.ok(refundRequestService.createMyRefundRequest(bookingId, request));
+        return ApiResponse.ok(refundRequestService.createMyRefundRequest(requireUserId(principal), bookingId, request));
     }
     @PostMapping("/{bookingId}/payment-session")
     @PreAuthorize("hasRole('CUSTOMER')")
@@ -130,6 +128,5 @@ public class BookingController {
             throw new ApiException(ErrorCode.UNAUTHORIZED);
         }
         return principal.userId();
-         
     }
 }

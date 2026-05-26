@@ -6,9 +6,10 @@ import java.util.List;
 
 public record BookingResponse (
         Long bookingId,
+        String hotelName,
         LocalDate checkIn,
         LocalDate checkOut,
-        Double totalPrice,
+        Long totalPrice,
         String status,
         LocalDateTime expiresAt,
         List<BookingItemResponse> items,

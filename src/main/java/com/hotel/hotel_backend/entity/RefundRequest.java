@@ -41,7 +41,7 @@ public class RefundRequest {
     private Hotel hotel;
 
     @Column(nullable = false)
-    private Double amount;
+    private Long amount;
 
     @Column(nullable = false, length = 255)
     private String reason;

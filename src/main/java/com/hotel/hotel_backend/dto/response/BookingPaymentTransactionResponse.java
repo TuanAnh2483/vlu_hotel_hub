@@ -6,7 +6,7 @@ public record BookingPaymentTransactionResponse(
         Long paymentTransactionId,
         String method,
         String status,
-        Double amount,
+        Long amount,
         String providerReference,
         String failureReason,
         String clientRequestId,

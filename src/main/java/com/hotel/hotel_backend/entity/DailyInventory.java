@@ -8,11 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name= "daily_inventory",
-        indexes = {
-            @Index(name = "inx_room_date",columnList = "room_id,date")
-        }
-        )
+@Table(name= "daily_inventory")
 @Getter
 @Setter
 @NoArgsConstructor

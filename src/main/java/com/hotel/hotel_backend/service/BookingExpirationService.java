@@ -3,17 +3,17 @@ package com.hotel.hotel_backend.service;
 import com.hotel.hotel_backend.entity.Booking;
 import com.hotel.hotel_backend.entity.BookingItem;
 import com.hotel.hotel_backend.entity.BookingStatus;
-import com.hotel.hotel_backend.exeption.ApiException;
-import com.hotel.hotel_backend.exeption.ErrorCode;
 import com.hotel.hotel_backend.repository.BookingItemRepository;
 import com.hotel.hotel_backend.repository.BookingRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookingExpirationService {
@@ -61,7 +61,8 @@ public class BookingExpirationService {
     private void releaseInventoryForBooking(Booking booking) {
         List<BookingItem> items = bookingItemRepository.findByBookingId(booking.getId());
         if (items.isEmpty()) {
-            throw new ApiException(ErrorCode.CONFLICT, "Booking items are missing");
+            log.warn("Skipping inventory release for bookingId={}: no items found", booking.getId());
+            return;
         }
 
         for (BookingItem item : items) {

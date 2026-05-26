@@ -58,6 +58,8 @@ public class BookingRefundService {
                 bookingExpirationService.releaseReservedInventory(booking);
             }
             case COMPLETED, CANCELLED -> {
+                // Inventory already released: COMPLETED rooms were occupied and freed on checkout,
+                // CANCELLED bookings had inventory released at cancellation time. No release needed.
             }
             default -> throw new ApiException(ErrorCode.CONFLICT, "Only paid bookings can be refunded");
         }

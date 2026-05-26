@@ -10,6 +10,8 @@ import com.hotel.hotel_backend.entity.Booking;
 import org.springframework.stereotype.Component;
 import org.modelmapper.ModelMapper;
 
+import java.util.List;
+
 
 @Component
 public class BookingMapper {
@@ -38,21 +40,28 @@ public class BookingMapper {
             );
         }
 
+        List<BookingItemResponse> itemResponses = booking.getItems().stream()
+                .map(item -> new BookingItemResponse(
+                        item.getRoom().getId(),
+                        item.getRoom().getName(),
+                        item.getQuantity(),
+                        item.getPrice()
+                ))
+                .toList();
+
+        String hotelName = (booking.getItems() != null && !booking.getItems().isEmpty())
+                ? booking.getItems().get(0).getRoom().getHotel().getName()
+                : null;
+
         return new BookingResponse(
                 booking.getId(),
+                hotelName,
                 booking.getCheckIn(),
                 booking.getCheckOut(),
                 booking.getTotalPrice(),
                 booking.getStatus().name(),
                 booking.getExpiresAt(),
-                booking.getItems().stream()
-                        .map(item -> new BookingItemResponse(
-                                item.getRoom().getId(),
-                                item.getRoom().getName(),
-                                item.getQuantity(),
-                                item.getPrice()
-                        ))
-                        .toList(),
+                itemResponses,
                 contactResponse
         );
 

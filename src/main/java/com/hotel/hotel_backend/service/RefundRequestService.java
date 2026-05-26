@@ -29,9 +29,9 @@ public class RefundRequestService {
     private final SecurityService securityService;
     private final BookingRefundService bookingRefundService;
 
-    public RefundRequestResponse createMyRefundRequest(Long bookingId, CreateRefundRequest request) {
+    public RefundRequestResponse createMyRefundRequest(Long userId, Long bookingId, CreateRefundRequest request) {
         User currentUser = securityService.getCurrentUser();
-        Booking booking = bookingRepository.findByIdAndUserId(bookingId, currentUser.getId())
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Booking not found"));
 
         if (refundRequestRepository.findByBookingId(bookingId).isPresent()) {
@@ -67,12 +67,11 @@ public class RefundRequestService {
     }
 
     @Transactional(readOnly = true)
-    public RefundRequestResponse getMyRefundRequest(Long bookingId) {
-        User currentUser = securityService.getCurrentUser();
+    public RefundRequestResponse getMyRefundRequest(Long userId, Long bookingId) {
         RefundRequest refundRequest = refundRequestRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Refund request not found"));
 
-        if (!refundRequest.getUser().getId().equals(currentUser.getId())) {
+        if (!refundRequest.getUser().getId().equals(userId)) {
             throw new ApiException(ErrorCode.NOT_FOUND, "Refund request not found");
         }
 

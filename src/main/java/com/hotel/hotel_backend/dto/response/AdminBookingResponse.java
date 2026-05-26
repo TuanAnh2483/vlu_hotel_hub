@@ -12,7 +12,7 @@ public record AdminBookingResponse(
         LocalDate checkIn,
         LocalDate checkOut,
         long nights,
-        Double totalPrice,
+        Long totalPrice,
         BookingStatus status,
         LocalDateTime createdAt
 ) {

@@ -38,7 +38,7 @@ public class BookingItem {
 
 
     @Column(name = "price", nullable = false)
-    private Double price;
+    private Long price;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

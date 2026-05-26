@@ -11,7 +11,7 @@ public record RefundRequestResponse(
         Long hotelId,
         String hotelName,
         String userEmail,
-        Double amount,
+        Long amount,
         String reason,
         String note,
         RefundRequestStatus status,

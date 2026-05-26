@@ -13,7 +13,7 @@ public record PartnerBookingDetailResponse(
         Long customerId,
         LocalDate checkIn,
         LocalDate checkOut,
-        Double totalPrice,
+        Long totalPrice,
         BookingStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,

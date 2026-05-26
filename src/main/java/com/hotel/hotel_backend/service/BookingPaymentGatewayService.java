@@ -342,12 +342,11 @@ public class BookingPaymentGatewayService {
         return matcher.find() ? matcher.group().toUpperCase(Locale.ROOT) : null;
     }
 
-    private boolean amountMatches(Double actualAmount, Double expectedAmount) {
+    private boolean amountMatches(Double actualAmount, Long expectedAmount) {
         if (actualAmount == null || expectedAmount == null) {
             return false;
         }
-        // Làm tròn về VND vì amount booking đang dùng Double nhưng tiền VND không cần phần lẻ.
-        return Math.round(actualAmount) == Math.round(expectedAmount);
+        return Math.round(actualAmount) == expectedAmount;
     }
 
 

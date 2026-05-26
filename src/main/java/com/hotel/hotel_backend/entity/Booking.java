@@ -40,7 +40,7 @@ public class Booking {
     @Column(name = "check_out", nullable = false)
     private LocalDate checkOut;
     @Column(name = "total_price", nullable = false)
-    private Double totalPrice;
+    private Long totalPrice;
 
     // trạng thái booking
     @Enumerated(EnumType.STRING)

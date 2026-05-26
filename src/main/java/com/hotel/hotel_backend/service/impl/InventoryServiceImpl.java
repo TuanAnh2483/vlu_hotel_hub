@@ -11,6 +11,7 @@ import com.hotel.hotel_backend.service.InventoryService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InventoryServiceImpl implements InventoryService {
@@ -83,6 +85,10 @@ public class InventoryServiceImpl implements InventoryService {
                 if (inv.getAvailableRooms() > totalRooms) {
                     // Cap availableRooms down; never go below existing blockedRooms.
                     int safeAvailable = Math.max(inv.getBlockedRooms(), totalRooms);
+                    if (inv.getBlockedRooms() > totalRooms) {
+                        log.warn("Inventory inconsistency: blockedRooms={} exceeds new totalRooms={} for roomId={} on date={}",
+                                inv.getBlockedRooms(), totalRooms, roomId, date);
+                    }
                     inv.setAvailableRooms(safeAvailable);
                     toUpdate.add(inv);
                 }

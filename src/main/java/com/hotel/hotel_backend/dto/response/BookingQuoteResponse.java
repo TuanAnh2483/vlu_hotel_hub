@@ -8,6 +8,6 @@ public record BookingQuoteResponse(
         String hotelName,
         LocalDate checkIn,
         LocalDate checkOut,
-        Double totalPrice,
+        Long totalPrice,
         List<BookingItemResponse> items
 ) {}

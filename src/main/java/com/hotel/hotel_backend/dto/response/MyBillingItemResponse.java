@@ -10,7 +10,7 @@ public record MyBillingItemResponse(
         Long bookingId,
         String hotelName,
         String description,
-        Double amount,
+        Long amount,
         PaymentTransactionStatus status,
         PaymentMethod method,
         LocalDateTime createdAt

@@ -128,7 +128,7 @@ public class BookingServiceImpl implements BookingService {
         BookingContact contact = createBookingContact(bookingContactRequest, booking);
         booking.setContact(contact);
 
-        double totalPrice = createBookingItems(booking, preparation.reservations());
+        long totalPrice = createBookingItems(booking, preparation.reservations());
         booking.setTotalPrice(totalPrice);
 
         bookingRepository.save(booking);
@@ -333,7 +333,7 @@ public class BookingServiceImpl implements BookingService {
                 throw new ApiException(ErrorCode.CONFLICT, "Not enough rooms available");
             }
 
-            reservations.add(new RoomReservation(room, requestedQuantity, (double) bookableRoom.stayPrice()));
+            reservations.add(new RoomReservation(room, requestedQuantity, bookableRoom.stayPrice()));
         }
 
         return reservations;
@@ -356,7 +356,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setUserId(userId);
         booking.setCheckIn(bookingRequest.getCheckIn());
         booking.setCheckOut(bookingRequest.getCheckOut());
-        booking.setTotalPrice(0.0);
+        booking.setTotalPrice(0L);
         // Sau confirm booking đã được giữ chỗ nhưng vẫn chờ bước pay placeholder.
         booking.setStatus(BookingStatus.PENDING_PAYMENT);
         booking.setExpiresAt(LocalDateTime.now().plusMinutes(PAYMENT_TTL_MINUTES));
@@ -372,11 +372,11 @@ public class BookingServiceImpl implements BookingService {
         return contact;
     }
 
-    private double createBookingItems(
+    private long createBookingItems(
             Booking booking,
             List<RoomReservation> reservations
     ) {
-        double totalPrice = 0.0;
+        long totalPrice = 0L;
         List<BookingItem> items = new ArrayList<>();
 
         for (RoomReservation reservation : reservations) {
@@ -412,8 +412,8 @@ public class BookingServiceImpl implements BookingService {
                 ))
                 .toList();
 
-        double totalPrice = preparation.reservations().stream()
-                .mapToDouble(reservation -> reservation.stayPrice() * reservation.quantity())
+        long totalPrice = preparation.reservations().stream()
+                .mapToLong(reservation -> reservation.stayPrice() * reservation.quantity())
                 .sum();
 
         return new BookingQuoteResponse(
@@ -512,9 +512,9 @@ public class BookingServiceImpl implements BookingService {
     private static final class RoomReservation {
         private final Room room;
         private final Integer quantity;
-        private final Double stayPrice;
+        private final Long stayPrice;
 
-        private RoomReservation(Room room, Integer quantity, Double stayPrice) {
+        private RoomReservation(Room room, Integer quantity, Long stayPrice) {
             this.room = room;
             this.quantity = quantity;
             this.stayPrice = stayPrice;
@@ -528,7 +528,7 @@ public class BookingServiceImpl implements BookingService {
             return quantity;
         }
 
-        private Double stayPrice() {
+        private Long stayPrice() {
             return stayPrice;
         }
     }
