@@ -285,6 +285,7 @@ export default function PartnerCalendar() {
             basePrice={calendar?.basePrice}
             todayIso={todayIso}
             loading={calendarLoading && Boolean(selectedRoomId)}
+            roomUnits={roomUnits}
           />
 
           {(calError || calendarQueryError) && (
@@ -295,6 +296,17 @@ export default function PartnerCalendar() {
 
           <div className="pcal-content-row">
             <div className="pcal-grid-card">
+              <CalendarGrid
+                monthCells={monthCells}
+                todayIso={todayIso}
+                calendar={calendar}
+                calendarLoading={calendarLoading}
+                selectedRoomId={selectedRoomId}
+                dayNames={DAY_NAMES}
+                onCellClick={openDayModal}
+              />
+            </div>
+            <div className="pcal-sidebar">
               <CalendarToolbar
                 hotels={hotels}
                 rooms={rooms}
@@ -314,21 +326,12 @@ export default function PartnerCalendar() {
                 onRangeUpdate={openRangeRateModal}
                 disabled={!selectedRoomId || calendarLoading}
               />
-              <CalendarGrid
-                monthCells={monthCells}
+              <CalendarSidebar
+                items={calendarItems}
                 todayIso={todayIso}
-                calendar={calendar}
-                calendarLoading={calendarLoading}
-                selectedRoomId={selectedRoomId}
-                dayNames={DAY_NAMES}
-                onCellClick={openDayModal}
+                defaultQuantity={calendar?.defaultQuantity}
               />
             </div>
-            <CalendarSidebar
-              items={calendarItems}
-              todayIso={todayIso}
-              defaultQuantity={calendar?.defaultQuantity}
-            />
           </div>
 
           {/* Day occupancy + pricing modal — two tabs in one */}

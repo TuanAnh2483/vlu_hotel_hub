@@ -129,7 +129,7 @@
 
 /* ── Sidebar ─────────────────────────────────────────────────────────── */
 .pcal-sidebar {
-  width: 220px;
+  width: 256px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -182,9 +182,12 @@
 }
 
 @media (max-width: 1100px) {
-  .pcal-content-row { flex-direction: column; }
+  .pcal-content-row { flex-direction: column-reverse; }
   .pcal-sidebar { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; gap: 12px; }
   .pcal-sb-card { flex: 1; min-width: 200px; }
+  .pct-root { flex-direction: row; flex-wrap: wrap; gap: 12px 20px; }
+  .pct-field, .pct-month-nav, .pct-btn { min-width: 180px; flex: 1; }
+  .pct-hr { display: none; }
 }
 
 /* ── Calendar grid wrapper card ──────────────────────────────────────── */
@@ -196,47 +199,47 @@
   overflow: hidden;
 }
 
-/* ── Toolbar (single row) ────────────────────────────────────────────── */
+/* ── Toolbar (vertical card in right sidebar) ────────────────────────── */
 .pct-root {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.pct-select-group {
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
 }
-.pct-group-label {
+.pct-section-title {
   font-size: 10px;
   font-weight: 900;
   color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 1px;
 }
-.pct-divider {
-  width: 1px;
-  height: 36px;
-  background: #e2e8f0;
-  flex-shrink: 0;
+.pct-hr {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 2px 0;
 }
-.pct-spacer { flex: 1; min-width: 8px; }
-.pct-selectors {
+.pct-field {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 5px;
+}
+.pct-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
 }
 .pct-select-wrap {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
 }
 .pct-select-icon {
   position: absolute;
-  left: 12px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
@@ -244,12 +247,12 @@
   z-index: 1;
 }
 .pct-select {
-  min-width: 200px;
-  padding: 10px 14px 10px 34px;
-  border-radius: 14px;
+  width: 100%;
+  padding: 9px 10px 9px 30px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #0f172a;
   outline: none;
@@ -265,15 +268,15 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px;
-  border-radius: 14px;
+  padding: 3px;
+  border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
 .pct-nav-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   border: none;
   background: transparent;
   color: #64748b;
@@ -283,37 +286,36 @@
   cursor: pointer;
   transition: background 0.14s, color 0.14s;
   font-family: inherit;
+  flex-shrink: 0;
 }
 .pct-nav-btn:hover { background: #fff; color: #0f172a; }
 .pct-month-label {
-  min-width: 150px;
+  flex: 1;
   text-align: center;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 900;
   color: #0f172a;
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: 6px 4px;
+  border-radius: 9px;
   border: none;
   background: transparent;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   transition: background 0.14s;
   font-family: inherit;
+  white-space: nowrap;
 }
 .pct-month-label:hover    { background: #fff; }
 .pct-month-label--current { color: #BE1E2E; }
-.pct-actions-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
 .pct-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  width: 100%;
   min-height: 38px;
   padding: 0 16px;
   border: none;

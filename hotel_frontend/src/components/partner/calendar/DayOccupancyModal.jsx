@@ -103,13 +103,19 @@ export default function DayOccupancyModal({
 
   const { item, iso, weekend } = modal;
   const totalQ   = calendar?.defaultQuantity || 0;
-  const booked   = item?.bookedRooms || item?.blockedRooms || 0;
+  const booked   = item?.blockedRooms || 0;
   const sellable = item?.sellableRooms ?? Math.max(0, totalQ - booked);
   const isClosed = Boolean(item?.closed);
   const roomName = calendar?.roomName || "—";
   const price    = item?.price ?? calendar?.basePrice;
 
   const hasRealUnits = Array.isArray(roomUnits) && roomUnits.length > 0;
+
+  // When physical unit data is available, derive stats from it so they match the slot diagram
+  const statsTotal    = hasRealUnits ? roomUnits.length : totalQ;
+  const statsOccupied = hasRealUnits ? roomUnits.filter(u => u.status === "OCCUPIED").length  : booked;
+  const statsFree     = hasRealUnits ? roomUnits.filter(u => u.status === "AVAILABLE").length : sellable;
+  const statsPct      = statsTotal > 0 ? Math.round(statsOccupied / statsTotal * 100) : 0;
 
   const slots = useMemo(() => {
     if (hasRealUnits) {
@@ -139,8 +145,6 @@ export default function DayOccupancyModal({
       b.status !== "CANCELLED" && b.status !== "REFUNDED",
     );
   }, [bookings, iso]);
-
-  const occupiedPct = totalQ > 0 ? Math.round(booked / totalQ * 100) : 0;
 
   // Edit tab helpers
   const aiLevel  = aiData ? getAiLevel(aiData.suggestedPrice, form?.price) : "MEDIUM";
@@ -188,29 +192,29 @@ export default function DayOccupancyModal({
                 <div className="pdom-stat pdom-stat--total">
                   <div className="pdom-stat-icon"><BedDouble size={16} /></div>
                   <div>
-                    <div className="pdom-stat-num">{totalQ}</div>
+                    <div className="pdom-stat-num">{statsTotal}</div>
                     <div className="pdom-stat-lbl">Tổng số phòng</div>
                   </div>
                 </div>
                 <div className="pdom-stat pdom-stat--occ">
                   <div className="pdom-stat-icon"><Users size={16} /></div>
                   <div>
-                    <div className="pdom-stat-num">{booked}</div>
+                    <div className="pdom-stat-num">{statsOccupied}</div>
                     <div className="pdom-stat-lbl">Đang có khách</div>
                   </div>
                 </div>
                 <div className="pdom-stat pdom-stat--free">
                   <div className="pdom-stat-icon"><CheckCircle2 size={16} /></div>
                   <div>
-                    <div className="pdom-stat-num">{isClosed ? "—" : sellable}</div>
+                    <div className="pdom-stat-num">{isClosed ? "—" : statsFree}</div>
                     <div className="pdom-stat-lbl">{isClosed ? "Đóng bán" : "Còn trống"}</div>
                   </div>
                 </div>
-                {!isClosed && totalQ > 0 && (
+                {!isClosed && statsTotal > 0 && (
                   <div className="pdom-stat pdom-stat--pct">
                     <div className="pdom-stat-icon"><CircleDollarSign size={16} /></div>
                     <div>
-                      <div className="pdom-stat-num">{occupiedPct}%</div>
+                      <div className="pdom-stat-num">{statsPct}%</div>
                       <div className="pdom-stat-lbl">Công suất</div>
                     </div>
                   </div>

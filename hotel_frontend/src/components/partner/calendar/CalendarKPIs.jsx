@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { BedDouble, CheckCircle2, TrendingUp, CircleDollarSign } from "lucide-react";
+import { BedDouble, CheckCircle2, Wrench, CircleDollarSign } from "lucide-react";
 import { fmtCompact, calcOccPct } from "./calendarUtils";
 
 const TONES = {
@@ -27,31 +27,36 @@ function KpiCard({ icon: Icon, tone, label, value, sub, loading }) {
   );
 }
 
-export default function CalendarKPIs({ items, defaultQuantity, basePrice, todayIso, loading }) {
+export default function CalendarKPIs({ items, defaultQuantity, basePrice, todayIso, loading, roomUnits }) {
   const m = useMemo(() => {
     if (!items.length || !defaultQuantity) return null;
 
     const open         = items.filter(i => !i.closed);
-    const bookedNights = open.reduce((s, i) => s + (i.bookedRooms || i.blockedRooms || 0), 0);
+    const bookedNights = open.reduce((s, i) => s + (i.blockedRooms || 0), 0);
     const totalSlots   = open.length * defaultQuantity;
     const avgOcc       = totalSlots > 0 ? Math.round(bookedNights / totalSlots * 100) : 0;
     const estRev       = items.reduce((s, i) => {
-      const booked = i.bookedRooms || i.blockedRooms || 0;
+      const booked = i.blockedRooms || 0;
       return s + booked * (i.price || basePrice || 0);
     }, 0);
     const adr = bookedNights > 0 ? Math.round(estRev / bookedNights) : 0;
 
-    const nearlyFull = items.filter(
-      i => !i.closed && calcOccPct(i.bookedRooms || i.blockedRooms || 0, defaultQuantity) >= 80,
-    ).length;
+    const todayItem = items.find(i => i.date === todayIso);
+    const hasRealUnits = Array.isArray(roomUnits) && roomUnits.length > 0;
 
-    const todayItem   = items.find(i => i.date === todayIso);
-    const todayVacant = todayItem && !todayItem.closed
-      ? (todayItem.sellableRooms ?? Math.max(0, defaultQuantity - (todayItem.blockedRooms || 0)))
+    let todayVacant = null;
+    if (hasRealUnits) {
+      todayVacant = roomUnits.filter(u => u.status === "AVAILABLE").length;
+    } else if (todayItem && !todayItem.closed) {
+      todayVacant = todayItem.sellableRooms ?? Math.max(0, defaultQuantity - (todayItem.blockedRooms || 0));
+    }
+
+    const maintenance = hasRealUnits
+      ? roomUnits.filter(u => u.status === "MAINTENANCE" || u.status === "CLEANING").length
       : null;
 
-    return { bookedNights, totalSlots, avgOcc, estRev, adr, nearlyFull, totalDays: items.length, todayVacant };
-  }, [items, defaultQuantity, basePrice, todayIso]);
+    return { bookedNights, totalSlots, avgOcc, estRev, adr, totalDays: items.length, todayVacant, maintenance };
+  }, [items, defaultQuantity, basePrice, todayIso, roomUnits]);
 
   return (
     <div className="pck-grid">
@@ -66,9 +71,9 @@ export default function CalendarKPIs({ items, defaultQuantity, basePrice, todayI
         sub={m ? (m.todayVacant !== null ? `Trên tổng ${defaultQuantity || 0} phòng` : "Hôm nay không thuộc tháng này") : undefined}
       />
       <KpiCard
-        icon={TrendingUp} tone="blue" label="Công suất TB" loading={loading}
-        value={m ? `${m.avgOcc}%` : "—"}
-        sub={m ? `${m.bookedNights} / ${m.totalSlots} phòng-đêm` : undefined}
+        icon={Wrench} tone="blue" label="Phòng đang bảo trì" loading={loading}
+        value={m ? (m.maintenance !== null ? String(m.maintenance) : "—") : "—"}
+        sub={m ? (m.maintenance !== null ? "Bảo trì + dọn phòng hôm nay" : "Chưa có dữ liệu phòng vật lý") : undefined}
       />
       <KpiCard
         icon={CircleDollarSign} tone="amber" label="Doanh thu ước tính" loading={loading}

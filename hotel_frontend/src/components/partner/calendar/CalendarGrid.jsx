@@ -19,7 +19,7 @@ function CalendarCell({ cell, todayIso, calendar, onCellClick }) {
   const totalQ    = calendar?.defaultQuantity || 0;
   const basePrice = calendar?.basePrice;
   const price     = item?.price ?? basePrice;
-  const booked    = item?.bookedRooms ?? 0;
+  const booked    = item?.blockedRooms ?? 0;
   const sellable  = item?.sellableRooms ?? 0;
   const occPct    = calcOccPct(booked, totalQ);
   const cellCls   = getCellClass(occPct, isClosed, isPast);

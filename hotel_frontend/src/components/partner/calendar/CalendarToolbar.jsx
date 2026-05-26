@@ -15,9 +15,11 @@ export default function CalendarToolbar({
   return (
     <div className="pct-root">
 
-      {/* ── Hotel selector ── */}
-      <div className="pct-select-group">
-        <span className="pct-group-label">Khách sạn</span>
+      {/* ── Bộ lọc ── */}
+      <div className="pct-section-title">Bộ lọc</div>
+
+      <div className="pct-field">
+        <span className="pct-field-label">Khách sạn</span>
         <div className="pct-select-wrap">
           <Building2 size={13} className="pct-select-icon" />
           <select
@@ -34,9 +36,8 @@ export default function CalendarToolbar({
         </div>
       </div>
 
-      {/* ── Room type selector ── */}
-      <div className="pct-select-group">
-        <span className="pct-group-label">Loại phòng</span>
+      <div className="pct-field">
+        <span className="pct-field-label">Loại phòng</span>
         <div className="pct-select-wrap">
           <Hotel size={13} className="pct-select-icon" />
           <select
@@ -55,34 +56,11 @@ export default function CalendarToolbar({
         </div>
       </div>
 
-      {/* ── Divider ── */}
-      <div className="pct-divider" />
+      <div className="pct-hr" />
 
-      {/* ── Bulk action buttons ── */}
-      <button
-        type="button"
-        onClick={onMonthUpdate}
-        disabled={disabled}
-        className="pct-btn pct-btn--primary"
-        aria-label="Cập nhật giá cho toàn tháng"
-      >
-        <CircleDollarSign size={14} /> Cập nhật tháng
-      </button>
+      {/* ── Điều hướng tháng ── */}
+      <div className="pct-section-title">Tháng</div>
 
-      <button
-        type="button"
-        onClick={onRangeUpdate}
-        disabled={disabled}
-        className="pct-btn pct-btn--dark"
-        aria-label="Cập nhật theo khoảng ngày"
-      >
-        <CalIcon size={14} /> Khoảng ngày
-      </button>
-
-      {/* ── Push month nav to right ── */}
-      <div className="pct-spacer" />
-
-      {/* ── Month navigation ── */}
       <div className="pct-month-nav">
         <button
           type="button"
@@ -112,6 +90,31 @@ export default function CalendarToolbar({
           <ChevronRight size={17} />
         </button>
       </div>
+
+      <div className="pct-hr" />
+
+      {/* ── Thao tác ── */}
+      <div className="pct-section-title">Thao tác</div>
+
+      <button
+        type="button"
+        onClick={onMonthUpdate}
+        disabled={disabled}
+        className="pct-btn pct-btn--primary"
+        aria-label="Cập nhật giá cho toàn tháng"
+      >
+        <CircleDollarSign size={14} /> Cập nhật tháng
+      </button>
+
+      <button
+        type="button"
+        onClick={onRangeUpdate}
+        disabled={disabled}
+        className="pct-btn pct-btn--dark"
+        aria-label="Cập nhật theo khoảng ngày"
+      >
+        <CalIcon size={14} /> Khoảng ngày
+      </button>
 
     </div>
   );

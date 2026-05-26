@@ -20,7 +20,7 @@ function useInsights(items, todayIso, defaultQuantity) {
     const result = [];
 
     const slowDays = future.filter(
-      i => calcOccPct(i.bookedRooms || i.blockedRooms || 0, defaultQuantity) < 30,
+      i => calcOccPct(i.blockedRooms || 0, defaultQuantity) < 30,
     ).length;
     if (slowDays >= 5) result.push({
       icon: TrendingDown, color: "#D97706", bg: "#FFFBEB", border: "#FDE68A",
@@ -30,7 +30,7 @@ function useInsights(items, todayIso, defaultQuantity) {
     const weakWeekends = future.filter(i => {
       const dow = new Date(i.date).getDay();
       return (dow === 0 || dow === 6) &&
-        calcOccPct(i.bookedRooms || i.blockedRooms || 0, defaultQuantity) < 50;
+        calcOccPct(i.blockedRooms || 0, defaultQuantity) < 50;
     }).length;
     if (weakWeekends > 0) result.push({
       icon: Moon, color: "#7C3AED", bg: "#F5F3FF", border: "#DDD6FE",
@@ -38,7 +38,7 @@ function useInsights(items, todayIso, defaultQuantity) {
     });
 
     const hotDays = future.filter(
-      i => calcOccPct(i.bookedRooms || i.blockedRooms || 0, defaultQuantity) >= 80,
+      i => calcOccPct(i.blockedRooms || 0, defaultQuantity) >= 80,
     ).length;
     if (hotDays > 0) result.push({
       icon: CheckCircle2, color: "#059669", bg: "#ECFDF5", border: "#A7F3D0",
