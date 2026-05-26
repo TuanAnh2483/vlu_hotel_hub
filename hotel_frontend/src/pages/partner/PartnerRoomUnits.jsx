@@ -4,20 +4,21 @@ import {
   useUpdateRoomUnit, useDeleteRoomUnit, useUploadRoomUnitImage,
 } from "../../hooks/usePartnerQueries";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSearchParams, useOutletContext } from "react-router-dom";
-import { PageHeader, Modal } from "../../components/admin/AdminLayout";
+import { useSearchParams, useOutletContext, useNavigate } from "react-router-dom";
+import { Modal } from "../../components/admin/AdminLayout";
 import {
-  Search, Building2, BedDouble, DoorOpen,
+  Search, BedDouble, DoorOpen,
   Pencil, Trash2, AlertTriangle, ChevronDown, Hash, Layers,
-  Sparkles, ImagePlus, X,
+  Sparkles, ImagePlus, X, Plus, Info, ArrowRight,
 } from "lucide-react";
 import "../../styles/pages/partner/PartnerRoomUnits.css";
 
 const STATUS_CONFIG = {
-  AVAILABLE:   { label: "Sẵn sàng",  color: "#10b981", bg: "#d1fae5", dot: "#10b981" },
-  OCCUPIED:    { label: "Có khách",  color: "#3b82f6", bg: "#dbeafe", dot: "#3b82f6" },
-  MAINTENANCE: { label: "Bảo trì",   color: "#ef4444", bg: "#fee2e2", dot: "#ef4444" },
-  CLEANING:    { label: "Dọn phòng", color: "#f59e0b", bg: "#fef3c7", dot: "#f59e0b" },
+  AVAILABLE:   { label: "Phòng trống",   color: "#10b981", bg: "#d1fae5", dot: "#10b981" },
+  RESERVED:    { label: "Có người đặt", color: "#8b5cf6", bg: "#ede9fe", dot: "#8b5cf6" },
+  OCCUPIED:    { label: "Có khách",      color: "#3b82f6", bg: "#dbeafe", dot: "#3b82f6" },
+  CLEANING:    { label: "Dọn phòng",    color: "#f59e0b", bg: "#fef3c7", dot: "#f59e0b" },
+  MAINTENANCE: { label: "Bảo trì",      color: "#ef4444", bg: "#fee2e2", dot: "#ef4444" },
 };
 
 const STATUS_OPTIONS = Object.entries(STATUS_CONFIG).map(([key, v]) => ({ key, ...v }));
@@ -51,24 +52,59 @@ function StatusSelect({ value, onChange, disabled }) {
   );
 }
 
-function SummaryCards({ units }) {
-  const counts = { AVAILABLE: 0, OCCUPIED: 0, MAINTENANCE: 0, CLEANING: 0 };
-  units.forEach(u => { if (counts[u.status] !== undefined) counts[u.status]++; });
-  const cards = [
-    { key: "total",       label: "Tổng phòng",   value: units.length,          color: "#1e293b",  bg: "#f8fafc" },
-    { key: "AVAILABLE",   label: "Sẵn sàng",     value: counts.AVAILABLE,      color: "#10b981",  bg: "#f0fdf4" },
-    { key: "OCCUPIED",    label: "Có khách",      value: counts.OCCUPIED,       color: "#3b82f6",  bg: "#eff6ff" },
-    { key: "CLEANING",    label: "Dọn phòng",     value: counts.CLEANING,       color: "#f59e0b",  bg: "#fffbeb" },
-    { key: "MAINTENANCE", label: "Bảo trì",       value: counts.MAINTENANCE,    color: "#ef4444",  bg: "#fef2f2" },
+function StatStrip({ units }) {
+  const counts = { AVAILABLE: 0, RESERVED: 0, OCCUPIED: 0, CLEANING: 0, MAINTENANCE: 0 };
+  units.forEach(u => { if (u.status in counts) counts[u.status]++; });
+  const pills = [
+    { label: "Tổng",      value: units.length,       color: "#1e293b", dot: null },
+    { label: "Trống",     value: counts.AVAILABLE,   color: "#10b981", dot: "#10b981" },
+    { label: "Đặt trước", value: counts.RESERVED,    color: "#8b5cf6", dot: "#8b5cf6" },
+    { label: "Có khách",  value: counts.OCCUPIED,    color: "#3b82f6", dot: "#3b82f6" },
+    { label: "Dọn phòng", value: counts.CLEANING,    color: "#f59e0b", dot: "#f59e0b" },
+    { label: "Bảo trì",   value: counts.MAINTENANCE, color: "#ef4444", dot: "#ef4444" },
   ];
   return (
-    <div className="pru-summary-cards">
-      {cards.map(c => (
-        <div key={c.key} className="pru-summary-card" style={{ background: c.bg }}>
-          <div className="pru-summary-value" style={{ color: c.color }}>{c.value}</div>
-          <div className="pru-summary-label">{c.label}</div>
+    <div className="pru-stat-strip">
+      {pills.map((p, i) => (
+        <div key={i} className="pru-stat-pill">
+          {p.dot && <span className="pru-stat-dot" style={{ background: p.dot }} />}
+          <span className="pru-stat-value" style={{ color: p.color }}>{p.value}</span>
+          <span className="pru-stat-label">{p.label}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function NotesCell({ notes, guestName }) {
+  const [tip, setTip] = useState(null);
+  const textRef = useRef(null);
+
+  function showTip() {
+    if (!notes || !textRef.current) return;
+    const r = textRef.current.getBoundingClientRect();
+    setTip({ top: r.top, left: r.left });
+  }
+
+  return (
+    <div className="pru-notes-cell">
+      {guestName && <div className="pru-guest-name">{guestName}</div>}
+      {notes ? (
+        <span
+          ref={textRef}
+          className="pru-notes-text"
+          onMouseEnter={showTip}
+          onMouseLeave={() => setTip(null)}
+        >
+          {notes}
+        </span>
+      ) : (!guestName && <span className="pru-empty-val">—</span>)}
+      {tip && (
+        <div className="pru-notes-tooltip" style={{ top: tip.top, left: tip.left }}>
+          {notes}
+          <span className="pru-notes-tooltip-arrow" />
+        </div>
+      )}
     </div>
   );
 }
@@ -105,6 +141,7 @@ function EditModal({ unit, hotelId, onSave, onClose, saving, error }) {
     floor: unit.floor != null ? String(unit.floor) : "",
     status: unit.status,
     notes: unit.notes || "",
+    guestName: unit.guestName || "",
     coverImageUrl: unit.coverImageUrl || "",
   });
   const [previewUrl, setPreviewUrl] = useState(unit.coverImageUrl || "");
@@ -223,15 +260,29 @@ function EditModal({ unit, hotelId, onSave, onClose, saving, error }) {
           <label className="pru-edit-label">Trạng thái</label>
           <StatusSelect value={form.status} onChange={v => set("status", v)} />
         </div>
+        {(form.status === "OCCUPIED" || form.status === "RESERVED") && (
+          <div className="pru-edit-field">
+            <label className="pru-edit-label">Tên khách</label>
+            <input
+              className="pru-edit-input"
+              placeholder="VD: Nguyễn Văn A"
+              maxLength={200}
+              value={form.guestName}
+              onChange={e => set("guestName", e.target.value)}
+            />
+          </div>
+        )}
         <div className="pru-edit-field">
           <label className="pru-edit-label">Ghi chú vận hành</label>
-          <input
-            className="pru-edit-input"
+          <textarea
+            className="pru-edit-input pru-edit-textarea"
             placeholder="VD: Sửa điều hoà..."
-            maxLength={500}
+            maxLength={1000}
+            rows={3}
             value={form.notes}
             onChange={e => set("notes", e.target.value)}
           />
+          <span className="pru-notes-counter">{form.notes.length} / 1000</span>
         </div>
         {error && <div className="pru-edit-error">{error}</div>}
         <div className="pru-edit-actions">
@@ -244,6 +295,7 @@ function EditModal({ unit, hotelId, onSave, onClose, saving, error }) {
               floor: form.floor !== "" ? Number(form.floor) : null,
               status: form.status,
               notes: form.notes.trim() || null,
+              guestName: form.guestName.trim() || null,
               coverImageUrl: form.coverImageUrl || null,
             })}
           >
@@ -255,7 +307,90 @@ function EditModal({ unit, hotelId, onSave, onClose, saving, error }) {
   );
 }
 
+function AddRoomRedirectModal({ rooms, preselectedRoomId, hotelId, onClose, navigate }) {
+  const [selectedRoomId, setSelectedRoomId] = useState(preselectedRoomId || (rooms[0]?.id ? String(rooms[0].id) : ""));
+
+  function handleGo() {
+    navigate("/partner/rooms", {
+      state: { openEditRoomId: Number(selectedRoomId), hotelId },
+    });
+  }
+
+  return (
+    <Modal title="Thêm phòng" onClose={onClose} width={460}>
+      <div style={{ padding: "4px 0 8px" }}>
+        <div style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 10,
+          padding: "12px 14px", marginBottom: 20,
+        }}>
+          <Info size={16} color="#2563eb" style={{ flexShrink: 0, marginTop: 1 }} />
+          <p style={{ margin: 0, fontSize: 13.5, color: "#1e40af", lineHeight: 1.6 }}>
+            Số lượng phòng được quản lý từ <strong>Loại phòng</strong>.
+            Để thêm phòng, hãy tăng số lượng trong loại phòng tương ứng —
+            hệ thống sẽ tự động sinh phòng mới.
+          </p>
+        </div>
+
+        {rooms.length > 0 ? (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Chọn loại phòng muốn chỉnh sửa:
+            </div>
+            <select
+              style={{
+                width: "100%", padding: "9px 12px", borderRadius: 8,
+                border: "1.5px solid #e2e8f0", fontSize: 14, color: "#1e293b",
+                background: "#fff", marginBottom: 20, outline: "none",
+              }}
+              value={selectedRoomId}
+              onChange={e => setSelectedRoomId(e.target.value)}
+            >
+              {rooms.map(r => (
+                <option key={r.id} value={String(r.id)}>
+                  {r.name} ({r.quantity} phòng)
+                </option>
+              ))}
+            </select>
+          </>
+        ) : (
+          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>
+            Chưa có loại phòng nào. Hãy tạo loại phòng trước.
+          </p>
+        )}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            style={{
+              padding: "9px 18px", borderRadius: 8, border: "1.5px solid #e2e8f0",
+              background: "#fff", color: "#64748b", fontSize: 13.5, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+            onClick={onClose}
+          >
+            Huỷ
+          </button>
+          <button
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "9px 18px", borderRadius: 8, border: "none",
+              background: "#BE1E2E", color: "#fff", fontSize: 13.5, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit",
+              opacity: !selectedRoomId ? 0.5 : 1,
+            }}
+            disabled={!selectedRoomId}
+            onClick={handleGo}
+          >
+            Đi tới chỉnh sửa loại phòng <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function PartnerRoomUnits() {
+  const navigate = useNavigate();
   const [sp] = useSearchParams();
   const outletCtx = useOutletContext() || {};
   const { selectedHotelId: ctxHotelId, setSelectedHotelId: setCtxHotelId } = outletCtx;
@@ -272,6 +407,7 @@ export default function PartnerRoomUnits() {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const [changingStatusId, setChangingStatusId] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     if (ctxHotelId && !sp.get("hotelId")) setSelectedHotelId(String(ctxHotelId));
@@ -312,7 +448,8 @@ export default function PartnerRoomUnits() {
       await updateUnit.mutateAsync({
         roomId: unit.roomId, unitId: unit.id, hotelId: selectedHotelId,
         roomNumber: unit.roomNumber, floor: unit.floor,
-        status: newStatus, notes: unit.notes, coverImageUrl: unit.coverImageUrl,
+        status: newStatus, notes: unit.notes, guestName: unit.guestName ?? null,
+        coverImageUrl: unit.coverImageUrl,
       });
     } catch (e) { alert(e.message); }
     finally { setChangingStatusId(null); }
@@ -341,49 +478,25 @@ export default function PartnerRoomUnits() {
 
   return (
     <div className="pru-root">
-      <PageHeader
-        title="Phòng"
-        subtitle="Quản lý trạng thái và vận hành từng phòng vật lý"
-      />
+      {/* ── Top bar: title + add button ── */}
+      <div className="pru-topbar">
+        <div className="pru-topbar-left">
+          <h1 className="pru-topbar-title">Phòng</h1>
+          <span className="pru-topbar-subtitle">Quản lý trạng thái và vận hành từng phòng vật lý</span>
+        </div>
+        {selectedHotelId && (
+          <button
+            className="pru-btn pru-btn-primary pru-topbar-add-btn"
+            onClick={() => setShowAddModal(true)}
+          >
+            <Plus size={15} /> Thêm phòng
+          </button>
+        )}
+      </div>
 
-      {/* Hotel selector */}
+      {/* ── Filter bar — always visible when hotels exist ── */}
       {hotels.length > 0 && (
-        <div className="pru-hotel-chips-wrap">
-          <div className="pru-hotel-chips-label">
-            <Building2 size={15} color="#BE1E2E" /> Chọn cơ sở:
-          </div>
-          <div className="pru-hotel-chips-row">
-            {hotels.map(h => {
-              const thumb = h.coverImageUrl || (Array.isArray(h.imageUrls) ? h.imageUrls[0] : "");
-              const active = String(h.id) === String(selectedHotelId);
-              return (
-                <button
-                  key={h.id}
-                  className={`pru-hotel-chip${active ? " active" : ""}`}
-                  onClick={() => selectHotel(String(h.id))}
-                >
-                  <div className="pru-hotel-chip-thumb">
-                    {thumb ? <img src={thumb} alt={h.name} /> : <Building2 size={16} color="#94a3b8" />}
-                  </div>
-                  <div className="pru-hotel-chip-name">{h.name}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {!selectedHotelId ? (
-        <div className="pru-empty-state">
-          <DoorOpen size={40} color="#cbd5e1" />
-          <div className="pru-empty-title">Chọn cơ sở để xem danh sách phòng</div>
-        </div>
-      ) : isLoading ? (
-        <div className="pru-loading"><div className="pru-spinner" /> Đang tải danh sách phòng...</div>
-      ) : (
-        <>
-          {units.length > 0 && <SummaryCards units={units} />}
-
+        <div className="pru-controls-wrap">
           <div className="pru-filter-bar">
             <div className="pru-filter-search-wrap">
               <Search size={14} color="#94a3b8" className="pru-filter-search-icon" />
@@ -396,36 +509,68 @@ export default function PartnerRoomUnits() {
             </div>
             <select
               className="pru-filter-select"
-              value={filterRoomId}
-              onChange={e => setFilterRoomId(e.target.value)}
+              value={selectedHotelId}
+              onChange={e => selectHotel(e.target.value)}
             >
-              <option value="">Tất cả loại phòng</option>
-              {rooms.map(r => (
-                <option key={r.id} value={String(r.id)}>{r.name}</option>
+              <option value="">-- Chọn cơ sở --</option>
+              {hotels.map(h => (
+                <option key={h.id} value={String(h.id)}>{h.name}</option>
               ))}
             </select>
-            <select
-              className="pru-filter-select"
-              value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
-            >
-              <option value="">Tất cả trạng thái</option>
-              {STATUS_OPTIONS.map(s => (
-                <option key={s.key} value={s.key}>{s.label}</option>
-              ))}
-            </select>
-            <div className="pru-filter-count">
-              {filteredUnits.length} / {units.length} phòng
-            </div>
+            {selectedHotelId && (
+              <>
+                <select
+                  className="pru-filter-select"
+                  value={filterRoomId}
+                  onChange={e => setFilterRoomId(e.target.value)}
+                >
+                  <option value="">Tất cả loại phòng</option>
+                  {rooms.map(r => (
+                    <option key={r.id} value={String(r.id)}>{r.name}</option>
+                  ))}
+                </select>
+                <select
+                  className="pru-filter-select"
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  {STATUS_OPTIONS.map(s => (
+                    <option key={s.key} value={s.key}>{s.label}</option>
+                  ))}
+                </select>
+                <div className="pru-filter-count">{filteredUnits.length} / {units.length} phòng</div>
+              </>
+            )}
           </div>
+          {selectedHotelId && units.length > 0 && <StatStrip units={units} />}
+        </div>
+      )}
+
+      {!selectedHotelId ? (
+        <div className="pru-empty-state">
+          <DoorOpen size={40} color="#cbd5e1" />
+          <div className="pru-empty-title">Chọn cơ sở để xem danh sách phòng</div>
+        </div>
+      ) : isLoading ? (
+        <div className="pru-loading"><div className="pru-spinner" /> Đang tải danh sách phòng...</div>
+      ) : (
+        <>
 
           {units.length === 0 ? (
             <div className="pru-empty-state">
               <Sparkles size={36} color="#cbd5e1" />
               <div className="pru-empty-title">Chưa có phòng vật lý nào</div>
               <div className="pru-empty-desc">
-                Tạo loại phòng trong trang <strong>Loại phòng</strong> — hệ thống sẽ tự động tạo phòng tương ứng.
+                Tạo loại phòng trong trang <strong>Loại phòng</strong> — hệ thống sẽ tự động sinh phòng tương ứng.
               </div>
+              <button
+                className="pru-btn pru-btn-primary"
+                style={{ marginTop: 16 }}
+                onClick={() => navigate(selectedHotelId ? `/partner/rooms?hotelId=${selectedHotelId}` : "/partner/rooms")}
+              >
+                Đi tới Loại phòng →
+              </button>
             </div>
           ) : filteredUnits.length === 0 ? (
             <div className="pru-empty-state">
@@ -463,9 +608,7 @@ export default function PartnerRoomUnits() {
                       </tr>
                     ) : (
                       <tr key={unit.id} className="pru-row">
-                        <td className="pru-cell-thumb">
-                          <UnitThumb unit={unit} />
-                        </td>
+                        <td className="pru-cell-thumb"><UnitThumb unit={unit} /></td>
                         <td className="pru-cell-number">
                           {unit.roomNumber
                             ? <strong>{unit.roomNumber}</strong>
@@ -492,7 +635,7 @@ export default function PartnerRoomUnits() {
                           />
                         </td>
                         <td className="pru-cell-notes">
-                          {unit.notes || <span className="pru-empty-val">—</span>}
+                          <NotesCell notes={unit.notes} guestName={unit.guestName} />
                         </td>
                         <td className="pru-cell-actions">
                           <button
@@ -518,6 +661,16 @@ export default function PartnerRoomUnits() {
             </div>
           )}
         </>
+      )}
+
+      {showAddModal && (
+        <AddRoomRedirectModal
+          rooms={rooms}
+          preselectedRoomId={filterRoomId || ""}
+          hotelId={selectedHotelId}
+          onClose={() => setShowAddModal(false)}
+          navigate={navigate}
+        />
       )}
 
       {editingUnit && (
