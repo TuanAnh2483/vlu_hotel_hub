@@ -2,14 +2,15 @@ import { useState, useEffect } from "react";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
 import { useBookingDetail, useCreatePaymentSession } from "../hooks/useBookingQueries";
-import { 
-  ChevronLeft, CreditCard, Wallet, 
+import { useLang } from "../contexts/LanguageContext";
+import { C } from "../lib/constants";
+import {
+  ChevronLeft, CreditCard, Wallet,
   ShieldCheck, Lock, ArrowRight, Check,
   QrCode, Sparkles
 } from "lucide-react";
 
-const P = "#BE1E2E";
-const FALLBACK_QR_IMAGE_URL = "/payments/QR_Code.png";
+const P = C.primary;
 
 // --- Helpers ---
 function fmt(n) { return (n || 0).toLocaleString("vi-VN") + " ₫"; }
@@ -33,7 +34,8 @@ function formatExpiry(v) {
 // --- Components ---
 
 function Stepper() {
-  const steps = ["Chọn phòng", "Xác nhận", "Thanh toán", "Hoàn tất"];
+  const { t } = useLang();
+  const steps = [t("step_room"), t("step_confirm"), t("step_payment"), t("step_done")];
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
       {steps.map((s, i) => {
@@ -99,7 +101,7 @@ const METHODS = [
 ];
 
 export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
-  const { bookingId, hotelName } = params;
+  const { bookingId } = params;
 
   const isPending = (data) => data?.status === "PENDING_PAYMENT";
 
@@ -113,14 +115,19 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
   const [statusMessage, setStatusMessage] = useState("");
 
   // Poll every 5 s while booking is PENDING_PAYMENT
-  const { data: booking, isLoading: loading, refetch: refetchBooking } = useBookingDetail(
-    bookingId,
-    {
-      refetchInterval: (query) =>
-        isPending(query.state.data) ? 5000 : false,
-      onError: (err) => setError(err.message || "Không thể tải đơn đặt phòng để thanh toán."),
-    }
-  );
+  const {
+    data: booking,
+    isLoading: loading,
+    error: bookingError,
+    refetch: refetchBooking,
+  } = useBookingDetail(bookingId, {
+    refetchInterval: (query) => (isPending(query.state.data) ? 5000 : false),
+  });
+
+  // H-01: onError bị xoá trong React Query v5 — dùng useEffect thay thế
+  useEffect(() => {
+    if (bookingError) setError(bookingError.message || "Không thể tải đơn đặt phòng để thanh toán.");
+  }, [bookingError]);
 
   const createPaymentSession = useCreatePaymentSession();
 
@@ -141,16 +148,16 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
   useEffect(() => {
     if (!booking) return;
     if (booking.status === "CONFIRMED") {
-      navigate("payment-success", { bookingId, amount: booking.totalPrice, hotelName });
+      navigate("payment-success", { bookingId, amount: booking.totalPrice, hotelName: booking.hotelName });
     }
     if (booking.status === "CANCELLED") {
       navigate("payment-failed", { bookingId, errorMessage: "Phiên thanh toán đã hết hạn." });
     }
   }, [booking?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const nights = booking ? nightsBetween(booking.checkIn, booking.checkOut) : 0;
-  const total  = booking?.totalPrice || 0;
-  const qrImageUrl = paymentSession?.qrImageUrl || FALLBACK_QR_IMAGE_URL;
+  const nights    = booking ? nightsBetween(booking.checkIn, booking.checkOut) : 0;
+  const total     = booking?.totalPrice || 0;
+  const qrImageUrl = paymentSession?.qrImageUrl || null;
 
   const handlePay = async () => {
     setPaying(true); setError(""); setStatusMessage("");
@@ -162,7 +169,7 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
        */
       const { data: latest } = await refetchBooking();
       if (latest?.status === "CONFIRMED") {
-        navigate("payment-success", { bookingId, amount: latest.totalPrice, hotelName });
+        navigate("payment-success", { bookingId, amount: latest.totalPrice, hotelName: latest.hotelName });
         return;
       }
       if (latest?.status === "CANCELLED") {
@@ -271,6 +278,7 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
 
                 {method === "bank" && (
                    <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {/* QR — chỉ hiện khi đã có URL thật; không dùng QR tĩnh để tránh user quét nhầm */}
                       <div style={{ background: "#fff", padding: "24px", borderRadius: 24, border: "1.5px solid #f1f5f9", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", marginBottom: 24 }}>
                          <div style={{ width: 200, height: 200, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 12 }}>
                             {qrImageUrl ? (
@@ -280,7 +288,7 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
                                 style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: 10 }}
                               />
                             ) : (
-                              <QrCode size={120} color={P} />
+                              <QrCode size={80} color="#cbd5e1" strokeWidth={1} />
                             )}
                          </div>
                          <p style={{ marginTop: 12, fontSize: 13, fontWeight: 800, color: "#1e293b" }}>Mã QR VietQR</p>
@@ -293,13 +301,18 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
                           {sessionError}
                         </div>
                       )}
-                      <div style={{ maxWidth: 400, width: "100%" }}>
-                         <div style={rowSt}><span>Ngân hàng:</span> <strong>{paymentSession?.bankName || "MB Bank"}</strong></div>
-                         <div style={rowSt}><span>Số tài khoản:</span> <strong>{paymentSession?.bankAccountNo || "0966927203"}</strong></div>
-                         <div style={rowSt}><span>Chủ tài khoản:</span> <strong>{paymentSession?.bankAccountName || "Tran Tuan Anh"}</strong></div>
-                         <div style={rowSt}><span>Số tiền:</span> <strong>{fmt(paymentSession?.amount || total)}</strong></div>
-                         <div style={rowSt}><span>Nội dung CK:</span> <strong style={{ color: P }}>{paymentSession?.transferContent || "Đang tạo..."}</strong></div>
-                      </div>
+                      {/* Chỉ hiện thông tin CK khi session đã load thành công */}
+                      {paymentSession ? (
+                        <div style={{ maxWidth: 400, width: "100%" }}>
+                           <div style={rowSt}><span>Ngân hàng:</span> <strong>{paymentSession.bankName}</strong></div>
+                           <div style={rowSt}><span>Số tài khoản:</span> <strong>{paymentSession.bankAccountNo}</strong></div>
+                           <div style={rowSt}><span>Chủ tài khoản:</span> <strong>{paymentSession.bankAccountName}</strong></div>
+                           <div style={rowSt}><span>Số tiền:</span> <strong>{fmt(paymentSession.amount)}</strong></div>
+                           <div style={rowSt}><span>Nội dung CK:</span> <strong style={{ color: P }}>{paymentSession.transferContent}</strong></div>
+                        </div>
+                      ) : !sessionLoading && !sessionError && (
+                        <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Thông tin chuyển khoản sẽ hiện khi mã được tạo.</div>
+                      )}
                       <p style={{ margin: "16px 0 0", color: "#64748b", fontSize: 12, lineHeight: 1.7, maxWidth: 440 }}>
                         SePay sẽ tự xác nhận khi giao dịch vào tài khoản. Trang này kiểm tra trạng thái mỗi vài giây.
                       </p>
@@ -354,7 +367,7 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
                    <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=200" style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="hotel" />
                 </div>
                 <div style={{ flex: 1 }}>
-                   <div style={{ fontSize: 15, fontWeight: 800, color: "#1e293b", marginBottom: 4 }}>{hotelName || "Grand Palace Hotel"}</div>
+                   <div style={{ fontSize: 15, fontWeight: 800, color: "#1e293b", marginBottom: 4 }}>{booking?.hotelName || t("bkd_title_fallback")}</div>
                    <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{nights} đêm · {fmtDate(booking?.checkIn)}</div>
                 </div>
              </div>
@@ -405,7 +418,7 @@ export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
                 <Sparkles size={18} color="#10b981" />
                 <h4 style={{ fontSize: 13, fontWeight: 800, color: "#166534", margin: 0 }}>Tích lũy điểm thưởng</h4>
              </div>
-             <p style={{ fontSize: 12, color: "#15803d", margin: 0, fontWeight: 500 }}>Hoàn tất thanh toán ngay để nhận thêm **120 điểm** thưởng vào ví của bạn.</p>
+             <p style={{ fontSize: 12, color: "#15803d", margin: 0, fontWeight: 500 }}>Hoàn tất thanh toán ngay để nhận thêm <strong>120 điểm</strong> thưởng vào ví của bạn.</p>
           </div>
         </div>
 

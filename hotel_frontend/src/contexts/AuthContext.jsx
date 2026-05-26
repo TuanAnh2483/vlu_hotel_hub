@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
     try {
       await authService.logout();
     } catch {
-      clearSession();
+      // authService.logout() clears the session in its own finally block
     } finally {
       setUser(null);
     }

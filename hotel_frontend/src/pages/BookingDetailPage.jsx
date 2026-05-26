@@ -104,7 +104,7 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
   const paymentStatusMap = usePaymentStatusMap();
   const refundStatusMap  = useRefundStatusMap();
 
-  const { bookingId, hotelName } = params;
+  const { bookingId } = params;
   const [cancelError, setCancelError] = useState("");
 
   const { data: booking,       isLoading: loading,         error: bookingError    } = useBookingDetail(bookingId);
@@ -151,6 +151,7 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
   const StatusIcon = statusCfg.icon;
   const canRequestRefund = booking
     && ["CONFIRMED", "COMPLETED", "CANCELLED"].includes(booking.status)
+    && booking.status !== "REFUNDED"
     && !refundRequest;
 
   return (
@@ -185,7 +186,7 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 20 }}>
                   <div>
                     <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 700, marginBottom: 8 }}>{t("bkd_booking_id")}{booking.bookingId}</div>
-                    <h1 style={{ fontSize: 28, fontWeight: 900, color: "#0f172a", margin: "0 0 8px" }}>{hotelName || t("bkd_title_fallback")}</h1>
+                    <h1 style={{ fontSize: 28, fontWeight: 900, color: "#0f172a", margin: "0 0 8px" }}>{booking.hotelName || t("bkd_title_fallback")}</h1>
                     <div style={{ color: "#64748b", fontSize: 14 }}>
                       {booking.items?.map((item) => item.roomTypeName).join(", ") || t("bkd_items_fallback")}
                     </div>
@@ -321,7 +322,7 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
 
                 {booking.status === "PENDING_PAYMENT" && (
                   <button
-                    onClick={() => navigate("payment", { bookingId: booking.bookingId, hotelName })}
+                    onClick={() => navigate("payment", { bookingId: booking.bookingId })}
                     style={{ alignItems: "center", background: C.primary, border: "none", borderRadius: 16, boxShadow: `0 12px 24px ${C.primary}33`, color: "#fff", cursor: "pointer", display: "flex", fontSize: 15, fontWeight: 800, gap: 10, justifyContent: "center", marginBottom: 12, padding: "15px 18px", width: "100%" }}
                   >
                     {t("bkd_pay_now")} <ArrowRight size={18} />

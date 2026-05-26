@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import "../styles/pages/BookingPage.css";
 
-const P = "#BE1E2E";
 
 const ICONS = {
   calendar: Calendar,
@@ -53,7 +52,7 @@ function Stepper({ current }) {
             <div className="bkp-step-col">
               <div
                 className="bkp-step-circle"
-                style={{ background: done || active ? P : "#e8e8e8" }}
+                style={{ background: done || active ? C.primary: "#e8e8e8" }}
               >
                 {done
                   ? <SvgIcon k="check" size={16} color="#fff" />
@@ -62,13 +61,13 @@ function Stepper({ current }) {
               </div>
               <span
                 className="bkp-step-label"
-                style={{ fontWeight: active ? 700 : 400, color: active ? P : done ? "#555" : "#bbb" }}
+                style={{ fontWeight: active ? 700 : 400, color: active ? C.primary: done ? "#555" : "#bbb" }}
               >
                 {s}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className="bkp-step-connector" style={{ background: done ? P : "#e8e8e8" }} />
+              <div className="bkp-step-connector" style={{ background: done ? C.primary: "#e8e8e8" }} />
             )}
           </div>
         );
@@ -82,7 +81,7 @@ function InfoRow({ icon, label, value, valueColor }) {
   return (
     <div className="bkp-info-row">
       <div className="bkp-info-row-icon">
-        <SvgIcon k={icon} size={16} color={P} />
+        <SvgIcon k={icon} size={16} color={C.primary} />
       </div>
       <div className="bkp-info-row-body">
         <div className="bkp-info-row-label">{label}</div>
@@ -98,7 +97,7 @@ function Card({ title, icon, children }) {
     <div className="bkp-card">
       {title && (
         <div className="bkp-card-title-row">
-          {icon && <SvgIcon k={icon} size={18} color={P} />}
+          {icon && <SvgIcon k={icon} size={18} color={C.primary} />}
           <h3 className="bkp-card-title">{title}</h3>
         </div>
       )}
@@ -132,9 +131,7 @@ export default function BookingPage({ navigate, user, params = {}, onLogout }) {
 
   const upd = k => e => setContact(p => ({ ...p, [k]: e.target.value }));
 
-  const subtotal = rooms.reduce((s, r) => s + (r.price || 0) * (r.quantity || 1) * nights, 0);
-  const tax      = Math.round(subtotal * 0.1);
-  const total    = subtotal + tax;
+  const total = rooms.reduce((s, r) => s + (r.price || 0) * (r.quantity || 1) * nights, 0);
 
   const hasContact = contact.fullName.trim() && contact.email.trim() && contact.phone.trim();
 
@@ -158,7 +155,7 @@ export default function BookingPage({ navigate, user, params = {}, onLogout }) {
   const loading = createBooking.isPending;
 
   const inp = focused => ({
-    border: `1.5px solid ${focused ? P : "#e8e8e8"}`,
+    border: `1.5px solid ${focused ? C.primary: "#e8e8e8"}`,
     background: focused ? "#fff" : "#fafafa",
   });
 
@@ -169,7 +166,7 @@ export default function BookingPage({ navigate, user, params = {}, onLogout }) {
         <div className="bkp-login-center">
           <div className="bkp-login-content">
             <div className="bkp-login-avatar">
-              <SvgIcon k="person" size={32} color={P} />
+              <SvgIcon k="person" size={32} color={C.primary} />
             </div>
             <p className="bkp-login-text">{t("booking_login_msg")}</p>
             <ActionBtn onClick={() => navigate("login")} style={{ padding: "12px 36px" }}>{t("booking_login_btn")}</ActionBtn>
@@ -281,7 +278,7 @@ export default function BookingPage({ navigate, user, params = {}, onLogout }) {
           <div className="bkp-price-box">
             <h3 className="bkp-price-title">{t("booking_price_title")}</h3>
 
-            {subtotal > 0 ? (
+            {total > 0 ? (
               <>
                 {rooms.map((r, i) => (
                   <div key={r.id ?? i} className="bkp-price-row">
@@ -291,10 +288,6 @@ export default function BookingPage({ navigate, user, params = {}, onLogout }) {
                     <span className="bkp-price-row-val">{fmt((r.price || 0) * (r.quantity || 1) * nights)}</span>
                   </div>
                 ))}
-                <div className="bkp-price-row bkp-price-row-tax">
-                  <span>{t("booking_tax")}</span>
-                  <span className="bkp-price-row-val">{fmt(tax)}</span>
-                </div>
                 <div className="bkp-price-total-row">
                   <span className="bkp-price-total-label">{t("booking_total")}</span>
                   <span className="bkp-price-total-value">{fmt(total)}</span>

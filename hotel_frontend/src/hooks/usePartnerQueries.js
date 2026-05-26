@@ -122,8 +122,11 @@ export function useUpdateRoom(options = {}) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ roomId, hotelId, ...data }) => partnerService.updateRoom(roomId, data),
-    onSuccess: (_data, { hotelId }) =>
-      queryClient.invalidateQueries({ queryKey: partnerKeys.rooms(hotelId) }),
+    onSuccess: (_data, { hotelId }) => {
+      queryClient.invalidateQueries({ queryKey: partnerKeys.rooms(hotelId) });
+      // quantity có thể thay đổi khi update room → keep hotel unit list in sync
+      if (hotelId) queryClient.invalidateQueries({ queryKey: partnerKeys.hotelRoomUnits(hotelId) });
+    },
     ...options,
   });
 }
