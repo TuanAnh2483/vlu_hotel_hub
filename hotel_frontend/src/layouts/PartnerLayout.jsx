@@ -82,9 +82,12 @@ export default function PartnerLayout() {
             <span className="partner-topbar-sep">/</span>
             <span className="partner-topbar-title">{pageTitle}</span>
           </div>
-          <button className="partner-topbar-bell" aria-label="Thông báo">
-            <Bell size={18} />
-          </button>
+          <div className="partner-topbar-bell-wrap">
+            <button className="partner-topbar-bell" aria-label="Thông báo">
+              <Bell size={18} />
+            </button>
+            <span className="partner-topbar-bell-tip">Tính năng thông báo đang phát triển</span>
+          </div>
         </div>
 
         <div className="partner-content">
