@@ -11,6 +11,7 @@ import com.hotel.hotel_backend.repository.HotelRepository;
 import com.hotel.hotel_backend.repository.PartnerApplicationRepository;
 import com.hotel.hotel_backend.repository.PaymentTransactionRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
+import com.hotel.hotel_backend.repository.RoomUnitRepository;
 import com.hotel.hotel_backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,9 @@ class AuthToPaymentFlowIntegrationTest {
     private RoomRepository roomRepository;
 
     @Autowired
+    private RoomUnitRepository roomUnitRepository;
+
+    @Autowired
     private DailyInventoryRepository dailyInventoryRepository;
 
     @Autowired
@@ -81,6 +85,7 @@ class AuthToPaymentFlowIntegrationTest {
         bookingRepository.deleteAll();
         dailyRateRepository.deleteAll();
         dailyInventoryRepository.deleteAll();
+        roomUnitRepository.deleteAll();
         roomRepository.deleteAll();
         hotelRepository.deleteAll();
         partnerApplicationRepository.deleteAll();

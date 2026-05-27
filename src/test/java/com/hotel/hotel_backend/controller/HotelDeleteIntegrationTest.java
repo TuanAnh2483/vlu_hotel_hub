@@ -14,6 +14,7 @@ import com.hotel.hotel_backend.repository.DailyRateRepository;
 import com.hotel.hotel_backend.repository.HotelRepository;
 import com.hotel.hotel_backend.repository.PaymentTransactionRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
+import com.hotel.hotel_backend.repository.RoomUnitRepository;
 import com.hotel.hotel_backend.repository.UserRepository;
 import com.hotel.hotel_backend.security.JwtService;
 import com.hotel.hotel_backend.service.InventoryService;
@@ -49,6 +50,7 @@ class HotelDeleteIntegrationTest {
     @Autowired UserRepository userRepository;
     @Autowired HotelRepository hotelRepository;
     @Autowired RoomRepository roomRepository;
+    @Autowired RoomUnitRepository roomUnitRepository;
     @Autowired DailyInventoryRepository dailyInventoryRepository;
     @Autowired DailyRateRepository dailyRateRepository;
     @Autowired BookingItemRepository bookingItemRepository;
@@ -63,6 +65,7 @@ class HotelDeleteIntegrationTest {
         paymentTransactionRepository.deleteAll();
         dailyRateRepository.deleteAll();
         dailyInventoryRepository.deleteAll();
+        roomUnitRepository.deleteAll();
         roomRepository.deleteAll();
         hotelRepository.deleteAll();
         userRepository.deleteAll();

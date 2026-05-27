@@ -13,6 +13,7 @@ import com.hotel.hotel_backend.repository.DailyInventoryRepository;
 import com.hotel.hotel_backend.repository.DailyRateRepository;
 import com.hotel.hotel_backend.repository.HotelRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
+import com.hotel.hotel_backend.repository.RoomUnitRepository;
 import com.hotel.hotel_backend.repository.UserRepository;
 import com.hotel.hotel_backend.service.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,9 @@ class HotelDetailIntegrationTest {
     private RoomRepository roomRepository;
 
     @Autowired
+    private RoomUnitRepository roomUnitRepository;
+
+    @Autowired
     private DailyInventoryRepository dailyInventoryRepository;
 
     @Autowired
@@ -66,6 +70,7 @@ class HotelDetailIntegrationTest {
     void setUp() {
         dailyRateRepository.deleteAll();
         dailyInventoryRepository.deleteAll();
+        roomUnitRepository.deleteAll();
         roomRepository.deleteAll();
         hotelRepository.deleteAll();
         userRepository.deleteAll();

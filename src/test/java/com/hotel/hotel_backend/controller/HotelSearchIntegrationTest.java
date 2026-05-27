@@ -41,6 +41,9 @@ class HotelSearchIntegrationTest {
     private RoomRepository roomRepository;
 
     @Autowired
+    private RoomUnitRepository roomUnitRepository;
+
+    @Autowired
     private DailyInventoryRepository dailyInventoryRepository;
 
     @Autowired
@@ -59,6 +62,7 @@ class HotelSearchIntegrationTest {
         // checkIn/checkOut duoc co dinh de helper inventory va request dung chung cung mot ky o.
         dailyRateRepository.deleteAll();
         dailyInventoryRepository.deleteAll();
+        roomUnitRepository.deleteAll();
         roomRepository.deleteAll();
         hotelRepository.deleteAll();
         userRepository.deleteAll();

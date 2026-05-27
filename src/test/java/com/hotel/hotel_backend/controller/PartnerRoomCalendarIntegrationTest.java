@@ -16,6 +16,7 @@ import com.hotel.hotel_backend.repository.HotelRepository;
 import com.hotel.hotel_backend.repository.HotelReviewRepository;
 import com.hotel.hotel_backend.repository.PaymentTransactionRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
+import com.hotel.hotel_backend.repository.RoomUnitRepository;
 import com.hotel.hotel_backend.repository.UserRepository;
 import com.hotel.hotel_backend.security.JwtService;
 import com.hotel.hotel_backend.service.InventoryService;
@@ -64,6 +65,9 @@ class PartnerRoomCalendarIntegrationTest {
     private RoomRepository roomRepository;
 
     @Autowired
+    private RoomUnitRepository roomUnitRepository;
+
+    @Autowired
     private DailyRateRepository dailyRateRepository;
 
     @Autowired
@@ -95,6 +99,7 @@ class PartnerRoomCalendarIntegrationTest {
         paymentTransactionRepository.deleteAll();
         dailyRateRepository.deleteAll();
         dailyInventoryRepository.deleteAll();
+        roomUnitRepository.deleteAll();
         roomRepository.deleteAll();
         hotelRepository.deleteAll();
         userRepository.deleteAll();

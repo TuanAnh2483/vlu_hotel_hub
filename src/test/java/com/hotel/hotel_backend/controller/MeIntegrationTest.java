@@ -12,6 +12,7 @@ import com.hotel.hotel_backend.repository.HotelReviewRepository;
 import com.hotel.hotel_backend.repository.PaymentTransactionRepository;
 import com.hotel.hotel_backend.repository.RefundRequestRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
+import com.hotel.hotel_backend.repository.RoomUnitRepository;
 import com.hotel.hotel_backend.repository.UserRepository;
 import com.hotel.hotel_backend.security.JwtService;
 import org.junit.jupiter.api.AfterEach;
@@ -44,6 +45,7 @@ class MeIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private HotelRepository hotelRepository;
     @Autowired private RoomRepository roomRepository;
+    @Autowired private RoomUnitRepository roomUnitRepository;
     @Autowired private BookingRepository bookingRepository;
     @Autowired private BookingItemRepository bookingItemRepository;
     @Autowired private PaymentTransactionRepository paymentTransactionRepository;
@@ -71,6 +73,7 @@ class MeIntegrationTest {
         bookingRepository.deleteAll();
         dailyRateRepository.deleteAll();
         dailyInventoryRepository.deleteAll();
+        roomUnitRepository.deleteAll();
         roomRepository.deleteAll();
         hotelRepository.deleteAll();
         userRepository.deleteAll();
