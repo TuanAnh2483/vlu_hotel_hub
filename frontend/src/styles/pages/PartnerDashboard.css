@@ -1,0 +1,328 @@
+/* ── Partner Dashboard ────────────────────────────────────────────────── */
+
+/* ── Two-column body ─────────────────────────────────────────────────── */
+.partner-dash-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.partner-dash-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.partner-dash-aside {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 72px;
+}
+
+/* ── Aside card ──────────────────────────────────────────────────────── */
+.pda-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pda-section-label {
+  font-size: 10px;
+  font-weight: 900;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Revenue row */
+.pda-revenue-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f5ff;
+  border-radius: 12px;
+  border: 1px solid #e9d5ff;
+}
+.pda-revenue-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #7C3AED12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pda-revenue-value {
+  font-size: 18px;
+  font-weight: 900;
+  color: #1e293b;
+  line-height: 1.2;
+}
+.pda-revenue-hint {
+  font-size: 11px;
+  color: #7C3AED;
+  font-weight: 600;
+}
+
+/* KPI list */
+.pda-kpi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pda-kpi-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.14s;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+.pda-kpi-row:hover { background: #f8fafc; }
+.pda-kpi-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pda-kpi-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.pda-kpi-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: #334155;
+}
+.pda-kpi-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.pda-kpi-val {
+  font-size: 12px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+/* Link */
+.pda-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #BE1E2E;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.pda-link:hover { text-decoration: underline; }
+
+/* Quick actions */
+.pda-quick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pda-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.14s;
+  font-family: inherit;
+  width: 100%;
+}
+.pda-quick-btn:hover { background: #f8fafc; }
+.pda-quick-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pda-quick-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  text-align: left;
+}
+.pda-quick-arrow { color: #cbd5e1; }
+
+/* Tips */
+.pda-tips-card { background: #fffbf0; border-color: #fde68a; }
+.pda-tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pda-tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #44403c;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .partner-dash-body { flex-direction: column; }
+  .partner-dash-aside { width: 100%; position: static; flex-direction: row; flex-wrap: wrap; }
+  .pda-card { flex: 1; min-width: 220px; }
+}
+
+
+
+/* Responsive grid layouts */
+.partner-dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .partner-dashboard-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .partner-dashboard-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.partner-dashboard-main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .partner-dashboard-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.partner-dashboard-stat-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.partner-dashboard-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -10px rgba(0,0,0,0.1);
+}
+
+.partner-dashboard-table-row {
+  transition: background 0.2s ease;
+}
+
+.partner-dashboard-table-row:hover {
+  background: #fcfdfe;
+}
+
+.partner-dashboard-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.partner-dashboard-quick-action:hover {
+  background: #fff !important;
+  border-color: var(--action-color) !important;
+  transform: translateX(4px);
+}
+
+.partner-dashboard-table-header {
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.partner-dashboard-table-th {
+  padding: 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.partner-dashboard-table-wrapper {
+  overflow-x: auto;
+}
+
+.partner-dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.partner-dashboard-kpi-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .partner-dashboard-kpi-3col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .partner-dashboard-kpi-3col {
+    grid-template-columns: 1fr;
+  }
+}

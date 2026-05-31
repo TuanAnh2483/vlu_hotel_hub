@@ -1,0 +1,284 @@
+/* ── Shared Admin Page Styles ──────────────────────────────────────────── */
+
+/* Summary grids */
+.admin-summary-grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.admin-summary-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.admin-summary-grid-4 { grid-template-columns: repeat(4, 1fr); }
+.admin-summary-grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+.admin-summary-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-summary-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(190, 30, 46, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 24px;
+}
+
+.admin-summary-card-value {
+  font-size: 24px;
+  font-weight: 900;
+  color: #1a1a1a;
+}
+
+.admin-summary-card-label {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+/* Filter tab bar */
+.admin-filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.admin-filter-tab {
+  padding: 7px 18px;
+  border-radius: 20px;
+  border: 1px solid #e5e5e5;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f5f5f5;
+  color: #666;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.admin-filter-tab.active {
+  border: none;
+  background: #BE1E2E;
+  color: #fff;
+}
+
+.admin-filter-tab-badge {
+  margin-left: 6px;
+  background: #fff;
+  color: #f57f17;
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+}
+
+/* Table toolbar */
+.admin-table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-table-toolbar-left {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-table-search {
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid #e5e5e5;
+  font-size: 13px;
+  width: 220px;
+  background: #f8f9fa;
+  font-family: inherit;
+  outline: none;
+}
+
+.admin-table-search:focus {
+  border-color: #BE1E2E;
+}
+
+/* Loading state */
+.admin-loading {
+  text-align: center;
+  padding: 48px;
+  color: #bbb;
+}
+
+/* Pagination */
+.admin-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 0;
+  border-top: 1px solid #f5f5f5;
+  margin-top: 10px;
+}
+
+.admin-page-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #666;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.admin-page-btn.active {
+  background: #BE1E2E;
+  color: #fff;
+  border-color: #BE1E2E;
+}
+
+/* Table cell helpers */
+.admin-cell-id {
+  color: #bbb;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.admin-cell-text {
+  font-size: 12px;
+  color: #555;
+}
+
+.admin-cell-name {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.admin-cell-amount {
+  font-weight: 800;
+  color: #BE1E2E;
+}
+
+.admin-cell-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Modal info block */
+.admin-modal-info {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.admin-modal-info-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.admin-modal-info-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+/* Modal detail rows */
+.admin-modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+  font-size: 13px;
+}
+
+.admin-modal-row-key {
+  color: #888;
+  font-weight: 600;
+}
+
+.admin-modal-row-val {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Modal action rows */
+.admin-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.admin-modal-actions-right {
+  text-align: right;
+  margin-top: 16px;
+}
+
+/* Error alert */
+.admin-error-alert {
+  background: #ffebee;
+  color: #c62828;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* Textarea in modal */
+.admin-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  font-size: 13px;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+  outline: none;
+}
+
+.admin-textarea:focus {
+  border-color: #BE1E2E;
+}
+
+/* Detail modal note (success/info) */
+.admin-modal-note {
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.admin-modal-note-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+/* Status count badge on card */
+.admin-summary-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}

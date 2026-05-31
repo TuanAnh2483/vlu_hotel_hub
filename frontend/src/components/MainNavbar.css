@@ -1,0 +1,368 @@
+/* ── MainNavbar ────────────────────────────────────────────────────────── */
+
+/* Desktop nav structure */
+.main-navbar-nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--primary-border);
+  padding: 0 40px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 8px rgba(190, 30, 46, 0.07);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-logo-wrap {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.navbar-logo {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.main-navbar-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.main-navbar-links.partner {
+  gap: 18px;
+}
+
+.navbar-nav-link {
+  font-size: 14px;
+  color: var(--text-main);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  padding-bottom: 3px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.navbar-nav-link:hover,
+.navbar-nav-link.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.navbar-nav-link.active {
+  font-weight: 700;
+}
+
+.main-navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+}
+
+.navbar-lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.navbar-lang-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.5px;
+}
+
+.navbar-auth-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background: var(--secondary);
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+}
+
+.navbar-auth-btn:hover {
+  background: var(--primary);
+  color: var(--surface);
+}
+
+/* Avatar menu trigger button */
+.navbar-avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: none;
+  transition: background 0.2s;
+}
+
+.navbar-avatar-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Keyboard focus rings — only visible on keyboard navigation, not mouse */
+.navbar-logo-wrap:focus-visible,
+.navbar-icon-btn:focus-visible,
+.navbar-lang-btn:focus-visible,
+.navbar-auth-btn:focus-visible,
+.navbar-avatar-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+@keyframes navbar-fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.navbar-dropdown {
+  animation: navbar-fade-in-up 0.2s ease-out;
+}
+
+.navbar-menu-item:hover {
+  background: var(--secondary);
+}
+
+/* ── MainNavbar Mobile Responsive ─────────────────────────────────────── */
+
+.main-navbar-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-main);
+  transition: background 0.18s;
+  flex-shrink: 0;
+}
+
+.main-navbar-hamburger:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Overlay behind the drawer */
+.main-navbar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  z-index: 299;
+}
+
+.main-navbar-overlay.visible {
+  display: block;
+}
+
+/* Side drawer — always in DOM but hidden via display:none on desktop */
+.main-navbar-drawer {
+  display: none;
+}
+
+/* ── Mobile breakpoint ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .main-navbar-nav {
+    padding: 0 16px;
+  }
+
+  /* Hide desktop links and action buttons */
+  .main-navbar-links {
+    display: none;
+  }
+
+  .main-navbar-actions {
+    display: none;
+  }
+
+  /* Show hamburger */
+  .main-navbar-hamburger {
+    display: flex;
+  }
+
+  /* Drawer slides in from the right */
+  .main-navbar-drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 70px;
+    right: 0;
+    bottom: 0;
+    width: min(300px, 86vw);
+    background: var(--surface);
+    z-index: 300;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -4px 0 28px rgba(0, 0, 0, 0.14);
+  }
+
+  .main-navbar-drawer.open {
+    transform: translateX(0);
+  }
+}
+
+/* ── Drawer internals ─────────────────────────────────────────────────── */
+
+.main-navbar-drawer-nav {
+  padding: 8px 0;
+}
+
+.main-navbar-drawer-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+
+.main-navbar-drawer-item:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.main-navbar-drawer-item.active {
+  color: var(--primary);
+  font-weight: 700;
+  background: var(--primary-light);
+  border-left-color: var(--primary);
+}
+
+.main-navbar-drawer-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+  flex-shrink: 0;
+}
+
+.main-navbar-drawer-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+}
+
+.main-navbar-drawer-user-info {
+  padding: 14px 20px;
+  background: var(--primary-light);
+}
+
+.main-navbar-drawer-user-email {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 6px;
+}
+
+.main-navbar-drawer-auth {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.main-navbar-drawer-auth-btn {
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.18s;
+  text-align: center;
+}
+
+.main-navbar-drawer-auth-btn.primary {
+  background: var(--primary);
+  color: var(--surface);
+}
+
+.main-navbar-drawer-auth-btn.primary:hover {
+  background: var(--primary-hover);
+}
+
+.main-navbar-drawer-auth-btn.secondary {
+  background: var(--secondary);
+  color: var(--text-main);
+}
+
+.main-navbar-drawer-auth-btn.secondary:hover {
+  background: var(--secondary-hover);
+}
+
+.main-navbar-drawer-logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  font-family: inherit;
+  margin-top: auto;
+}
+
+.main-navbar-drawer-logout:hover {
+  background: var(--primary-light);
+}

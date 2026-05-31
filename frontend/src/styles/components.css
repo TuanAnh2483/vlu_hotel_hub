@@ -1,0 +1,347 @@
+/* ── Shared UI Components ─────────────────────────────────────────────── */
+
+/* Card */
+.ui-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-lg);
+  padding: 22px 26px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(10px);
+}
+
+/* Modal overlay */
+.ui-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.ui-modal-box {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 28px 30px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+}
+
+.ui-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.ui-modal-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-main);
+  user-select: none;
+  cursor: default;
+}
+
+.ui-modal-close {
+  background: var(--secondary);
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Form field */
+.ui-form-field {
+  margin-bottom: 14px;
+}
+
+.ui-form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  letter-spacing: 0.2px;
+}
+
+.ui-form-required {
+  color: var(--primary);
+  margin-left: 3px;
+}
+
+/* Input & Select */
+.ui-input,
+.ui-select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.ui-input:focus,
+.ui-select:focus {
+  border-color: var(--primary);
+}
+
+.ui-input:disabled {
+  background: var(--secondary);
+}
+
+/* Search input */
+.ui-search-wrap {
+  position: relative;
+}
+
+.ui-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-light);
+  display: flex;
+  pointer-events: none;
+}
+
+.ui-search-input {
+  padding: 9px 14px 9px 36px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  width: 260px;
+  background: var(--secondary);
+  transition: border-color 0.15s;
+}
+
+.ui-search-input:focus {
+  border-color: var(--primary);
+}
+
+/* Table */
+.ui-table-wrap {
+  overflow-x: auto;
+}
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ui-table thead tr {
+  background: var(--secondary);
+  border-bottom: 2px solid var(--border);
+}
+
+.ui-table th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+.ui-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.ui-table tbody tr:hover {
+  background: var(--secondary);
+}
+
+.ui-table td {
+  padding: 12px 14px;
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.ui-table-empty td {
+  text-align: center;
+  padding: 48px 0;
+  color: var(--text-light);
+}
+
+.ui-table-empty-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+/* Pagination */
+.ui-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+}
+
+.ui-page-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-light);
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.ui-page-btn.active {
+  background: var(--primary);
+  color: var(--surface);
+  border-color: var(--primary);
+}
+
+/* Toast animation */
+@keyframes toast-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* Button spinner */
+@keyframes admin-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.admin-btn-spinner {
+  animation: admin-spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Page loader bar */
+@keyframes page-loader-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.ui-page-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #f0d8da;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.ui-page-loader-bar {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  animation: page-loader-slide 1.2s ease-in-out infinite;
+}
+
+/* Loading spinner */
+.ui-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--secondary);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: ui-spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes ui-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.ui-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  text-align: center;
+}
+
+.ui-empty-state-icon {
+  margin-bottom: 20px;
+  opacity: 0.35;
+}
+
+.ui-empty-state-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 8px;
+}
+
+.ui-empty-state-desc {
+  font-size: 13px;
+  color: var(--text-light);
+  margin: 0 0 24px;
+  max-width: 320px;
+  line-height: 1.6;
+}
+
+.ui-empty-state-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 11px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s;
+}
+
+.ui-empty-state-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* Page header */
+.ui-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+}
+
+.ui-page-header-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  user-select: none;
+  cursor: default;
+}
+
+.ui-page-header-subtitle {
+  color: var(--text-light);
+  font-size: 13px;
+  margin-top: 4px;
+  margin-bottom: 0;
+}

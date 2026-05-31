@@ -1,0 +1,103 @@
+export const vi = {
+  // ── Filter sidebar ──────────────────────────────────────
+  filter_title:         "Bộ lọc tìm kiếm",
+  filter_hotel_type:    "Loại khách sạn",
+  filter_rating:        "Đánh giá",
+  filter_rating_suffix: " sao trở lên",
+  filter_room_cat:      "Hạng phòng",
+  filter_amenities:     "Tiện nghi",
+  filter_show_more:     "Hiện thêm ›",
+  filter_show_less:     "Thu gọn ‹",
+  filter_budget:        "Ngân sách / đêm",
+  filter_apply:         "Áp dụng bộ lọc",
+
+  // ── Results ─────────────────────────────────────────────
+  results_found:        "Đã tìm thấy",
+  results_suffix:       "kết quả",
+  results_from_search:  "kết quả từ tìm kiếm",
+  no_results:           "Không tìm thấy kết quả phù hợp.",
+  view_detail:          "XEM CHI TIẾT",
+  price_label:          "GIÁ CHỈ TỪ",
+  search_summary_label: "Kết quả cho",
+
+  // ── Featured banner ─────────────────────────────────────
+  banner_badge:   "VLU Hotel Hub",
+  banner_title_1: "Khám phá nơi lưu trú",
+  banner_title_2: "hoàn hảo cho bạn",
+  banner_sub:     "Tìm và đặt phòng khách sạn, resort, căn hộ trên toàn quốc — giá tốt, xác nhận tức thì.",
+  banner_feat_1:  "Đa dạng loại hình",
+  banner_feat_2:  "Đặt phòng tức thì",
+  banner_feat_3:  "Miễn phí hủy phòng",
+
+  // ── Hotel / room / amenity enum labels ──────────────────
+  hotel_type_hotel:     "Khách sạn",
+  hotel_type_apartment: "Căn hộ",
+  hotel_type_resort:    "Khu nghỉ dưỡng",
+  hotel_type_villa:     "Biệt thự",
+  hotel_type_homestay:  "Homestay",
+  hotel_type_hostel:    "Hostel",
+
+  room_cat_standard: "Tiêu chuẩn",
+  room_cat_deluxe:   "Cao cấp",
+  room_cat_suite:    "Phòng Suite",
+  room_cat_family:   "Gia đình",
+
+  amenity_wifi:       "Wifi miễn phí",
+  amenity_pool:       "Hồ bơi",
+  amenity_parking:    "Bãi đỗ xe",
+  amenity_spa:        "Spa",
+  amenity_restaurant: "Nhà hàng",
+  amenity_minibar:    "Quầy mini bar",
+  amenity_seaview:    "Tầm nhìn ra biển",
+  amenity_breakfast:  "Bữa sáng",
+};
+
+export const en = {
+  filter_title:         "Search filters",
+  filter_hotel_type:    "Hotel type",
+  filter_rating:        "Review",
+  filter_rating_suffix: " stars or more",
+  filter_room_cat:      "Room category",
+  filter_amenities:     "Amenities",
+  filter_show_more:     "Show more ›",
+  filter_show_less:     "Show less ‹",
+  filter_budget:        "Budget per night",
+  filter_apply:         "Apply filter",
+
+  results_found:        "Found",
+  results_suffix:       "results",
+  results_from_search:  "search results",
+  no_results:           "No matching results were found.",
+  view_detail:          "SEE DETAILS",
+  price_label:          "PRICES STARTING FROM",
+  search_summary_label: "Results for",
+
+  banner_badge:   "VLU Hotel Hub",
+  banner_title_1: "Explore accommodations",
+  banner_title_2: "perfect for you",
+  banner_sub:     "Search and book hotels, resorts, and apartments nationwide — great rates, instant confirmation.",
+  banner_feat_1:  "A variety of types",
+  banner_feat_2:  "Instant booking",
+  banner_feat_3:  "Free cancellation",
+
+  hotel_type_hotel:     "Hotel",
+  hotel_type_apartment: "Apartment",
+  hotel_type_resort:    "Resort",
+  hotel_type_villa:     "Villa",
+  hotel_type_homestay:  "Homestay",
+  hotel_type_hostel:    "Hostel",
+
+  room_cat_standard: "Standard",
+  room_cat_deluxe:   "Deluxe",
+  room_cat_suite:    "Suite",
+  room_cat_family:   "Family",
+
+  amenity_wifi:       "Free Wi-Fi",
+  amenity_pool:       "Swimming pool",
+  amenity_parking:    "Parking lot",
+  amenity_spa:        "Spa",
+  amenity_restaurant: "Restaurant",
+  amenity_minibar:    "Mini-bar",
+  amenity_seaview:    "Ocean view",
+  amenity_breakfast:  "Breakfast",
+};

@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Brand ──────────────────────────────────────────── */
+    --primary:              #BE1E2E;
+    --primary-hover:        #A01925;
+    --primary-dark:         #a31825;
+    --primary-light:        #fdf4f5;
+    --primary-bg:           rgba(190, 30, 46, 0.08);
+    --primary-border:       rgba(190, 30, 46, 0.14);
+
+    /* ── Surface ────────────────────────────────────────── */
+    --background:           #F8F9FA;
+    --surface:              #FFFFFF;
+    --secondary:            #F7F7F7;
+    --secondary-hover:      #E5E5E5;
+    --border:               #E5E7EB;
+
+    /* ── Text ───────────────────────────────────────────── */
+    --text-main:            #111827;
+    --text-muted:           #4B5563;
+    --text-light:           #6B7280;
+
+    /* ── Semantic ───────────────────────────────────────── */
+    --success:              #10B981;
+    --warning:              #F59E0B;
+    --danger:               #EF4444;
+    --info:                 #3B82F6;
+
+    /* ── Semantic backgrounds & borders ─────────────────── */
+    --success-bg:           rgba(16, 185, 129, 0.1);
+    --success-border:       rgba(16, 185, 129, 0.25);
+    --warning-bg:           rgba(245, 158, 11, 0.1);
+    --warning-border:       rgba(245, 158, 11, 0.25);
+    --danger-bg:            rgba(239, 68, 68, 0.1);
+    --danger-border:        rgba(239, 68, 68, 0.25);
+    --info-bg:              rgba(59, 130, 246, 0.1);
+    --info-border:          rgba(59, 130, 246, 0.25);
+
+    /* ── Shadows ────────────────────────────────────────── */
+    --shadow-sm:            0 2px 8px rgba(0, 0, 0, 0.05);
+    --shadow-md:            0 4px 20px rgba(0, 0, 0, 0.08);
+    --shadow-lg:            0 8px 32px rgba(0, 0, 0, 0.12);
+    --shadow-xl:            0 20px 60px rgba(0, 0, 0, 0.2);
+
+    /* ── Radius ─────────────────────────────────────────── */
+    --radius-sm:            8px;
+    --radius-md:            12px;
+    --radius-lg:            16px;
+    --radius-xl:            20px;
+    --radius-full:          9999px;
+
+    /* ── Gradient ───────────────────────────────────────── */
+    --gradient-brand:       linear-gradient(135deg, #ffffff 0%, #fdf4f5 45%, #f7ebeb 100%);
+
+    /* ── Font ───────────────────────────────────────────── */
+    --font-sans:            'Be Vietnam Pro', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* ── Admin sidebar (brand-derived) ──────────────────── */
+    --sidebar-bg:           #EFD6D6;
+    --sidebar-text:         #5a1a22;
+    --sidebar-border:       var(--primary-border);
+    --sidebar-hover:        rgba(190, 30, 46, 0.09);
+  }
+
+  body {
+    @apply bg-[var(--background)] text-[var(--text-main)] antialiased m-0 p-0;
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-[var(--text-main)];
+  }
+
+  p {
+    @apply m-0;
+  }
+}
+
+@layer utilities {
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  @keyframes verify-email-spin {
+    to { transform: rotate(360deg); }
+  }
+  .verify-email-spin {
+    animation: verify-email-spin 1s linear infinite;
+  }
+}

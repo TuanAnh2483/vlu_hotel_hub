@@ -1,0 +1,113 @@
+export const vi = {
+  // ── Hotel detail page ───────────────────────────────────
+  detail_back:          "← Quay lại",
+  detail_loading:       "Đang tải thông tin khách sạn...",
+  detail_not_found:     "Không tìm thấy khách sạn",
+  detail_not_found_sub: "Khách sạn này không tồn tại hoặc đã bị xóa.",
+  detail_no_photo:      "Khách sạn chưa có ảnh",
+  detail_star:          " SAO",
+
+  // ── About section ───────────────────────────────────────
+  detail_about:     "Giới thiệu khách sạn",
+  detail_read_more: "Xem thêm chi tiết ▾",
+  detail_collapse:  "Thu gọn ▴",
+
+  // ── Amenities & rooms ───────────────────────────────────
+  detail_amenities:     "Tiện nghi nổi bật",
+  detail_rooms:         "Các phòng hiện trống",
+  detail_refresh:       "🔄 Cập nhật phòng",
+  detail_loading_rooms: "Đang tải danh sách phòng...",
+  detail_no_rooms:      "Không có phòng trống cho ngày bạn chọn. Vui lòng thử ngày khác.",
+  detail_per_night:     "/đêm",
+  detail_full:             "Hết phòng",
+  detail_selected:         "Đã chọn ✓",
+  detail_select:           "Chọn phòng này",
+  detail_available_units:  "Còn",
+  detail_select_room:      "Chưa chọn phòng",
+
+  // ── Reviews section ─────────────────────────────────────
+  detail_reviews:       "Đánh giá của khách",
+  detail_no_review_msg: "Khách sạn này chưa có đánh giá nào.",
+  detail_no_reviews:    "Chưa có đánh giá nào cho khách sạn này.",
+  detail_show_reviews:  "Xem tất cả",
+  detail_partner_reply: "Phản hồi từ khách sạn",
+  detail_guest:         "Khách hàng",
+
+  // ── Support & sidebar ───────────────────────────────────
+  detail_help:          "Cần hỗ trợ thêm?",
+  detail_help_btn:      "📞 Liên hệ bộ phận hỗ trợ",
+  detail_your_trip:     "Chuyến đi của bạn",
+  detail_checkin:       "NHẬN PHÒNG",
+  detail_checkout:      "TRẢ PHÒNG",
+  detail_guests:        "KHÁCH",
+  detail_per_night_lbl: "/đêm",
+  detail_tax:           "Thuế & phí dịch vụ (10%)",
+  detail_total:         "Tổng cộng",
+  detail_confirm_btn:   "Xác nhận đặt phòng",
+  detail_cancel_policy: "🛡️ Miễn phí hủy phòng trước 24 giờ nhận phòng. Không tính phí nếu hủy đúng hạn.",
+  detail_cancel_policy_flexible: "🛡️ Miễn phí hủy phòng trước 24 giờ nhận phòng.",
+  detail_cancel_policy_moderate: "🛡️ Miễn phí hủy phòng trước 7 ngày nhận phòng.",
+  detail_cancel_policy_strict:   "Không hoàn tiền khi hủy phòng.",
+
+  // ── Rating labels ───────────────────────────────────────
+  rating_excellent: "Xuất sắc",
+  rating_great:     "Rất tốt",
+  rating_good:      "Tốt",
+  rating_ok:        "Khá tốt",
+  rating_count:     " đánh giá",
+  rating_none:      "Chưa có đánh giá",
+};
+
+export const en = {
+  detail_back:          "← Back",
+  detail_loading:       "Loading hotel information...",
+  detail_not_found:     "No hotels found",
+  detail_not_found_sub: "This hotel does not exist or has been removed.",
+  detail_no_photo:      "No photos available for this hotel",
+  detail_star:          " STARS",
+
+  detail_about:     "Hotel Introduction",
+  detail_read_more: "See more details ▾",
+  detail_collapse:  "Collapse ▴",
+
+  detail_amenities:     "Top amenities",
+  detail_rooms:         "Available rooms",
+  detail_refresh:       "🔄 Refresh rooms",
+  detail_loading_rooms: "Loading room list...",
+  detail_no_rooms:      "There are no rooms available for the date you selected. Please try another date.",
+  detail_per_night:     "/night",
+  detail_full:             "Fully booked",
+  detail_selected:         "Selected ✓",
+  detail_select:           "Select this room",
+  detail_available_units:  "Left",
+  detail_select_room:      "No room selected",
+
+  detail_reviews:       "Customer Reviews",
+  detail_no_review_msg: "This hotel has no reviews yet.",
+  detail_no_reviews:    "There are no reviews for this hotel yet.",
+  detail_show_reviews:  "View all",
+  detail_partner_reply: "Response from hotel",
+  detail_guest:         "Guest",
+
+  detail_help:          "Need more help?",
+  detail_help_btn:      "📞 Contact Support",
+  detail_your_trip:     "Your trip",
+  detail_checkin:       "CHECK-IN",
+  detail_checkout:      "CHECK-OUT",
+  detail_guests:        "GUESTS",
+  detail_per_night_lbl: "/night",
+  detail_tax:           "Taxes & service charges (10%)",
+  detail_total:         "Total",
+  detail_confirm_btn:   "Confirm booking",
+  detail_cancel_policy: "🛡️ Free cancellation up to 24 hours before check-in. No cancellation fee if canceled on time.",
+  detail_cancel_policy_flexible: "🛡️ Free cancellation up to 24 hours before check-in.",
+  detail_cancel_policy_moderate: "🛡️ Free cancellation up to 7 days before check-in.",
+  detail_cancel_policy_strict:   "No refund upon cancellation.",
+
+  rating_excellent: "Excellent",
+  rating_great:     "Very good",
+  rating_good:      "Good",
+  rating_ok:        "Pretty good",
+  rating_count:     " reviews",
+  rating_none:      "No reviews yet",
+};

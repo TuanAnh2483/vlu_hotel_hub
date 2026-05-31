@@ -1,0 +1,587 @@
+/* ── Partner Services & Amenities ─────────────────────────────────────── */
+
+.psv-root {
+  padding-bottom: 80px;
+}
+
+/* ── Hotel chip selector ─────────────────────────────────────────────── */
+
+.psv-hotel-chips-wrap {
+  background: #fff;
+  border-radius: 20px;
+  padding: 16px 24px;
+  margin-bottom: 28px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.psv-hotel-chips-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #BE1E2E;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.psv-hotel-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.psv-hotel-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 14px;
+  border: 2px solid #f1f5f9;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-align: left;
+}
+
+.psv-hotel-chip:hover {
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+}
+
+.psv-hotel-chip--active {
+  border-color: #BE1E2E;
+  background: #FFF1F2;
+  box-shadow: 0 0 0 3px rgba(190, 30, 46, 0.1);
+}
+
+.psv-chip-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.psv-chip-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.psv-chip-info {
+  min-width: 0;
+}
+
+.psv-chip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.psv-hotel-chip--active .psv-chip-name {
+  color: #BE1E2E;
+}
+
+.psv-chip-loc {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────────────── */
+
+.psv-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  background: #f8fafc;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  width: fit-content;
+}
+
+.psv-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.psv-tab:hover {
+  background: #fff;
+  color: #1e293b;
+}
+
+.psv-tab.active {
+  background: #fff;
+  color: #BE1E2E;
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.psv-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #BE1E2E;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* ── Panel ─────────────────────────────────────────────────────────────── */
+
+.psv-panel {
+  background: #fff;
+  border-radius: 24px;
+  padding: 32px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.psv-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.psv-panel-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.psv-panel-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: #BE1E2E;
+  background: #FFF1F2;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* ── Room chips ────────────────────────────────────────────────────────── */
+
+.psv-room-chips-wrap {
+  background: #fff;
+  border-radius: 20px;
+  padding: 16px 24px;
+  margin-bottom: 28px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.psv-room-chips-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #BE1E2E;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.psv-room-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.psv-room-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 2px solid #f1f5f9;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  text-align: left;
+  position: relative;
+}
+
+.psv-room-chip:hover {
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
+.psv-room-chip--active {
+  border-color: #BE1E2E;
+  background: #FFF1F2;
+  box-shadow: 0 0 0 3px rgba(190, 30, 46, 0.1);
+}
+
+.psv-room-chip-cat {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.4px;
+}
+
+.psv-room-chip--active .psv-room-chip-cat {
+  color: #BE1E2E;
+  opacity: 0.7;
+}
+
+.psv-room-chip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.psv-room-chip--active .psv-room-chip-name {
+  color: #BE1E2E;
+}
+
+.psv-room-chip-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #BE1E2E;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(190, 30, 46, 0.3);
+}
+
+/* ── Amenity group ─────────────────────────────────────────────────────── */
+
+.psv-amenity-group {
+  margin-bottom: 24px;
+}
+
+.psv-amenity-group-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.psv-amenity-group-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #f1f5f9;
+}
+
+.psv-amenity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.psv-amenity-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #f1f5f9;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  text-align: left;
+}
+
+.psv-amenity-item:hover {
+  border-color: #e2e8f0;
+  background: #fff;
+  color: #1e293b;
+}
+
+.psv-amenity-item.selected {
+  border-color: #BE1E2E;
+  background: #FFF1F2;
+  color: #BE1E2E;
+  font-weight: 700;
+}
+
+.psv-amenity-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid #e2e8f0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.psv-amenity-item.selected .psv-amenity-check {
+  border-color: #BE1E2E;
+  background: #BE1E2E;
+  color: #fff;
+}
+
+/* ── Custom amenities ──────────────────────────────────────────────────── */
+
+.psv-section-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 12px;
+}
+
+.psv-custom-section {
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px dashed #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.psv-custom-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.psv-custom-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.psv-custom-tag-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.psv-custom-tag-del:hover {
+  color: #ef4444;
+}
+
+.psv-custom-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.psv-custom-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.psv-custom-input:focus {
+  border-color: #BE1E2E;
+}
+
+.psv-custom-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.psv-custom-add-btn:hover:not(:disabled) {
+  background: #FFF1F2;
+  border-color: #BE1E2E;
+  color: #BE1E2E;
+}
+
+.psv-custom-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Save row ──────────────────────────────────────────────────────────── */
+
+.psv-save-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 8px;
+}
+
+.psv-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 14px;
+  border: none;
+  background: #BE1E2E;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(190, 30, 46, 0.35);
+  transition: background 0.2s;
+}
+
+.psv-save-btn:hover:not(:disabled) {
+  background: #a31825;
+}
+
+.psv-save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────── */
+
+.psv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 0;
+  text-align: center;
+  background: #fff;
+  border-radius: 24px;
+  border: 1px dashed #cbd5e1;
+  gap: 12px;
+}
+
+.psv-empty--inline {
+  padding: 60px 0;
+  border: none;
+  background: none;
+}
+
+.psv-empty-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #475569;
+}
+
+.psv-empty-desc {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.psv-link-btn {
+  background: none;
+  border: none;
+  color: #BE1E2E;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.psv-link-btn:hover {
+  color: #a31825;
+}
+
+/* ── Back to rooms button ─────────────────────────────────────────────── */
+
+.psv-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1.5px solid #BE1E2E;
+  background: #fff;
+  color: #BE1E2E;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.psv-back-btn:hover {
+  background: #BE1E2E;
+  color: #fff;
+}

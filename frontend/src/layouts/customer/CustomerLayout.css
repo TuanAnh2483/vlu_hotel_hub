@@ -1,0 +1,17 @@
+/* ── Customer Layout ──────────────────────────────────────────────────── */
+
+.customer-root {
+  min-height: 100vh;
+  background: var(--gradient-brand);
+  display: flex;
+  flex-direction: column;
+}
+
+.customer-content {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 24px 56px;
+  box-sizing: border-box;
+  flex: 1;
+}

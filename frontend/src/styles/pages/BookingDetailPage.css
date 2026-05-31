@@ -1,0 +1,500 @@
+/* ── BookingDetailPage ──────────────────────────────────────────────────── */
+
+.bkd-root {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #ffffff 0%, #fdf4f5 45%, #f7ebeb 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Loading state */
+.bkd-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+/* Login gate */
+.bkd-login-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bkd-login-box {
+  text-align: center;
+  background: #fff;
+  padding: 48px;
+  border-radius: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+  max-width: 400px;
+}
+
+.bkd-login-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+}
+
+.bkd-login-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+.bkd-login-desc {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.bkd-login-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 16px;
+  background: #BE1E2E;
+  border: none;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Main container */
+.bkd-container {
+  flex: 1;
+  max-width: 1140px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 40px 20px;
+}
+
+/* Top bar */
+.bkd-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.bkd-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 100px;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+  font-family: inherit;
+}
+
+.bkd-back-btn:hover {
+  color: #BE1E2E;
+  border-color: #BE1E2E;
+  box-shadow: 0 4px 12px rgba(190, 30, 46, 0.1);
+}
+
+.bkd-topbar-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Two-column grid */
+.bkd-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 32px;
+  align-items: start;
+}
+
+.bkd-left {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.bkd-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: sticky;
+  top: 100px;
+}
+
+/* Cards */
+.bkd-card {
+  background: #fff;
+  border-radius: 32px;
+  padding: 32px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f5f9;
+}
+
+.bkd-card-main {
+  padding: 40px;
+}
+
+.bkd-card-right {
+  background: #fff;
+  border-radius: 32px;
+  padding: 32px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f1f5f9;
+}
+
+/* Booking header */
+.bkd-booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.bkd-booking-id-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.bkd-booking-id-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #1e293b;
+  margin: 0;
+}
+
+.bkd-status-badge {
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bkd-created-at {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Hotel preview */
+.bkd-hotel-preview {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  background: #f8fafc;
+  border-radius: 24px;
+  margin-bottom: 32px;
+}
+
+.bkd-hotel-image {
+  width: 140px;
+  height: 100px;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.bkd-hotel-body {
+  flex: 1;
+}
+
+.bkd-hotel-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 6px;
+}
+
+.bkd-hotel-address {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bkd-map-btn {
+  color: #BE1E2E;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+/* Schedule grid */
+.bkd-schedule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 40px;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.bkd-schedule-item {
+  text-align: center;
+}
+
+.bkd-schedule-divider {
+  height: 40px;
+  width: 1px;
+  background: #e2e8f0;
+}
+
+.bkd-schedule-time {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Label / value typography (from labelSt / valSt) */
+.bkd-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 1.5px;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.bkd-val {
+  font-size: 20px;
+  font-weight: 900;
+  color: #1e293b;
+  margin: 0 0 4px;
+}
+
+/* Section titles */
+.bkd-section-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 16px;
+}
+
+/* Room list */
+.bkd-room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bkd-room-item {
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bkd-room-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bkd-room-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bkd-room-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.bkd-room-meta {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.bkd-room-price {
+  font-size: 16px;
+  font-weight: 900;
+  color: #1e293b;
+}
+
+/* Contact info grid */
+.bkd-contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+}
+
+.bkd-contact-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+/* Special requests */
+.bkd-special-request-box {
+  padding: 20px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
+
+.bkd-special-request-text {
+  margin: 0;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.7;
+  font-weight: 500;
+}
+
+/* Price summary (right card) */
+.bkd-price-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #1e293b;
+  margin-bottom: 24px;
+}
+
+.bkd-price-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.bkd-price-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.bkd-price-row-val {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.bkd-price-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 8px 0;
+}
+
+.bkd-price-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bkd-price-total-label {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.bkd-price-total-value {
+  font-size: 24px;
+  font-weight: 900;
+  color: #BE1E2E;
+}
+
+/* Action buttons */
+.bkd-action-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bkd-primary-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  background: #BE1E2E;
+  color: #fff;
+  border: none;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 10px 20px rgba(190, 30, 46, 0.2);
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.bkd-outline-btn {
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+/* Refund policy card */
+.bkd-policy-card {
+  background: #eff6ff;
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid #dbeafe;
+}
+
+.bkd-policy-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.bkd-policy-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1e3a8a;
+  margin: 0;
+}
+
+.bkd-policy-text {
+  font-size: 13px;
+  color: #1e40af;
+  margin: 0;
+  line-height: 1.6;
+  font-weight: 500;
+}

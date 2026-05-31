@@ -1,0 +1,23 @@
+/* ── Partner Booking Detail Page ─────────────────────────────────────── */
+
+.partner-booking-detail-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 100px;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+  transition: color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.partner-booking-detail-back-btn:hover {
+  color: #BE1E2E !important;
+  border-color: #BE1E2E !important;
+  box-shadow: 0 4px 12px rgba(190,30,46,0.1) !important;
+}
