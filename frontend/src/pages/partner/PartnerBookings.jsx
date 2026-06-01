@@ -2,7 +2,7 @@ import { createElement, useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { useMyHotels, usePartnerBookings, usePartnerBookingDetail, useCompleteBooking } from "../../hooks/usePartnerQueries";
 import { PageHeader, Card, Badge, Btn, Table, Modal } from "../../components/admin/AdminLayout";
-import { Filter, Calendar, Download, User, Building2, Eye, CheckCircle2 } from "lucide-react";
+import { Filter, Calendar, Download, User, Building2, Eye, CheckCircle2, BedDouble, LogIn } from "lucide-react";
 import { useLang } from "../../contexts/LanguageContext";
 import "../../styles/pages/partner/PartnerBookings.css";
 
@@ -29,6 +29,14 @@ function canCheckoutBooking(booking) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return !Number.isNaN(checkOut.getTime()) && checkOut <= today;
+}
+
+function canCheckinBooking(booking) {
+  if (booking?.status !== "CONFIRMED" || !booking.checkIn) return false;
+  const checkIn = new Date(`${booking.checkIn}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return !Number.isNaN(checkIn.getTime()) && today >= checkIn;
 }
 
 export default function PartnerBookings() {
@@ -93,6 +101,8 @@ export default function PartnerBookings() {
 
   const rows = items.map((b) => {
     const canCheckout = canCheckoutBooking(b);
+    const canCheckin  = canCheckinBooking(b);
+    const needsAssign = b.status === "CONFIRMED" && !canCheckin;
     const isCheckingOut = completeBooking.isPending && completeBooking.variables === b.bookingId;
 
     return [
@@ -118,42 +128,60 @@ export default function PartnerBookings() {
       >
         <Eye size={14} /> {t("pt_bk_detail")}
       </button>,
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {/* Gán phòng — CONFIRMED trước ngày nhận */}
+        {needsAssign && (
+          <button
+            onClick={() => navigate(`/partner/bookings/${b.bookingId}`)}
+            style={{ alignItems: "center", background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 10, color: "#475569", cursor: "pointer", display: "flex", fontSize: 12, fontWeight: 700, gap: 6, padding: "7px 12px" }}
+          >
+            <BedDouble size={13} /> {t("pt_bk_assign_room")}
+          </button>
+        )}
+
+        {/* Check-in — đến ngày nhận phòng */}
+        {canCheckin && !canCheckout && (
+          <button
+            onClick={() => navigate(`/partner/bookings/${b.bookingId}`)}
+            style={{ alignItems: "center", background: "#BE1E2E", border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", display: "flex", fontSize: 12, fontWeight: 800, gap: 6, padding: "7px 12px", boxShadow: "0 2px 8px rgba(190,30,46,0.25)" }}
+          >
+            <LogIn size={13} /> {t("pt_bk_checkin_btn")}
+          </button>
+        )}
+
+        {/* Hoàn tất (checkout) — đến ngày trả phòng */}
         {canCheckout && checkoutConfirmId !== b.bookingId && (
           <button
             onClick={() => setCheckoutConfirmId(b.bookingId)}
             disabled={isCheckingOut}
-            style={{ alignItems: "center", background: "#10b981", border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", display: "flex", fontSize: 12, fontWeight: 800, gap: 6, padding: "8px 12px" }}
+            style={{ alignItems: "center", background: "#10b981", border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", display: "flex", fontSize: 12, fontWeight: 800, gap: 6, padding: "7px 12px" }}
           >
-            <CheckCircle2 size={14} /> {t("pt_bk_checkout_btn")}
+            <CheckCircle2 size={13} /> {t("pt_bk_checkout_btn")}
           </button>
         )}
         {canCheckout && checkoutConfirmId === b.bookingId && (
           <div style={{ display: "flex", gap: 6, alignItems: "center", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "6px 10px" }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#047857" }}>Xác nhận check-out?</span>
-            <button
-              onClick={() => handleCheckout(b)}
-              disabled={isCheckingOut}
-              style={{ background: "#10b981", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 800, padding: "5px 10px", opacity: isCheckingOut ? 0.7 : 1 }}
-            >
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#047857" }}>Xác nhận?</span>
+            <button onClick={() => handleCheckout(b)} disabled={isCheckingOut}
+              style={{ background: "#10b981", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 800, padding: "5px 10px", opacity: isCheckingOut ? 0.7 : 1 }}>
               {isCheckingOut ? "..." : "Xác nhận"}
             </button>
-            <button
-              onClick={() => setCheckoutConfirmId(null)}
-              style={{ background: "#f1f5f9", border: "none", borderRadius: 8, color: "#64748b", cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "5px 10px" }}
-            >
+            <button onClick={() => setCheckoutConfirmId(null)}
+              style={{ background: "#f1f5f9", border: "none", borderRadius: 8, color: "#64748b", cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "5px 10px" }}>
               Hủy
             </button>
           </div>
         )}
+
         {b.status === "COMPLETED" && (
           <span style={{ alignItems: "center", background: "#ecfdf5", border: "1px solid #bbf7d0", borderRadius: 10, color: "#047857", display: "flex", fontSize: 12, fontWeight: 800, gap: 6, padding: "7px 10px" }}>
-            <CheckCircle2 size={14} /> {t("pt_bk_checked_out")}
+            <CheckCircle2 size={13} /> {t("pt_bk_checked_out")}
           </span>
         )}
+
         <button
           onClick={() => navigate(`/partner/bookings/${b.bookingId}`)}
-          style={{ padding: "8px 16px", borderRadius: 10, background: "#BE1E2E", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 10px rgba(190, 30, 46, 0.2)" }}
+          style={{ padding: "7px 14px", borderRadius: 10, background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
         >
           {t("pt_bk_view_full")}
         </button>
