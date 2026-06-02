@@ -547,6 +547,7 @@ export default function AddPropertyWizard() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [createdHotelId, setCreatedHotelId] = useState(null);
   const [showResume, setShowResume] = useState(() => {
     const draft = loadDraft();
     return draft && draft.propertyType && draft.step > 0;
@@ -733,7 +734,7 @@ export default function AddPropertyWizard() {
       revokePendingImageUrls(state.images);
 
       clearDraft();
-      navigate("/partner/rooms", { state: { newProperty: true, hotelId } });
+      setCreatedHotelId(hotelId);
     } catch (e) {
       setError(e.message || "Có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
@@ -742,6 +743,52 @@ export default function AddPropertyWizard() {
   }
 
   const isLastStep = state.step === STEPS.length - 1;
+
+  // ── Success screen ──────────────────────────────────────────────────────
+  if (createdHotelId) {
+    return (
+      <div style={{ maxWidth: 520, margin: "0 auto", paddingBottom: 60, paddingTop: 32, textAlign: "center" }}>
+        <div style={{ fontSize: 56, marginBottom: 16 }}>🏨</div>
+        <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111827", marginBottom: 8 }}>Cơ sở đã được tạo thành công!</h1>
+        <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, marginBottom: 28 }}>
+          Cơ sở lưu trú của bạn đã được thêm vào hệ thống. Tiếp theo, hãy thêm phòng và cài đặt giá để bắt đầu nhận đặt phòng.
+        </p>
+
+        {/* Next steps */}
+        <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 14, padding: "20px 24px", marginBottom: 28, textAlign: "left" }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#6b7280", marginBottom: 14, letterSpacing: 0.5 }}>BƯỚC TIẾP THEO</div>
+          {[
+            { num: 1, label: "Thêm loại phòng", desc: "Tạo các loại phòng với giá và số lượng", done: false },
+            { num: 2, label: "Thêm phòng vật lý", desc: "Gán số phòng cụ thể để quản lý tình trạng", done: false },
+            { num: 3, label: "Cài giá theo mùa", desc: "Thiết lập giá trên lịch để tối ưu doanh thu", done: false },
+          ].map(s => (
+            <div key={s.num} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#BE1E2E", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0, marginTop: 1 }}>{s.num}</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{s.label}</div>
+                <div style={{ fontSize: 12, color: "#9ca3af" }}>{s.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <button
+            onClick={() => navigate("/partner/rooms", { state: { newProperty: true, hotelId: createdHotelId } })}
+            style={{ background: "#BE1E2E", border: "none", borderRadius: 12, color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 800, padding: "14px", width: "100%" }}
+          >
+            Thêm phòng ngay →
+          </button>
+          <button
+            onClick={() => navigate("/partner/hotels")}
+            style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 12, color: "#475569", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: "12px" }}
+          >
+            Về danh sách cơ sở
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", paddingBottom: 60 }}>

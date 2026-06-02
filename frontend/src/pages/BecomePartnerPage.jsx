@@ -2,9 +2,19 @@
 import { C } from "../lib/constants";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
-import { useStartOnboarding, useSubmitOnboarding } from "../hooks/usePartnerQueries";
+import { useStartOnboarding, useSubmitOnboarding, useMyApplication } from "../hooks/usePartnerQueries";
+import { useAuth } from "../contexts/AuthContext";
 import { useLang } from "../contexts/LanguageContext";
 import "../styles/pages/BecomePartnerPage.css";
+
+const APP_ID_KEY = "partner_application_id";
+
+const APP_STATUS_CFG = {
+  SUBMITTED:    { label: "Đã nộp đơn",      color: "#f59e0b", bg: "#fffbeb", step: 1 },
+  UNDER_REVIEW: { label: "Đang xét duyệt",  color: "#3b82f6", bg: "#eff6ff", step: 2 },
+  APPROVED:     { label: "Đã được duyệt",   color: "#10b981", bg: "#ecfdf5", step: 3 },
+  REJECTED:     { label: "Bị từ chối",      color: "#ef4444", bg: "#fef2f2", step: 3 },
+};
 
 function StepIndicator({ current }) {
   const { t } = useLang();
@@ -61,16 +71,33 @@ function Field({ label, required, children, hint }) {
 
 export default function BecomePartnerPage({ navigate, user, onLogout }) {
   const { t } = useLang();
-  const [step, setStep]   = useState(0);
+  const { refreshUser, logout } = useAuth();
+  const savedAppId = localStorage.getItem(APP_ID_KEY);
+
+  const [step, setStep]   = useState(savedAppId ? 2 : 0);
   const [form, setForm]   = useState({ businessName: "", email: user?.email || "", phone: "", taxCode: "", propertyType: "" });
   const [error, setError] = useState("");
-  const [appId, setAppId] = useState(null);
+  const [appId, setAppId] = useState(savedAppId);
+  const [refreshing, setRefreshing] = useState(false);
 
   const startOnboarding  = useStartOnboarding();
   const submitOnboarding = useSubmitOnboarding();
+  const { data: application, refetch: refetchApp } = useMyApplication({ enabled: Boolean(savedAppId || appId) });
   const loading = startOnboarding.isPending || submitOnboarding.isPending;
 
   const upd = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  async function handleRefreshStatus() {
+    setRefreshing(true);
+    try {
+      await refetchApp();
+      const freshUser = await refreshUser();
+      if (freshUser?.userType === "PARTNER") {
+        navigate("partner-dashboard");
+      }
+    } catch {}
+    finally { setRefreshing(false); }
+  }
 
   if (!user) {
     return (
@@ -106,7 +133,11 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
         onSuccess: (app) => {
           const id = app.applicationId || app.id;
           submitOnboarding.mutate(id, {
-            onSuccess: () => { setAppId(id); setStep(2); },
+            onSuccess: () => {
+              localStorage.setItem(APP_ID_KEY, id);
+              setAppId(id);
+              setStep(2);
+            },
             onError: (e) => setError(e.message),
           });
         },
@@ -235,23 +266,104 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
           </div>
         )}
 
-        {/* Step 2 — Success */}
-        {step === 2 && (
-          <div className="bp-card bp-card-success">
-            <div className="bp-success-icon">🎉</div>
-            <h2 className="bp-success-title">{t("bp_success_title")}</h2>
-            <p className="bp-success-desc">
-              {t("bp_success_desc")} <strong style={{ color: "#1a1a1a" }}>{form.email}</strong>
-            </p>
+        {/* Step 2 — Application status tracker */}
+        {step === 2 && (() => {
+          const status   = application?.status;
+          const cfg      = APP_STATUS_CFG[status] || APP_STATUS_CFG.SUBMITTED;
+          const isApproved  = status === "APPROVED";
+          const isRejected  = status === "REJECTED";
+          const needsRelogin = isApproved && user?.userType === "CUSTOMER";
 
-            <div className="bp-success-id-box">
-              <div className="bp-success-id-label">{t("bp_app_id_lbl")}</div>
-              <div className="bp-success-id-val">#{appId || "—"}</div>
+          const TIMELINE = [
+            { label: "Đã nộp đơn",     done: true },
+            { label: "Đang xét duyệt", done: cfg.step >= 2 },
+            { label: isRejected ? "Bị từ chối" : "Được duyệt", done: cfg.step >= 3, rejected: isRejected },
+          ];
+
+          return (
+            <div className="bp-card">
+              <div className="bp-success-icon">{isApproved ? "🎉" : isRejected ? "❌" : "⏳"}</div>
+              <h2 className="bp-success-title" style={{ color: isRejected ? "#ef4444" : "#111827" }}>
+                {isApproved ? "Đơn đăng ký được duyệt!" : isRejected ? "Đơn bị từ chối" : "Đơn đang được xét duyệt"}
+              </h2>
+
+              {/* Status badge */}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: cfg.bg, color: cfg.color, borderRadius: 20, fontSize: 13, fontWeight: 700, padding: "6px 14px", marginBottom: 20 }}>
+                {cfg.label}
+              </div>
+
+              {/* Re-login banner */}
+              {needsRelogin && (
+                <div style={{ background: "#ecfdf5", border: "1px solid #bbf7d0", borderRadius: 12, padding: "14px 16px", marginBottom: 20, textAlign: "left" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#047857", marginBottom: 6 }}>
+                    ✅ Tài khoản đã được nâng cấp lên Partner
+                  </div>
+                  <div style={{ fontSize: 13, color: "#065f46", marginBottom: 12 }}>
+                    Vui lòng đăng xuất và đăng nhập lại để truy cập Partner Portal.
+                  </div>
+                  <button
+                    onClick={async () => { localStorage.removeItem(APP_ID_KEY); await logout(); navigate("login"); }}
+                    style={{ background: "#10b981", border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 800, padding: "10px 20px" }}
+                  >
+                    Đăng xuất & Đăng nhập lại
+                  </button>
+                </div>
+              )}
+
+              {/* Rejection reason */}
+              {isRejected && application?.rejectionReason && (
+                <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, color: "#b91c1c", fontSize: 13, padding: "12px 16px", marginBottom: 20, textAlign: "left" }}>
+                  <strong>Lý do: </strong>{application.rejectionReason}
+                </div>
+              )}
+
+              {/* Timeline */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 24, textAlign: "left" }}>
+                {TIMELINE.map((step, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0, background: step.done ? (step.rejected ? "#ef4444" : "#10b981") : "#e5e7eb", color: step.done ? "#fff" : "#9ca3af" }}>
+                        {step.done ? (step.rejected ? "✕" : "✓") : (i + 1)}
+                      </div>
+                      {i < TIMELINE.length - 1 && (
+                        <div style={{ width: 2, height: 28, background: TIMELINE[i + 1].done ? "#10b981" : "#e5e7eb" }} />
+                      )}
+                    </div>
+                    <div style={{ paddingTop: 3, paddingBottom: i < TIMELINE.length - 1 ? 28 : 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: step.done ? "#111827" : "#9ca3af" }}>{step.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bp-success-id-box">
+                <div className="bp-success-id-label">{t("bp_app_id_lbl")}</div>
+                <div className="bp-success-id-val">#{appId || application?.id || "—"}</div>
+              </div>
+
+              {!isApproved && !isRejected && (
+                <button
+                  onClick={handleRefreshStatus}
+                  disabled={refreshing}
+                  style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 10, color: "#475569", cursor: refreshing ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700, marginTop: 14, opacity: refreshing ? 0.6 : 1, padding: "10px 20px", width: "100%" }}
+                >
+                  {refreshing ? "Đang làm mới..." : "🔄 Làm mới trạng thái"}
+                </button>
+              )}
+
+              {isRejected && (
+                <button
+                  onClick={() => { localStorage.removeItem(APP_ID_KEY); setAppId(null); setStep(0); setForm({ businessName: "", email: user?.email || "", phone: "", taxCode: "", propertyType: "" }); }}
+                  style={{ background: C.primary, border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 800, marginTop: 14, padding: "10px 20px", width: "100%" }}
+                >
+                  Nộp đơn lại
+                </button>
+              )}
+
+              <button className="bp-home-btn" style={{ marginTop: 10 }} onClick={() => navigate("home")}>{t("bp_home_btn")}</button>
             </div>
-
-            <button className="bp-home-btn" onClick={() => navigate("home")}>{t("bp_home_btn")}</button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Benefits */}
         {step === 0 && (

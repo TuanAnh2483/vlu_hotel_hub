@@ -137,6 +137,12 @@ export const partnerService = {
   submitOnboarding: (applicationId) =>
     apiClient.post(`/api/partner-onboarding/${applicationId}/submit`),
 
+  getMyApplication: () =>
+    apiClient.get("/api/partner-onboarding/my").catch(e => {
+      if (e.status === 404) return null;
+      throw e;
+    }),
+
   // ── Reviews ─────────────────────────────────────────────────────────
   getReviews: (params = {}) => {
     const p = {};

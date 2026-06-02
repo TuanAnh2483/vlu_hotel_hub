@@ -8,6 +8,7 @@ import {
   useRefundRequest,
   useCancelBooking,
 } from "../hooks/useBookingQueries";
+import { useMyReviews, useCreateReview } from "../hooks/useReviewQueries";
 import { useLang } from "../contexts/LanguageContext";
 import {
   AlertCircle,
@@ -19,6 +20,7 @@ import {
   ReceiptText,
   RefreshCcw,
   ShieldCheck,
+  Star,
   User,
   XCircle,
 } from "lucide-react";
@@ -98,6 +100,106 @@ function fieldLabel(value) {
   return String(value).replaceAll("_", " ");
 }
 
+function StarPicker({ value, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <button
+          key={n}
+          onClick={() => onChange(n)}
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}
+        >
+          <Star
+            size={24}
+            fill={n <= value ? "#f59e0b" : "none"}
+            color={n <= value ? "#f59e0b" : "#d1d5db"}
+            strokeWidth={1.5}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ReviewCard({ bookingId, hotelName, hasReview, canWrite, createReview, t }) {
+  const [rating,    setRating]    = useState(5);
+  const [comment,   setComment]   = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [err,       setErr]       = useState("");
+
+  if (hasReview || submitted) {
+    return (
+      <Card>
+        <div style={{ alignItems: "center", display: "flex", gap: 10, marginBottom: 8 }}>
+          <Star size={20} fill="#f59e0b" color="#f59e0b" />
+          <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Đánh giá của bạn</span>
+        </div>
+        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, color: "#047857", fontSize: 13, fontWeight: 700, padding: "10px 14px" }}>
+          ✓ Bạn đã gửi đánh giá cho chuyến lưu trú này.
+        </div>
+      </Card>
+    );
+  }
+
+  if (!canWrite) return null;
+
+  function handleSubmit() {
+    setErr("");
+    if (!rating) { setErr("Vui lòng chọn số sao."); return; }
+    createReview.mutate(
+      { bookingId: Number(bookingId), rating, comment: comment.trim() || null },
+      {
+        onSuccess: () => setSubmitted(true),
+        onError: (e) => setErr(e.message || "Gửi đánh giá thất bại."),
+      }
+    );
+  }
+
+  return (
+    <Card>
+      <div style={{ alignItems: "center", display: "flex", gap: 10, marginBottom: 16 }}>
+        <Star size={20} fill="#f59e0b" color="#f59e0b" />
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: 0 }}>Đánh giá chuyến lưu trú</h2>
+      </div>
+      <p style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: "0 0 16px" }}>
+        Chia sẻ trải nghiệm của bạn tại <strong>{hotelName}</strong> để giúp khách hàng khác.
+      </p>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 8 }}>XẾP HẠNG</div>
+        <StarPicker value={rating} onChange={setRating} />
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 8 }}>NHẬN XÉT <span style={{ fontWeight: 400 }}>(tuỳ chọn)</span></div>
+        <textarea
+          value={comment}
+          onChange={e => setComment(e.target.value)}
+          placeholder="Phòng sạch sẽ, nhân viên thân thiện..."
+          maxLength={500}
+          style={{ width: "100%", minHeight: 90, padding: "10px 12px", border: "1.5px solid #e2e8f0", borderRadius: 12, fontSize: 13, resize: "vertical", fontFamily: "inherit", boxSizing: "border-box", outline: "none" }}
+        />
+        <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "right" }}>{comment.length}/500</div>
+      </div>
+
+      {err && (
+        <div style={{ background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: 10, color: "#be123c", fontSize: 12, fontWeight: 700, marginBottom: 12, padding: "8px 12px" }}>
+          {err}
+        </div>
+      )}
+
+      <button
+        onClick={handleSubmit}
+        disabled={createReview.isPending}
+        style={{ alignItems: "center", background: C.primary, border: "none", borderRadius: 14, color: "#fff", cursor: createReview.isPending ? "not-allowed" : "pointer", display: "flex", fontSize: 14, fontWeight: 800, gap: 8, justifyContent: "center", opacity: createReview.isPending ? 0.7 : 1, padding: "13px 16px", width: "100%" }}
+      >
+        <Star size={16} fill="#fff" color="#fff" />
+        {createReview.isPending ? "Đang gửi..." : "Gửi đánh giá"}
+      </button>
+    </Card>
+  );
+}
+
 export default function BookingDetailPage({ navigate, user, params = {}, onLogout }) {
   const { t } = useLang();
   const statusMap        = useStatusMap();
@@ -150,6 +252,12 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
   const statusCfg = statusMap[booking?.status] || { label: booking?.status || t("bkd_unknown"), color: "#64748b", bg: "#f8fafc", icon: AlertCircle };
   const StatusIcon = statusCfg.icon;
   const hasPaid = payments.some(p => p.status === "SUCCESS" && p.amount > 0);
+
+  const { data: myReviews = [] } = useMyReviews();
+  const createReview = useCreateReview();
+  const hasReview = myReviews.some(r => Number(r.bookingId) === Number(bookingId));
+  const canWriteReview = booking?.status === "COMPLETED" && !hasReview;
+
   const allowsRefund = booking?.cancellationPolicy !== "STRICT";
   const canRequestRefund = booking
     && ["CONFIRMED", "COMPLETED", "CANCELLED"].includes(booking.status)
@@ -397,6 +505,18 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
                   </div>
                 )}
               </Card>
+
+              {/* ── Review card ── */}
+              {booking.status === "COMPLETED" && (
+                <ReviewCard
+                  bookingId={booking.bookingId}
+                  hotelName={booking.hotelName}
+                  hasReview={hasReview}
+                  canWrite={canWriteReview}
+                  createReview={createReview}
+                  t={t}
+                />
+              )}
 
             </div>
           </div>

@@ -422,3 +422,12 @@ export function useSubmitOnboarding(options = {}) {
     ...options,
   });
 }
+
+export function useMyApplication(options = {}) {
+  return useQuery({
+    queryKey: ["partner", "my-application"],
+    queryFn:  () => partnerService.getMyApplication(),
+    staleTime: 60 * 1000,
+    ...options,
+  });
+}
