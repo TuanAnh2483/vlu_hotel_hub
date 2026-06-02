@@ -54,6 +54,7 @@ app:
       account-no: ${PAYMENT_BANK_ACCOUNT_NO}
       account-name: ${PAYMENT_BANK_ACCOUNT_NAME}
       bank-name: ${PAYMENT_BANK_NAME}
+      bank-bin: ${PAYMENT_BANK_BIN:}
     sepay:
       webhook-api-key: ${PAYMENT_SEPAY_WEBHOOK_API_KEY}
 

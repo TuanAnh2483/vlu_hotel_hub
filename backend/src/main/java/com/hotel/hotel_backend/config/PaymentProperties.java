@@ -45,6 +45,8 @@ public class PaymentProperties {
         private String accountNo = "";
         private String accountName = "";
         private String bankName = "";
+        /** VietQR bank BIN code (e.g. 970422 for MB Bank). Required for QR generation. */
+        private String bankBin = "";
     }
 
     @Getter

@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -231,6 +233,7 @@ public class BookingPaymentGatewayService {
 
     private PaymentSessionResponse toPaymentSessionResponse(PaymentTransaction transaction) {
         PaymentProperties.Bank bank = paymentProperties.getBank();
+        String qrUrl = buildVietQrUrl(bank, transaction.getAmount(), transaction.getPaymentCode());
         return new PaymentSessionResponse(
                 transaction.getId(),
                 transaction.getBooking().getId(),
@@ -242,9 +245,33 @@ public class BookingPaymentGatewayService {
                 bank.getAccountNo(),
                 bank.getAccountName(),
                 bank.getBankName(),
-                paymentProperties.normalizedQrImageUrl(),
+                qrUrl,
                 transaction.getExpiresAt()
         );
+    }
+
+    /**
+     * Sinh URL QR động qua VietQR API (img.vietqr.io).
+     * Nếu bankBin chưa cấu hình, fallback về qrImageUrl tĩnh trong config.
+     */
+    private String buildVietQrUrl(PaymentProperties.Bank bank, Long amount, String transferContent) {
+        if (!StringUtils.hasText(bank.getBankBin()) || !StringUtils.hasText(bank.getAccountNo())) {
+            return paymentProperties.normalizedQrImageUrl();
+        }
+        String base = String.format(
+                "https://img.vietqr.io/image/%s-%s-compact2.png",
+                bank.getBankBin().trim(),
+                bank.getAccountNo().trim()
+        );
+        StringBuilder sb = new StringBuilder(base);
+        sb.append("?amount=").append(amount != null ? amount : 0);
+        if (StringUtils.hasText(transferContent)) {
+            sb.append("&addInfo=").append(URLEncoder.encode(transferContent, StandardCharsets.UTF_8));
+        }
+        if (StringUtils.hasText(bank.getAccountName())) {
+            sb.append("&accountName=").append(URLEncoder.encode(bank.getAccountName().trim(), StandardCharsets.UTF_8));
+        }
+        return sb.toString();
     }
 
     private String generatePaymentCode(Long bookingId) {
