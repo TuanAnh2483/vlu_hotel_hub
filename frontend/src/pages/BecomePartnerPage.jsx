@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 import { useStartOnboarding, useSubmitOnboarding, useMyApplication } from "../hooks/usePartnerQueries";
 import { useAuth } from "../contexts/AuthContext";
 import { useLang } from "../contexts/LanguageContext";
+import { Building2, BarChart3, Globe, CircleDollarSign, ShieldCheck, CheckCircle2, XCircle, Clock } from "lucide-react";
 import "../styles/pages/BecomePartnerPage.css";
 
 const APP_ID_KEY = "partner_application_id";
@@ -196,7 +197,7 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
       <div className="bp-root-auth">
         <MainNavbar active="become-partner" navigate={navigate} user={user} onLogout={onLogout} />
         <div className="bp-login-gate">
-          <div className="bp-login-icon">🏨</div>
+          <div className="bp-login-icon"><Building2 size={48} color="#BE1E2E" aria-hidden="true" /></div>
           <h2 className="bp-login-title">{t("bp_login_title")}</h2>
           <p className="bp-login-desc">{t("bp_login_desc")}</p>
           <button className="bp-login-btn" onClick={() => navigate("login")}>{t("bp_login_btn")}</button>
@@ -228,10 +229,10 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
   }
 
   const benefits = [
-    { icon: "📊", tkey_title: "bp_benefit_1_title", tkey_desc: "bp_benefit_1_desc" },
-    { icon: "🌐", tkey_title: "bp_benefit_2_title", tkey_desc: "bp_benefit_2_desc" },
-    { icon: "💰", tkey_title: "bp_benefit_3_title", tkey_desc: "bp_benefit_3_desc" },
-    { icon: "🛡️", tkey_title: "bp_benefit_4_title", tkey_desc: "bp_benefit_4_desc" },
+    { Icon: BarChart3,       tkey_title: "bp_benefit_1_title", tkey_desc: "bp_benefit_1_desc" },
+    { Icon: Globe,           tkey_title: "bp_benefit_2_title", tkey_desc: "bp_benefit_2_desc" },
+    { Icon: CircleDollarSign,tkey_title: "bp_benefit_3_title", tkey_desc: "bp_benefit_3_desc" },
+    { Icon: ShieldCheck,     tkey_title: "bp_benefit_4_title", tkey_desc: "bp_benefit_4_desc" },
   ];
 
   return (
@@ -240,7 +241,7 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
 
       {/* Hero */}
       <div className="bp-hero">
-        <div className="bp-hero-icon">🏨</div>
+        <div className="bp-hero-icon"><Building2 size={56} color="#BE1E2E" aria-hidden="true" /></div>
         <h1 className="bp-hero-title">{t("bp_hero_title")}</h1>
         <p className="bp-hero-subtitle">{t("bp_hero_sub")}</p>
       </div>
@@ -390,7 +391,9 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
 
           return (
             <div className="bp-card">
-              <div className="bp-success-icon">{isApproved ? "🎉" : isRejected ? "❌" : "⏳"}</div>
+              <div className="bp-success-icon">
+                {isApproved ? <CheckCircle2 size={48} color="#059669" aria-hidden="true" /> : isRejected ? <XCircle size={48} color="#ef4444" aria-hidden="true" /> : <Clock size={48} color="#f59e0b" aria-hidden="true" />}
+              </div>
               <h2 className="bp-success-title" style={{ color: isRejected ? "#ef4444" : "#111827" }}>
                 {isApproved ? "Đơn đăng ký được duyệt!" : isRejected ? "Đơn bị từ chối" : "Đơn đang được xét duyệt"}
               </h2>
@@ -403,8 +406,8 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
               {/* Re-login banner */}
               {needsRelogin && (
                 <div style={{ background: "#ecfdf5", border: "1px solid #bbf7d0", borderRadius: 12, padding: "14px 16px", marginBottom: 20, textAlign: "left" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#047857", marginBottom: 6 }}>
-                    ✅ Tài khoản đã được nâng cấp lên Partner
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#047857", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                    <CheckCircle2 size={16} aria-hidden="true" /> Tài khoản đã được nâng cấp lên Partner
                   </div>
                   <div style={{ fontSize: 13, color: "#065f46", marginBottom: 12 }}>
                     Vui lòng đăng xuất và đăng nhập lại để truy cập Partner Portal.
@@ -480,7 +483,7 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
             <div className="bp-benefits-grid">
               {benefits.map(b => (
                 <div key={b.tkey_title} className="bp-benefit-card">
-                  <div className="bp-benefit-icon">{b.icon}</div>
+                  <div className="bp-benefit-icon"><b.Icon size={28} color="#BE1E2E" aria-hidden="true" /></div>
                   <div className="bp-benefit-title">{t(b.tkey_title)}</div>
                   <div className="bp-benefit-desc">{t(b.tkey_desc)}</div>
                 </div>

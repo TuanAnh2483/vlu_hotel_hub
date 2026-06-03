@@ -24,7 +24,7 @@ export const vi = {
   bp_field_biz_name:  "Tên doanh nghiệp",
   bp_field_email:     "Email liên hệ",
   bp_field_phone:     "Số điện thoại",
-  bp_review_note:     "✅ Sau khi gửi, đơn đăng ký sẽ được Admin xem xét trong vòng 1–3 ngày làm việc.",
+  bp_review_note:     "Sau khi gửi, đơn đăng ký sẽ được Admin xem xét trong vòng 1–3 ngày làm việc.",
   bp_edit:            "← Chỉnh sửa",
   bp_submit:          "Gửi đơn đăng ký",
   bp_submitting:      "Đang gửi đơn...",

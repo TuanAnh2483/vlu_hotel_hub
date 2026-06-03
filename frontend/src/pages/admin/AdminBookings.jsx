@@ -3,6 +3,7 @@ import AdminLayout, { AP, PageHeader, Card, Badge, Btn, Table, Modal } from "../
 import { useAdminBookings } from "../../hooks/useAdminQueries";
 import { useLang } from "../../contexts/LanguageContext";
 import { SkeletonTableRows } from "../../components/ui/Skeleton";
+import { ClipboardList, CheckCircle2, Clock, XCircle, CircleDollarSign, FileText } from "lucide-react";
 import "../../styles/pages/admin/AdminCommon.css";
 
 const STATUSES = ["", "CONFIRMED", "PENDING_PAYMENT", "CANCELLED", "COMPLETED"];
@@ -52,14 +53,14 @@ export default function AdminBookings({ navigate, user, onLogout }) {
       {/* Summary */}
       <div className="admin-summary-grid admin-summary-grid-5">
         {[
-          { label: t("adm_bk_total"),     value: counts.total,        color: "#4361ee", icon: "📋" },
-          { label: t("adm_bk_confirmed"), value: counts.confirmed,    color: "#2e7d32", icon: "✅" },
-          { label: t("adm_bk_pending"),   value: counts.pending,      color: "#f57f17", icon: "⏳" },
-          { label: t("adm_bk_cancelled"), value: counts.cancelled,    color: "#888",    icon: "❌" },
-          { label: t("adm_bk_revenue"),   value: fmt(counts.revenue), color: AP,        icon: "💰", isStr: true },
+          { label: t("adm_bk_total"),     value: counts.total,        color: "#4361ee", Icon: ClipboardList },
+          { label: t("adm_bk_confirmed"), value: counts.confirmed,    color: "#2e7d32", Icon: CheckCircle2 },
+          { label: t("adm_bk_pending"),   value: counts.pending,      color: "#f57f17", Icon: Clock },
+          { label: t("adm_bk_cancelled"), value: counts.cancelled,    color: "#888",    Icon: XCircle },
+          { label: t("adm_bk_revenue"),   value: fmt(counts.revenue), color: AP,        Icon: CircleDollarSign, isStr: true },
         ].map(c => (
           <div key={c.label} className="admin-summary-card">
-            <span className="admin-summary-card-icon">{c.icon}</span>
+            <span className="admin-summary-card-icon" style={{ color: c.color }}><c.Icon size={20} aria-hidden="true" /></span>
             <div>
               <div className="admin-summary-card-value" style={{ fontSize: c.isStr ? 14 : 22, color: c.color }}>{c.value}</div>
               <div className="admin-summary-card-label">{c.label}</div>
@@ -132,7 +133,7 @@ export default function AdminBookings({ navigate, user, onLogout }) {
 
       {/* Detail modal */}
       {detail && (
-        <Modal title={`📋 ${t("adm_bk_detail_title")} #${detail.id}`} onClose={() => setDetail(null)}>
+        <Modal title={`${t("adm_bk_detail_title")} #${detail.id}`} onClose={() => setDetail(null)}>
           <div className="admin-modal-info">
             <div className="admin-modal-info-title">{detail.hotelName || "—"}</div>
             <div className="admin-modal-info-sub">{detail.userEmail}</div>

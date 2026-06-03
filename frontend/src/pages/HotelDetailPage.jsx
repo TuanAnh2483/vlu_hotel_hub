@@ -1,18 +1,21 @@
 ﻿import { useState, useEffect } from "react";
 import { C } from "../lib/constants";
-import { ShieldCheck, Clock, ShieldOff } from "lucide-react";
+import { ShieldCheck, Clock, ShieldOff, MapPin, BedDouble, Building2, Users, CheckCircle2 } from "lucide-react";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
 import { useHotelDetail, useAvailableRooms } from "../hooks/useHotelQueries";
 import { useHotelReviews } from "../hooks/useReviewQueries";
 import { useLang } from "../contexts/LanguageContext";
-import { ROOM_AMENITIES_FLAT } from "../utils/amenityConfig";
+import { ROOM_AMENITIES_FLAT, HOTEL_AMENITIES_FLAT } from "../utils/amenityConfig";
+import { ROOM_CATEGORY_LABELS, BED_TYPE_LABELS } from "../utils/roomConfig";
+import { getTypeLabel } from "../utils/propertyGroupUtils";
 
 const PLACEHOLDER = "repeating-conic-gradient(#ccc 0% 25%,#e8e8e8 0% 50%) 0 0/20px 20px";
 
-const ROOM_CATEGORY_LABEL = { STANDARD: "Phòng tiêu chuẩn", DELUXE: "Phòng Deluxe", SUITE: "Suite", FAMILY: "Phòng gia đình" };
-const BED_TYPE_LABEL       = { SINGLE: "1 giường đơn", DOUBLE: "1 giường đôi", TWIN: "2 giường đơn" };
-const AMENITY_LABEL = Object.fromEntries(ROOM_AMENITIES_FLAT.map(a => [a.key, a.label]));
+const ROOM_CATEGORY_LABEL = ROOM_CATEGORY_LABELS;
+const BED_TYPE_LABEL       = BED_TYPE_LABELS;
+const AMENITY_LABEL        = Object.fromEntries(ROOM_AMENITIES_FLAT.map(a => [a.key, a.label]));
+const HOTEL_AMENITY_LOOKUP = Object.fromEntries(HOTEL_AMENITIES_FLAT.map(a => [a.key, a]));
 
 function RoomDetailModal({ room, nights, onClose, onAdd, onRemove, cartQty }) {
   const [imgIdx, setImgIdx] = useState(0);
@@ -73,11 +76,11 @@ function RoomDetailModal({ room, nights, onClose, onAdd, onRemove, cartQty }) {
           </div>
 
           {/* Meta row */}
-          <div style={{ display: "flex", gap: 16, fontSize: 13, color: "#666", marginBottom: 16 }}>
-            <span>👥 {room.capacity} khách tối đa</span>
-            {room.bedType && <span>🛏 {BED_TYPE_LABEL[room.bedType] || room.bedType}</span>}
+          <div style={{ display: "flex", gap: 16, fontSize: 13, color: "#666", marginBottom: 16, flexWrap: "wrap" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Users size={13} aria-hidden="true" /> {room.capacity} khách tối đa</span>
+            {room.bedType && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><BedDouble size={13} aria-hidden="true" /> {BED_TYPE_LABEL[room.bedType] || room.bedType}</span>}
             {room.availableUnits != null && (
-              <span style={{ color: room.availableUnits <= 3 ? "#e57373" : "#888" }}>✦ Còn {room.availableUnits} phòng</span>
+              <span style={{ color: room.availableUnits <= 3 ? "#e57373" : "#888" }}>Còn {room.availableUnits} phòng</span>
             )}
           </div>
 
@@ -228,7 +231,7 @@ function fmt(n) {
 const DESC_LIMIT = 260;
 
 export default function HotelDetailPage({ navigate, params = {}, user, onLogout, requireAuth }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const ratingLabel = useRatingLabel();
   const [imgIdx, setImgIdx]             = useState(0);
   const [expanded, setExpanded]         = useState(false);
@@ -312,7 +315,7 @@ export default function HotelDetailPage({ navigate, params = {}, user, onLogout,
       <div style={{ minHeight: "100vh", background: "#f7f8fa" }}>
         <MainNavbar active="search" navigate={navigate} user={user} onLogout={onLogout} />
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px", textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🏨</div>
+          <Building2 size={48} color="#BE1E2E" style={{ marginBottom: 16 }} aria-hidden="true" />
           <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>{t("detail_not_found")}</h2>
           <p style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>{t("detail_not_found_sub")}</p>
           <button onClick={() => window.history.back()} style={{ background: "#BE1E2E", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
@@ -360,10 +363,12 @@ export default function HotelDetailPage({ navigate, params = {}, user, onLogout,
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent,rgba(0,0,0,0.65))", padding: "40px 24px 20px" }}>
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                 <span style={{ background: C.primary, color: "#fff", borderRadius: 4, padding: "2px 10px", fontSize: 12, fontWeight: 700 }}>{hotel?.starLevel || "—"}{t("detail_star")}</span>
-                <span style={{ background: "rgba(255,255,255,0.2)", color: "#fff", borderRadius: 4, padding: "2px 10px", fontSize: 12 }}>{hotel?.hotelType || "Khách sạn"}</span>
+                <span style={{ background: "rgba(255,255,255,0.2)", color: "#fff", borderRadius: 4, padding: "2px 10px", fontSize: 12 }}>{getTypeLabel(hotel?.hotelType, lang)}</span>
               </div>
               <h1 style={{ margin: 0, color: "#fff", fontSize: 26, fontWeight: 800 }}>{hotel?.name}</h1>
-              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 4 }}>📍 {hotel?.address}</div>
+              <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                <MapPin size={13} aria-hidden="true" /> {hotel?.address}
+              </div>
             </div>
             {imageCount > 1 && (
               <>
@@ -423,12 +428,17 @@ export default function HotelDetailPage({ navigate, params = {}, user, onLogout,
             <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 20, boxShadow: "0 1px 6px rgba(0,0,0,0.07)" }}>
               <h2 style={{ margin: "0 0 16px", fontSize: 18, fontWeight: 700, color: C.dark }}>{t("detail_amenities")}</h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                {amenities.map((a) => (
-                  <div key={a.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#f7f8fa", borderRadius: 8 }}>
-                    <span style={{ fontSize: 22 }}>{a.icon}</span>
-                    <span style={{ fontSize: 13, color: C.dark, fontWeight: 500 }}>{a.label}</span>
-                  </div>
-                ))}
+                {amenities.map((key) => {
+                  const a = HOTEL_AMENITY_LOOKUP[key];
+                  if (!a) return null;
+                  const Icon = a.Icon;
+                  return (
+                    <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#f7f8fa", borderRadius: 8 }}>
+                      <Icon size={18} color="#BE1E2E" aria-hidden="true" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: "#1a1a1a", fontWeight: 500 }}>{a.label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -472,8 +482,8 @@ export default function HotelDetailPage({ navigate, params = {}, user, onLogout,
                             <div style={{ fontWeight: 700, fontSize: 15, color: C.dark }}>{r.name}</div>
                             <button onClick={() => setDetailRoom(r)} style={{ background: "none", border: "none", color: C.primary, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, flexShrink: 0 }}>Xem chi tiết</button>
                           </div>
-                          <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>
-                            🛏 {r.beds}{r.size ? ` · 📐 ${r.size}` : ""}
+                          <div style={{ fontSize: 12, color: "#888", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                            <BedDouble size={13} aria-hidden="true" /> {r.beds}{r.size ? ` · ${r.size}` : ""}
                             {r.availableUnits != null && (
                               <span style={{ marginLeft: 8, color: r.availableUnits <= 3 ? "#e57373" : "#aaa" }}>
                                 · {t("detail_available_units") || "Còn"} {r.availableUnits}
@@ -589,7 +599,7 @@ export default function HotelDetailPage({ navigate, params = {}, user, onLogout,
                 // Đủ chỗ
                 return (
                   <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
-                    <span style={{ fontSize: 18, flexShrink: 0 }}>✅</span>
+                    <CheckCircle2 size={18} color="#16a34a" style={{ flexShrink: 0 }} aria-hidden="true" />
                     <div style={{ fontSize: 13, color: "#166534", lineHeight: 1.5 }}>
                       Đủ chỗ cho tất cả <strong>{guests} khách</strong>.
                     </div>

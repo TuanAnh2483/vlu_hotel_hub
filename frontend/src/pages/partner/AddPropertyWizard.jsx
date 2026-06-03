@@ -4,7 +4,7 @@ import {
   Building2, Home, TreePalm, Hotel, Warehouse, House,
   ChevronRight, ChevronLeft,
   Plus, Trash2, Check,
-  Users, AlertCircle, Upload, X,
+  Users, AlertCircle, Upload, X, BedDouble,
 } from "lucide-react";
 import { partnerService } from "../../services/partnerService";
 import {
@@ -12,6 +12,7 @@ import {
   imageItemUrl, revokePendingImageUrls,
 } from "../../utils/imageFormItems";
 import { getPropertyGroup, getDefaultBookingMode } from "../../utils/propertyGroupUtils";
+import { ROOM_CATEGORIES, ROOM_CATEGORY_LABELS, BED_TYPES, BED_TYPE_LABELS } from "../../utils/roomConfig";
 import AmenityPicker from "../../components/partner/AmenityPicker";
 import { HOTEL_AMENITY_CATEGORIES, ROOM_AMENITY_CATEGORIES, HOTEL_AMENITY_KEYS } from "../../utils/amenityConfig";
 
@@ -30,11 +31,6 @@ const PROPERTY_TYPES = [
 ];
 
 
-const BED_TYPES = ["SINGLE", "DOUBLE", "TWIN"];
-const BED_TYPE_LABELS = { SINGLE: "Giường đơn", DOUBLE: "Giường đôi", TWIN: "2 giường đơn" };
-
-const ROOM_CATEGORIES = ["STANDARD", "DELUXE", "SUITE", "FAMILY"];
-const ROOM_CATEGORY_LABELS = { STANDARD: "Tiêu chuẩn", DELUXE: "Deluxe", SUITE: "Suite", FAMILY: "Gia đình" };
 
 const EMPTY_ROOM_TYPE = { name: "", bedType: "DOUBLE", quantity: 1, capacity: 2, roomCategory: "STANDARD", price: "" };
 
@@ -477,7 +473,7 @@ function StepPricing({ state, update }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 8 }}>Tóm tắt giá loại phòng</div>
           {state.roomTypes.filter(rt => rt.name?.trim()).map((rt, idx) => (
             <div key={idx} style={{ background: "#f9fafb", borderRadius: 10, padding: "10px 16px", marginBottom: 8, border: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>🛏 {rt.name} ({rt.quantity} phòng)</span>
+              <span style={{ fontWeight: 600, fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}><BedDouble size={13} aria-hidden="true" /> {rt.name} ({rt.quantity} phòng)</span>
               <span style={{ fontWeight: 700, fontSize: 13, color: "#BE1E2E" }}>
                 {rt.price ? new Intl.NumberFormat("vi-VN").format(Number(rt.price)) + " ₫/đêm" : "Chưa đặt giá"}
               </span>
@@ -748,7 +744,7 @@ export default function AddPropertyWizard() {
   if (createdHotelId) {
     return (
       <div style={{ maxWidth: 520, margin: "0 auto", paddingBottom: 60, paddingTop: 32, textAlign: "center" }}>
-        <div style={{ fontSize: 56, marginBottom: 16 }}>🏨</div>
+        <Building2 size={56} color="#BE1E2E" style={{ marginBottom: 16 }} aria-hidden="true" />
         <h1 style={{ fontSize: 24, fontWeight: 900, color: "#111827", marginBottom: 8 }}>Cơ sở đã được tạo thành công!</h1>
         <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, marginBottom: 28 }}>
           Cơ sở lưu trú của bạn đã được thêm vào hệ thống. Tiếp theo, hãy thêm phòng và cài đặt giá để bắt đầu nhận đặt phòng.

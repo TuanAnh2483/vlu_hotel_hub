@@ -2,6 +2,7 @@
 import { C } from "../../lib/constants";
 import { useHotelSearch } from "../../hooks/useHotelQueries";
 import { useLang } from "../../contexts/LanguageContext";
+import { Building2, Zap, ShieldCheck, MapPin, CalendarDays, User, BedDouble } from "lucide-react";
 import "./HotelSearchResults.css";
 
 function Img({ src, alt = "", h = 160, r = 0 }) {
@@ -300,9 +301,9 @@ function FeaturedBanner() {
         </p>
 
         <div style={{ display: "flex", gap: 28 }}>
-          {[["🏨", t("banner_feat_1")], ["⚡", t("banner_feat_2")], ["🛡️", t("banner_feat_3")]].map(([icon, label]) => (
+          {[[Building2, t("banner_feat_1")], [Zap, t("banner_feat_2")], [ShieldCheck, t("banner_feat_3")]].map(([Icon, label]) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-              <span style={{ fontSize: 15 }}>{icon}</span>
+              <Icon size={14} aria-hidden="true" />
               <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.8)" }}>{label}</span>
             </div>
           ))}
@@ -357,20 +358,20 @@ function SearchSummaryBar({ params, totalItems, loading }) {
 
   const typeOption = HOTEL_TYPE_OPTIONS.find(o => o.value === params.hotelTypes);
   const chips = [
-    params.province   && { icon: "📍", label: params.province + (params.district ? `, ${params.district}` : "") },
-    params.checkIn && params.checkOut && { icon: "📅", label: `${params.checkIn} → ${params.checkOut}` },
-    params.guests  && { icon: "👤", label: `${params.guests} ${t("guests").trim()}` },
-    params.rooms   && params.rooms > 1 && { icon: "🛏", label: `${params.rooms} ${t("search_rooms").toLowerCase()}` },
-    params.hotelTypes && { icon: "🏨", label: typeOption ? t(typeOption.tkey) : params.hotelTypes },
+    params.province   && { Icon: MapPin,       label: params.province + (params.district ? `, ${params.district}` : "") },
+    params.checkIn && params.checkOut && { Icon: CalendarDays, label: `${params.checkIn} → ${params.checkOut}` },
+    params.guests  && { Icon: User,        label: `${params.guests} ${t("guests").trim()}` },
+    params.rooms   && params.rooms > 1 && { Icon: BedDouble,   label: `${params.rooms} ${t("search_rooms").toLowerCase()}` },
+    params.hotelTypes && { Icon: Building2,    label: typeOption ? t(typeOption.tkey) : params.hotelTypes },
   ].filter(Boolean);
 
   return (
     <div style={{ background: "#fff", borderRadius: 14, padding: "14px 20px", marginBottom: 16, boxShadow: "0 1px 6px rgba(0,0,0,0.07)", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
       <span style={{ fontSize: 12, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 0.8, flexShrink: 0 }}>{t("search_summary_label")}</span>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flex: 1 }}>
-        {chips.map(({ icon, label }) => (
+        {chips.map(({ Icon, label }) => (
           <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#fdf4f5", border: "1px solid #f5d0d4", borderRadius: 100, padding: "4px 12px", fontSize: 13, fontWeight: 600, color: "#7a0d1a" }}>
-            {icon} {label}
+            <Icon size={13} aria-hidden="true" /> {label}
           </span>
         ))}
       </div>

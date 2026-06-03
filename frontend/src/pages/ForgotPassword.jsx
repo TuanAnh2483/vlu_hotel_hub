@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CheckCircle2 } from "lucide-react";
 import { C, S, SubmitButton, ImgSide } from "../components/auth/AuthShared";
 import { useForgotPassword } from "../hooks/useAuthMutations";
 import { useLang } from "../contexts/LanguageContext";
@@ -51,7 +52,7 @@ const ForgotPassword = ({ setPage }) => {
 
           {sent ? (
             <div style={{ background: "#eafaf1", border: "1.5px solid #27ae60", borderRadius: 10, padding: "22px 24px", textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+              <CheckCircle2 size={32} color="#27ae60" style={{ marginBottom: 8 }} aria-hidden="true" />
               <div style={{ fontWeight: 700, color: "#27ae60", marginBottom: 4 }}>{t("forgot_sent_title")}</div>
               <div style={{ fontSize: 13, color: "#555" }}>{t("forgot_sent_msg").replace("{email}", sentEmail)}</div>
             </div>

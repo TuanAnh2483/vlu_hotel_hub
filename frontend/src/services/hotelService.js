@@ -1,25 +1,5 @@
 import apiClient from "./apiClient";
 
-const AMENITY_MAP = {
-  WIFI:        { icon: "📶", label: "WiFi miễn phí" },
-  POOL:        { icon: "🏊", label: "Hồ bơi" },
-  PARKING:     { icon: "🅿️", label: "Đỗ xe miễn phí" },
-  GYM:         { icon: "💪", label: "Phòng Gym" },
-  SPA:         { icon: "💆", label: "Spa & Thư giãn" },
-  RESTAURANT:  { icon: "🍽️", label: "Ẩm thực" },
-  PET_ALLOWED: { icon: "🐾", label: "Cho phép thú cưng" },
-};
-
-const HOTEL_TYPE_MAP = {
-  HOTEL:       "Khách sạn",
-  APARTMENT:   "Căn hộ",
-  RESORT:      "Resort",
-  VILLA:       "Biệt thự",
-  HOMESTAY:    "Homestay",
-  HOSTEL:      "Hostel",
-  GUEST_HOUSE: "Nhà nghỉ",
-};
-
 function isoDate(dt) {
   return dt.toISOString().split("T")[0];
 }
@@ -74,7 +54,7 @@ function normalizeHotel(h) {
     imageUrl:           h.coverImageUrl || images[0] || "",
     imageUrls:          images,
     amenities:          [],
-    hotelType:          HOTEL_TYPE_MAP[h.hotelType] || h.hotelType || "Khách sạn",
+    hotelType:          h.hotelType || "HOTEL",
   };
 }
 
@@ -161,8 +141,7 @@ export const hotelService = {
       const data = await apiClient.get(`/api/hotels/${id}`);
       if (!data || !data.hotelId) return null;
       const images = normalizeImageList(data.imageUrls, data.coverImageUrl);
-      const rawAmenities = Array.isArray(data.amenities) ? data.amenities : [];
-      const amenities = rawAmenities.map((a) => AMENITY_MAP[a]).filter(Boolean);
+      const amenities = Array.isArray(data.amenities) ? data.amenities : [];
       return {
         id:          data.hotelId,
         name:        data.name,
@@ -172,7 +151,7 @@ export const hotelService = {
         description: data.description || "",
         rating:      Number(data.ratingAvg) || 0,
         ratingCount: data.ratingCount || 0,
-        hotelType:   HOTEL_TYPE_MAP[data.hotelType] || data.hotelType || "Khách sạn",
+        hotelType:   data.hotelType || "HOTEL",
         starLevel:   data.starLevel || 3,
         amenities,
         imageUrl:    data.coverImageUrl || images[0] || "",

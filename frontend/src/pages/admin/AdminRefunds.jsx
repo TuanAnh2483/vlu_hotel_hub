@@ -3,6 +3,7 @@ import AdminLayout, { AP, PageHeader, Card, Badge, Btn, Table, Modal } from "../
 import { useAdminRefunds } from "../../hooks/useAdminQueries";
 import { useLang } from "../../contexts/LanguageContext";
 import { SkeletonTableRows } from "../../components/ui/Skeleton";
+import { Clock, CheckCircle2, XCircle, CircleDollarSign, ReceiptText } from "lucide-react";
 import "../../styles/pages/admin/AdminCommon.css";
 
 const STATUSES = ["", "PENDING", "APPROVED", "REJECTED"];
@@ -36,13 +37,13 @@ export default function AdminRefunds({ navigate, user, onLogout }) {
       {/* Summary */}
       <div className="admin-summary-grid admin-summary-grid-4">
         {[
-          { label: t("adm_rf_pending"),       value: pending,           color: "#f57f17", icon: "⏳" },
-          { label: t("adm_rf_approved"),      value: approved,          color: "#2e7d32", icon: "✅" },
-          { label: t("adm_rf_rejected"),      value: rejected,          color: "#c62828", icon: "❌" },
-          { label: t("adm_rf_total_pending"), value: fmt(totalPending), color: AP,        icon: "💰", isStr: true },
+          { label: t("adm_rf_pending"),       value: pending,           color: "#f57f17", Icon: Clock },
+          { label: t("adm_rf_approved"),      value: approved,          color: "#2e7d32", Icon: CheckCircle2 },
+          { label: t("adm_rf_rejected"),      value: rejected,          color: "#c62828", Icon: XCircle },
+          { label: t("adm_rf_total_pending"), value: fmt(totalPending), color: AP,        Icon: CircleDollarSign, isStr: true },
         ].map(c => (
           <div key={c.label} className="admin-summary-card">
-            <span className="admin-summary-card-icon">{c.icon}</span>
+            <span className="admin-summary-card-icon" style={{ color: c.color }}><c.Icon size={20} aria-hidden="true" /></span>
             <div>
               <div className="admin-summary-card-value" style={{ fontSize: c.isStr ? 15 : 24, color: c.color }}>{c.value}</div>
               <div className="admin-summary-card-label">{c.label}</div>
@@ -110,7 +111,7 @@ export default function AdminRefunds({ navigate, user, onLogout }) {
 
       {/* Detail modal — read-only */}
       {detail && (
-        <Modal title={`💰 ${t("adm_rf_detail_title")} #${detail.id}`} onClose={() => setDetail(null)}>
+        <Modal title={`${t("adm_rf_detail_title")} #${detail.id}`} onClose={() => setDetail(null)}>
           <div className="admin-modal-info">
             <div className="admin-modal-info-title">{detail.hotelName}</div>
             <div className="admin-modal-info-sub">{detail.userEmail}</div>

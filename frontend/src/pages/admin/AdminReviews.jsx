@@ -3,7 +3,7 @@ import AdminLayout, {
   AP, PageHeader, Card, Btn, SearchInput, Table, Modal,
 } from "../../components/admin/AdminLayout";
 import { useAdminReviews, useDeleteAdminReview } from "../../hooks/useAdminQueries";
-import { Star, Trash2, Eye } from "lucide-react";
+import { Star, Trash2, Eye, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { useLang } from "../../contexts/LanguageContext";
 
 function StarRating({ rating, size = 14 }) {
@@ -23,7 +23,7 @@ function StarRating({ rating, size = 14 }) {
 }
 
 const RATING_OPTIONS = ["", "5", "4", "3", "2", "1"];
-const RATING_LABEL   = { "": "Tất cả", "5": "⭐⭐⭐⭐⭐", "4": "⭐⭐⭐⭐", "3": "⭐⭐⭐", "2": "⭐⭐", "1": "⭐" };
+const RATING_LABEL   = { "": "Tất cả", "5": "5 sao", "4": "4 sao", "3": "3 sao", "2": "2 sao", "1": "1 sao" };
 
 export default function AdminReviews({ navigate, user, onLogout }) {
   const { t } = useLang();
@@ -71,10 +71,10 @@ export default function AdminReviews({ navigate, user, onLogout }) {
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
         {[
-          { label: t("adm_rv_total"),    value: counts.total,    icon: "⭐", color: "#f59e0b" },
-          { label: t("adm_rv_avg"),      value: counts.avg,      icon: "📊", color: "#4361ee" },
-          { label: t("adm_rv_five_star"),value: counts.fivestar, icon: "🌟", color: "#2e7d32" },
-          { label: t("adm_rv_one_star"), value: counts.onestar,  icon: "😞", color: "#c62828" },
+          { label: t("adm_rv_total"),    value: counts.total,    Icon: Star,       color: "#f59e0b" },
+          { label: t("adm_rv_avg"),      value: counts.avg,      Icon: BarChart3,  color: "#4361ee" },
+          { label: t("adm_rv_five_star"),value: counts.fivestar, Icon: TrendingUp, color: "#2e7d32" },
+          { label: t("adm_rv_one_star"), value: counts.onestar,  Icon: TrendingDown,color: "#c62828" },
         ].map(c => (
           <div key={c.label} style={{
             background: "#fff", borderRadius: 12, padding: "16px 20px",
@@ -83,9 +83,9 @@ export default function AdminReviews({ navigate, user, onLogout }) {
           }}>
             <div style={{
               width: 48, height: 48, borderRadius: "50%", background: `${c.color}18`,
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
+              display: "flex", alignItems: "center", justifyContent: "center", color: c.color,
             }}>
-              {c.icon}
+              <c.Icon size={22} aria-hidden="true" />
             </div>
             <div>
               <div style={{ fontSize: 24, fontWeight: 900, color: "#1a1a1a" }}>{c.value}</div>

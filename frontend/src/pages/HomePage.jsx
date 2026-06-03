@@ -440,7 +440,7 @@ export default function HomePage({ navigate, user, onLogout }) {
                   <HotelCard
                     key={h.id}
                     hotel={h}
-                    imgUrl={h.imageUrl || IMG_HOTELS[hotelPage * HOTEL_PAGE_SIZE + i] || ""}
+                    imgUrl={h.imageUrl || IMG_HOTELS[i % IMG_HOTELS.length] || ""}
                     onView={() => navigate("hotel", { hotelId: h.id, ...defaultStayParams(searchQuery || {}) })}
                   />
                 ))

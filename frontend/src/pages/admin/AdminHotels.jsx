@@ -6,6 +6,7 @@ import AdminLayout, {
 import { useAdminHotels, useUpdateAdminHotel, useDeleteAdminHotel, useAdminHotelRooms } from "../../hooks/useAdminQueries";
 import { useLang } from "../../contexts/LanguageContext";
 import { HOTEL_AMENITIES_FLAT, ROOM_AMENITIES_FLAT } from "../../utils/amenityConfig";
+import { Building2, CheckCircle2, Star } from "lucide-react";
 
 const HOTEL_AMENITY_LABEL = Object.fromEntries(HOTEL_AMENITIES_FLAT.map(a => [a.key, a.label]));
 const ROOM_AMENITY_LABEL  = Object.fromEntries(ROOM_AMENITIES_FLAT.map(a => [a.key, a.label]));
@@ -90,16 +91,16 @@ export default function AdminHotels({ navigate, user, onLogout }) {
       {/* Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
         {[
-          { label: t("adm_hotels_total"),      value: counts.total,  color: AP,        icon: "🏨" },
-          { label: t("adm_users_active"),      value: counts.active, color: "#2e7d32", icon: "✅" },
-          { label: t("adm_hotels_avg_rating"), value: counts.avg,    color: "#f5a623", icon: "⭐" },
+          { label: t("adm_hotels_total"),      value: counts.total,  color: AP,        Icon: Building2 },
+          { label: t("adm_users_active"),      value: counts.active, color: "#2e7d32", Icon: CheckCircle2 },
+          { label: t("adm_hotels_avg_rating"), value: counts.avg,    color: "#f5a623", Icon: Star },
         ].map(c => (
           <div key={c.label} style={{
             background: "#fff", borderRadius: 12, padding: "16px 20px",
             boxShadow: "0 2px 10px rgba(0,0,0,0.05)", border: "1px solid #f0f0f0",
             display: "flex", alignItems: "center", gap: 14,
           }}>
-            <span style={{ fontSize: 24 }}>{c.icon}</span>
+            <span style={{ color: c.color }}><c.Icon size={22} aria-hidden="true" /></span>
             <div>
               <div style={{ fontSize: 24, fontWeight: 900, color: c.color }}>{c.value}</div>
               <div style={{ fontSize: 11, color: "#888", marginTop: 2, fontWeight: 600 }}>{c.label}</div>
@@ -151,7 +152,7 @@ export default function AdminHotels({ navigate, user, onLogout }) {
                 background: "#f0f4ff", color: "#4361ee",
               }}>{HOTEL_TYPE_LABEL[h.hotelType] || h.hotelType || "—"}</span>,
               <span style={{ fontWeight: 700, color: "#f5a623" }}>
-                {h.ratingAvg > 0 ? `⭐ ${Number(h.ratingAvg).toFixed(1)}` : "—"}
+                {h.ratingAvg > 0 ? `★ ${Number(h.ratingAvg).toFixed(1)}` : "—"}
                 {h.ratingCount > 0 && <span style={{ color: "#aaa", fontWeight: 400, fontSize: 11 }}> ({h.ratingCount})</span>}
               </span>,
               <Badge status={h.status || "ACTIVE"} />,
@@ -253,7 +254,7 @@ export default function AdminHotels({ navigate, user, onLogout }) {
               ["Chủ sở hữu", selected.ownerEmail],
               ["Loại hình",  HOTEL_TYPE_LABEL[selected.hotelType] || selected.hotelType],
               ["Trạng thái", selected.status],
-              ["Đánh giá",   selected.ratingAvg > 0 ? `⭐ ${Number(selected.ratingAvg).toFixed(1)} (${selected.ratingCount})` : "Chưa có"],
+              ["Đánh giá",   selected.ratingAvg > 0 ? `★ ${Number(selected.ratingAvg).toFixed(1)} (${selected.ratingCount})` : "Chưa có"],
               ["Tỉnh/Thành", selected.province],
               ["Quận/Huyện", selected.district],
               ["Địa chỉ",    selected.address],

@@ -1,4 +1,5 @@
 ﻿import { useLocation, Navigate } from "react-router-dom";
+import { CheckCircle2, XCircle, CreditCard } from "lucide-react";
 import { C } from "../lib/constants";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
@@ -21,8 +22,8 @@ function SuccessPage({ navigate, user, onLogout, state }) {
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{ background: "#fff", borderRadius: 20, padding: "52px 48px", maxWidth: 520, width: "100%", boxShadow: "0 4px 32px rgba(0,0,0,0.10)", textAlign: "center" }}>
           {/* Success icon */}
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: 40 }}>
-            ✅
+          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+            <CheckCircle2 size={44} color="#16a34a" aria-hidden="true" />
           </div>
 
           <h1 style={{ fontSize: 24, fontWeight: 900, color: "#1a1a1a", marginBottom: 8 }}>
@@ -98,8 +99,8 @@ function FailedPage({ navigate, user, onLogout, state }) {
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{ background: "#fff", borderRadius: 20, padding: "52px 48px", maxWidth: 520, width: "100%", boxShadow: "0 4px 32px rgba(0,0,0,0.10)", textAlign: "center" }}>
           {/* Failed icon */}
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#ffebee", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: 40 }}>
-            ❌
+          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#ffebee", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+            <XCircle size={44} color="#dc2626" aria-hidden="true" />
           </div>
 
           <h1 style={{ fontSize: 24, fontWeight: 900, color: "#1a1a1a", marginBottom: 8 }}>
@@ -134,9 +135,9 @@ function FailedPage({ navigate, user, onLogout, state }) {
             {bookingId && (
               <button
                 onClick={() => navigate("payment", { bookingId })}
-                style={{ flex: 2, background: C.primary, color: "#fff", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+                style={{ flex: 2, background: C.primary, color: "#fff", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
               >
-                💳 Thử thanh toán lại
+                <CreditCard size={16} aria-hidden="true" /> Thử thanh toán lại
               </button>
             )}
             <button

@@ -1,6 +1,7 @@
 import AdminLayout, { AP, PageHeader, Card, Badge, Btn, Table } from "../../components/admin/AdminLayout";
 import { useAdminSystem } from "../../hooks/useAdminQueries";
 import { useLang } from "../../contexts/LanguageContext";
+import { Globe, Database, CreditCard, Mail, HardDrive, Zap, CheckCircle2 } from "lucide-react";
 
 const ERROR_COLORS = {
   PAYMENT_FAILED:   "#c62828",
@@ -10,12 +11,12 @@ const ERROR_COLORS = {
 };
 
 const SERVICES = [
-  { name: "API Server",    status: "ONLINE",  latency: "12ms",  icon: "🌐" },
-  { name: "Database",      status: "ONLINE",  latency: "4ms",   icon: "🗄️" },
-  { name: "Payment Gate",  status: "ONLINE",  latency: "230ms", icon: "💳" },
-  { name: "Email Service", status: "ONLINE",  latency: "85ms",  icon: "📧" },
-  { name: "File Storage",  status: "ONLINE",  latency: "18ms",  icon: "📁" },
-  { name: "Cache Layer",   status: "ONLINE",  latency: "2ms",   icon: "⚡" },
+  { name: "API Server",    status: "ONLINE",  latency: "12ms",  Icon: Globe },
+  { name: "Database",      status: "ONLINE",  latency: "4ms",   Icon: Database },
+  { name: "Payment Gate",  status: "ONLINE",  latency: "230ms", Icon: CreditCard },
+  { name: "Email Service", status: "ONLINE",  latency: "85ms",  Icon: Mail },
+  { name: "File Storage",  status: "ONLINE",  latency: "18ms",  Icon: HardDrive },
+  { name: "Cache Layer",   status: "ONLINE",  latency: "2ms",   Icon: Zap },
 ];
 
 export default function AdminSystem({ navigate, user, onLogout }) {
@@ -45,7 +46,7 @@ export default function AdminSystem({ navigate, user, onLogout }) {
               border: "1px solid #e8f5e9", background: "#f9fef9",
               display: "flex", alignItems: "center", gap: 12,
             }}>
-              <span style={{ fontSize: 20 }}>{svc.icon}</span>
+              <svc.Icon size={20} color="#2e7d32" aria-hidden="true" />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>{svc.name}</div>
                 <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{t("adm_sys_latency")}: {svc.latency}</div>
@@ -102,7 +103,7 @@ export default function AdminSystem({ navigate, user, onLogout }) {
 
             {data.recentErrors.length === 0 ? (
               <div style={{ textAlign: "center", padding: 32, color: "#bbb", fontSize: 13 }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+                <CheckCircle2 size={32} color="#2e7d32" style={{ marginBottom: 8 }} aria-hidden="true" />
                 {t("adm_sys_errors_empty")}
               </div>
             ) : (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { CheckCircle2 } from "lucide-react";
 import { C, S, SubmitButton, ImgSide } from "../components/auth/AuthShared";
 import { useResetPassword } from "../hooks/useAuthMutations";
 import { useLang } from "../contexts/LanguageContext";
@@ -80,7 +81,7 @@ export default function ResetPasswordPage({ setPage }) {
         <div style={S.formSide}>
           <div style={S.formBox}>
             <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+              <CheckCircle2 size={48} color="#2e7d32" style={{ marginBottom: 16 }} aria-hidden="true" />
               <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>{t("reset_success_title")}</h2>
               <p style={{ fontSize: 14, color: "#888", lineHeight: 1.6, marginBottom: 28 }}>{t("reset_success_desc")}</p>
               <button
