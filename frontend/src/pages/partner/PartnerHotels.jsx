@@ -25,6 +25,7 @@ import { HOTEL_AMENITY_CATEGORIES, HOTEL_AMENITIES_FLAT, HOTEL_AMENITY_KEYS } fr
 import "../../styles/pages/partner/PartnerHotels.css";
 import { useLang } from "../../contexts/LanguageContext";
 import { getGroupColor, getTypeLabel } from "../../utils/propertyGroupUtils";
+import { useVnLocations } from "../../hooks/useVnLocations";
 
 // --- Configuration & Helpers ---
 const HOTEL_TYPES = ["HOTEL", "APARTMENT", "RESORT", "VILLA", "HOMESTAY", "HOSTEL", "GUEST_HOUSE"];
@@ -98,6 +99,10 @@ function HotelForm({ form, setForm, onSubmit, onCancel, saving, title, hotelType
     HOTEL: t("pt_type_hotel"), APARTMENT: t("pt_type_apartment"), RESORT: t("pt_type_resort"),
     VILLA: t("pt_type_villa"), HOMESTAY: t("pt_type_homestay"), HOSTEL: t("pt_type_hostel"), GUEST_HOUSE: t("pt_type_guest_house"),
   };
+  const { provinceOptions, districtOptions, loadingProvinces, loadingDistricts } = useVnLocations(form.province);
+  const visibleDistricts = form.district && !districtOptions.includes(form.district)
+    ? [form.district, ...districtOptions]
+    : districtOptions;
 
   return (
     <Modal title={title} onClose={onCancel} width={640}>
@@ -108,10 +113,26 @@ function HotelForm({ form, setForm, onSubmit, onCancel, saving, title, hotelType
 
         <div className="partner-hotel-form-grid">
           <Field label={t("pt_hotels_province")} required>
-            <input className="partner-hotel-form-input" value={form.province} onChange={e => setForm(f => ({ ...f, province: e.target.value }))} placeholder={t("pt_hotels_province_ph")} />
+            <select
+              className="partner-hotel-form-input"
+              value={form.province}
+              onChange={e => setForm(f => ({ ...f, province: e.target.value, district: "" }))}
+              disabled={loadingProvinces}
+            >
+              <option value="">{loadingProvinces ? "Đang tải..." : t("pt_hotels_province_ph")}</option>
+              {provinceOptions.map(p => <option key={p.code} value={p.name}>{p.name}</option>)}
+            </select>
           </Field>
           <Field label={t("pt_hotels_district")} required>
-            <input className="partner-hotel-form-input" value={form.district} onChange={e => setForm(f => ({ ...f, district: e.target.value }))} placeholder={t("pt_hotels_district_ph")} />
+            <select
+              className="partner-hotel-form-input"
+              value={form.district}
+              onChange={e => setForm(f => ({ ...f, district: e.target.value }))}
+              disabled={!form.province || loadingDistricts}
+            >
+              <option value="">{loadingDistricts ? "Đang tải quận/huyện..." : t("pt_hotels_district_ph")}</option>
+              {visibleDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
           </Field>
         </div>
 

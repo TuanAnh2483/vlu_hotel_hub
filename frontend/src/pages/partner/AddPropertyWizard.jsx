@@ -15,6 +15,7 @@ import { getPropertyGroup, getDefaultBookingMode } from "../../utils/propertyGro
 import { ROOM_CATEGORIES, ROOM_CATEGORY_LABELS, BED_TYPES, BED_TYPE_LABELS } from "../../utils/roomConfig";
 import AmenityPicker from "../../components/partner/AmenityPicker";
 import { HOTEL_AMENITY_CATEGORIES, ROOM_AMENITY_CATEGORIES, HOTEL_AMENITY_KEYS } from "../../utils/amenityConfig";
+import { useVnLocations } from "../../hooks/useVnLocations";
 
 // ── Constants ───────────────────────────────────────────────────────────
 
@@ -182,6 +183,10 @@ function StepPropertyType({ state, update }) {
 
 function StepBasicInfo({ state, update }) {
   const typeLabel = PROPERTY_TYPES.find(t => t.value === state.propertyType)?.label || "cơ sở";
+  const { provinceOptions, districtOptions, loadingProvinces, loadingDistricts } = useVnLocations(state.province);
+  const visibleDistricts = state.district && !districtOptions.includes(state.district)
+    ? [state.district, ...districtOptions]
+    : districtOptions;
   return (
     <div>
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff5f5", border: "1px solid #fecaca", borderRadius: 8, padding: "6px 12px", marginBottom: 20 }}>
@@ -198,11 +203,27 @@ function StepBasicInfo({ state, update }) {
       </Field>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <Field label="Quận / Huyện" required>
-          <Input value={state.district} onChange={v => update({ district: v })} placeholder="VD: Quận 1" />
-        </Field>
         <Field label="Tỉnh / Thành phố" required>
-          <Input value={state.province} onChange={v => update({ province: v })} placeholder="VD: Hồ Chí Minh" />
+          <select
+            style={inputSt}
+            value={state.province}
+            onChange={e => update({ province: e.target.value, district: "" })}
+            disabled={loadingProvinces}
+          >
+            <option value="">{loadingProvinces ? "Đang tải..." : "Chọn tỉnh / thành phố"}</option>
+            {provinceOptions.map(p => <option key={p.code} value={p.name}>{p.name}</option>)}
+          </select>
+        </Field>
+        <Field label="Quận / Huyện" required>
+          <select
+            style={inputSt}
+            value={state.district}
+            onChange={e => update({ district: e.target.value })}
+            disabled={!state.province || loadingDistricts}
+          >
+            <option value="">{loadingDistricts ? "Đang tải quận/huyện..." : "Chọn quận / huyện"}</option>
+            {visibleDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
         </Field>
       </div>
 

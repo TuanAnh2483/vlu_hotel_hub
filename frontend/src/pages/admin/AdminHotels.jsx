@@ -7,6 +7,7 @@ import { useAdminHotels, useUpdateAdminHotel, useDeleteAdminHotel, useAdminHotel
 import { useLang } from "../../contexts/LanguageContext";
 import { HOTEL_AMENITIES_FLAT, ROOM_AMENITIES_FLAT } from "../../utils/amenityConfig";
 import { Building2, CheckCircle2, Star } from "lucide-react";
+import { useVnLocations } from "../../hooks/useVnLocations";
 
 const HOTEL_AMENITY_LABEL = Object.fromEntries(HOTEL_AMENITIES_FLAT.map(a => [a.key, a.label]));
 const ROOM_AMENITY_LABEL  = Object.fromEntries(ROOM_AMENITIES_FLAT.map(a => [a.key, a.label]));
@@ -43,6 +44,10 @@ export default function AdminHotels({ navigate, user, onLogout }) {
   });
 
   const upd = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+  const { provinceOptions, districtOptions, loadingProvinces, loadingDistricts } = useVnLocations(form.province);
+  const visibleDistricts = form.district && !districtOptions.includes(form.district)
+    ? [form.district, ...districtOptions]
+    : districtOptions;
   const openDetail = h => { setSelected(h); setModal("detail"); };
   const openEdit = h => {
     setError("");
@@ -199,12 +204,22 @@ export default function AdminHotels({ navigate, user, onLogout }) {
             </div>
             <div style={{ paddingRight: 8 }}>
               <FormField label={t("adm_hotels_province")} required>
-                <Input value={form.province} onChange={upd("province")} placeholder={t("adm_hotels_province_ph")} />
+                <Select
+                  value={form.province}
+                  onChange={e => setForm(f => ({ ...f, province: e.target.value, district: "" }))}
+                  disabled={loadingProvinces}
+                >
+                  <option value="">{loadingProvinces ? "Đang tải..." : t("adm_hotels_province_ph")}</option>
+                  {provinceOptions.map(p => <option key={p.code} value={p.name}>{p.name}</option>)}
+                </Select>
               </FormField>
             </div>
             <div style={{ paddingLeft: 8 }}>
               <FormField label={t("adm_hotels_district")} required>
-                <Input value={form.district} onChange={upd("district")} placeholder={t("adm_hotels_district_ph")} />
+                <Select value={form.district} onChange={upd("district")} disabled={!form.province || loadingDistricts}>
+                  <option value="">{loadingDistricts ? "Đang tải quận/huyện..." : t("adm_hotels_district_ph")}</option>
+                  {visibleDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+                </Select>
               </FormField>
             </div>
             <div style={{ gridColumn: "1/-1" }}>

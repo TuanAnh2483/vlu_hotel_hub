@@ -325,15 +325,17 @@ export function Input({ value, onChange, type = "text", placeholder, disabled })
   );
 }
 
-export function Select({ value, onChange, children }) {
+export function Select({ value, onChange, children, disabled = false }) {
   return (
     <select
       value={value}
       onChange={onChange}
+      disabled={disabled}
       style={{
         width: "100%", padding: "9px 12px", borderRadius: 8,
-        border: "1px solid #e0e0e0", fontSize: 13, background: "#fff", outline: "none",
-        cursor: "pointer",
+        border: "1px solid #e0e0e0", fontSize: 13, outline: "none",
+        background: disabled ? "#f5f5f5" : "#fff",
+        cursor: disabled ? "not-allowed" : "pointer",
       }}
     >
       {children}

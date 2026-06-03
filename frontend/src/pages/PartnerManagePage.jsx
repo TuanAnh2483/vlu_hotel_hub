@@ -11,6 +11,7 @@ import {
   AlertCircle, CircleDollarSign, ClipboardList, CheckCircle2, Inbox, Layers,
 } from "lucide-react";
 import "../styles/pages/PartnerManagePage.css";
+import { useVnLocations } from "../hooks/useVnLocations";
 
 const P  = "#BE1E2E";
 const BG = "linear-gradient(135deg, #ffffff 0%, #fdf4f5 45%, #f7ebeb 100%)";
@@ -85,6 +86,10 @@ function HotelsTab() {
   const createHotel = useCreateHotel();
   const updateHotel = useUpdateHotel();
   const saving = createHotel.isPending || updateHotel.isPending;
+  const { provinceOptions, districtOptions, loadingProvinces, loadingDistricts } = useVnLocations(form.province);
+  const visibleDistricts = form.district && !districtOptions.includes(form.district)
+    ? [form.district, ...districtOptions]
+    : districtOptions;
 
   function openCreate() { setForm(EMPTY_HOTEL); setErr(""); setModal("create"); }
   function openEdit(h) { setForm({ name: h.name||"", province: h.province||"", district: h.district||"", address: h.address||"", hotelType: h.hotelType||"HOTEL", description: h.description||"", amenities: h.amenities||[] }); setErr(""); setModal(h); }
@@ -159,8 +164,18 @@ function HotelsTab() {
           <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
             <div><Label>Tên khách sạn *</Label><input className="partner-manage-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ví dụ: Grand Palace Hotel" /></div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><Label>Tỉnh/Thành phố</Label><input className="partner-manage-input" value={form.province} onChange={e => setForm(f => ({ ...f, province: e.target.value }))} placeholder="Hà Nội" /></div>
-              <div><Label>Quận/Huyện</Label><input className="partner-manage-input" value={form.district} onChange={e => setForm(f => ({ ...f, district: e.target.value }))} placeholder="Hoàn Kiếm" /></div>
+              <div><Label>Tỉnh/Thành phố</Label>
+                <select className="partner-manage-input" value={form.province} onChange={e => setForm(f => ({ ...f, province: e.target.value, district: "" }))} disabled={loadingProvinces}>
+                  <option value="">{loadingProvinces ? "Đang tải..." : "Chọn tỉnh / thành phố"}</option>
+                  {provinceOptions.map(p => <option key={p.code} value={p.name}>{p.name}</option>)}
+                </select>
+              </div>
+              <div><Label>Quận/Huyện</Label>
+                <select className="partner-manage-input" value={form.district} onChange={e => setForm(f => ({ ...f, district: e.target.value }))} disabled={!form.province || loadingDistricts}>
+                  <option value="">{loadingDistricts ? "Đang tải quận/huyện..." : "Chọn quận / huyện"}</option>
+                  {visibleDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
             </div>
             <div><Label>Địa chỉ</Label><input className="partner-manage-input" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Đường ABC" /></div>
             <div><Label>Loại</Label>
