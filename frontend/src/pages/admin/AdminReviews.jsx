@@ -2,8 +2,9 @@ import { useState } from "react";
 import AdminLayout, {
   AP, PageHeader, Card, Btn, SearchInput, Table, Modal,
 } from "../../components/admin/AdminLayout";
-import { useAdminReviews, useDeleteAdminReview } from "../../hooks/useAdminQueries";
-import { Star, Trash2, Eye, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAdminReviews, useDeleteAdminReview, useAdminHotels, adminKeys } from "../../hooks/useAdminQueries";
+import { Star, Trash2, Eye, BarChart3, TrendingUp, TrendingDown, Building2, ChevronDown } from "lucide-react";
 import { useLang } from "../../contexts/LanguageContext";
 
 function StarRating({ rating, size = 14 }) {
@@ -33,9 +34,20 @@ export default function AdminReviews({ navigate, user, onLogout }) {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
+  const [noReviewOpen, setNoReviewOpen] = useState(false);
+
   const { data: reviewsData, isLoading: loading, error } = useAdminReviews();
   const reviews = Array.isArray(reviewsData) ? reviewsData : [];
   const deleteReview = useDeleteAdminReview();
+
+  const queryClient = useQueryClient();
+  const [hotelsEnabled, setHotelsEnabled] = useState(
+    () => !!queryClient.getQueryData(adminKeys.hotels())
+  );
+  const { data: hotelsRaw } = useAdminHotels({ enabled: hotelsEnabled });
+  const hotelsNoReview = hotelsRaw
+    ? hotelsRaw.filter(h => !h.ratingCount || h.ratingCount === 0)
+    : null;
 
   const handleDelete = (id) => {
     if (!window.confirm(t("adm_rv_del_confirm"))) return;
@@ -68,51 +80,105 @@ export default function AdminReviews({ navigate, user, onLogout }) {
         subtitle={t("adm_rv_subtitle")}
       />
 
-      {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
+      {/* Summary cards — 5 cards */}
+      <div className="admin-summary-grid admin-summary-grid-5" style={{ marginBottom: noReviewOpen ? 0 : 20 }}>
         {[
-          { label: t("adm_rv_total"),    value: counts.total,    Icon: Star,       color: "#f59e0b" },
-          { label: t("adm_rv_avg"),      value: counts.avg,      Icon: BarChart3,  color: "#4361ee" },
-          { label: t("adm_rv_five_star"),value: counts.fivestar, Icon: TrendingUp, color: "#2e7d32" },
-          { label: t("adm_rv_one_star"), value: counts.onestar,  Icon: TrendingDown,color: "#c62828" },
+          { label: t("adm_rv_total"),    value: counts.total,          Icon: Star,        color: "#f59e0b", clickable: false },
+          { label: t("adm_rv_avg"),      value: counts.avg,            Icon: BarChart3,   color: "#4361ee", clickable: false },
+          { label: t("adm_rv_five_star"),value: counts.fivestar,       Icon: TrendingUp,  color: "#2e7d32", clickable: false },
+          { label: t("adm_rv_one_star"), value: counts.onestar,        Icon: TrendingDown,color: "#c62828", clickable: false },
+          { label: "Chưa đánh giá",      value: hotelsNoReview === null ? "—" : hotelsNoReview.length, Icon: Building2,   color: "#6b7280", clickable: true  },
         ].map(c => (
-          <div key={c.label} style={{
-            background: "#fff", borderRadius: 12, padding: "16px 20px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.05)", border: "1px solid #f0f0f0",
-            display: "flex", alignItems: "center", gap: 14,
-          }}>
+          <div
+            key={c.label}
+            onClick={c.clickable ? () => { if (!hotelsEnabled) setHotelsEnabled(true); setNoReviewOpen(o => !o); } : undefined}
+            role={c.clickable ? "button" : undefined}
+            tabIndex={c.clickable ? 0 : undefined}
+            aria-expanded={c.clickable ? noReviewOpen : undefined}
+            onKeyDown={c.clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { if (!hotelsEnabled) setHotelsEnabled(true); setNoReviewOpen(o => !o); } } : undefined}
+            style={{
+              background: "#fff", borderRadius: 12, padding: "14px 16px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+              border: c.clickable && noReviewOpen
+                ? "1.5px solid #d1d5db"
+                : "1px solid #f0f0f0",
+              display: "flex", alignItems: "center", gap: 12,
+              cursor: c.clickable ? "pointer" : "default",
+              transition: "border-color 0.15s",
+              borderBottomLeftRadius:  c.clickable && noReviewOpen ? 0 : 12,
+              borderBottomRightRadius: c.clickable && noReviewOpen ? 0 : 12,
+            }}
+          >
             <div style={{
-              width: 48, height: 48, borderRadius: "50%", background: `${c.color}18`,
+              width: 42, height: 42, borderRadius: "50%", background: `${c.color}18`, flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center", color: c.color,
             }}>
-              <c.Icon size={22} aria-hidden="true" />
+              <c.Icon size={20} aria-hidden="true" />
             </div>
-            <div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: "#1a1a1a" }}>{c.value}</div>
-              <div style={{ fontSize: 11, color: "#888", marginTop: 2, fontWeight: 600 }}>{c.label}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: "#1a1a1a", lineHeight: 1.1 }}>{c.value}</div>
+              <div style={{ fontSize: 11, color: "#888", marginTop: 3, fontWeight: 600 }}>{c.label}</div>
             </div>
+            {c.clickable && (
+              <ChevronDown
+                size={14} color="#9ca3af" style={{ marginLeft: "auto", flexShrink: 0, transition: "transform 0.2s", transform: noReviewOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+              />
+            )}
           </div>
         ))}
       </div>
+
+      {/* Expandable list — anchored below 5th card */}
+      {noReviewOpen && (
+        <div style={{
+          background: "#fff", border: "1.5px solid #d1d5db", borderTop: "none",
+          borderRadius: "0 0 12px 12px", marginBottom: 20, overflow: "hidden",
+          boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+        }}>
+          {!hotelsRaw ? (
+            <div style={{ padding: "16px 20px", fontSize: 13, color: "#9ca3af", textAlign: "center" }}>
+              Đang tải...
+            </div>
+          ) : hotelsNoReview.length === 0 ? (
+            <div style={{ padding: "16px 20px", fontSize: 13, color: "#9ca3af", textAlign: "center" }}>
+              Tất cả khách sạn đã có đánh giá 🎉
+            </div>
+          ) : (
+            <div style={{ maxHeight: 260, overflowY: "auto" }}>
+              {hotelsNoReview.map((h, i) => (
+                <div key={h.id} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "9px 20px", fontSize: 13,
+                  borderTop: i === 0 ? "none" : "1px solid #f3f4f6",
+                }}>
+                  <div style={{ minWidth: 0 }}>
+                    <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{h.name}</span>
+                    {(h.province || h.district) && (
+                      <span style={{ color: "#9ca3af", fontSize: 12, marginLeft: 8 }}>
+                        {[h.district, h.province].filter(Boolean).join(", ")}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 11, color: "#9ca3af", whiteSpace: "nowrap", marginLeft: 12 }}>
+                    Chưa có đánh giá
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <Card>
         {/* Filters */}
         <div style={{ display: "flex", gap: 12, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
           <SearchInput value={search} onChange={setSearch} placeholder={t("adm_rv_search_ph")} />
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="admin-filter-bar" style={{ marginBottom: 0 }}>
             {RATING_OPTIONS.map(r => (
               <button
                 key={r}
                 onClick={() => setRating(r)}
-                style={{
-                  padding: "7px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700,
-                  border: ratingFilter === r ? "none" : "1px solid #e5e5e5",
-                  cursor: "pointer",
-                  background: ratingFilter === r ? AP : "#f5f5f5",
-                  color: ratingFilter === r ? "#fff" : "#666",
-                  transition: "all 0.15s",
-                  whiteSpace: "nowrap",
-                }}
+                className={`admin-filter-tab${ratingFilter === r ? " active" : ""}`}
               >
                 {RATING_LABEL[r]}
               </button>
@@ -134,9 +200,8 @@ export default function AdminReviews({ navigate, user, onLogout }) {
         ) : (
           <>
             <Table
-              headers={[t("adm_id"), t("adm_rv_col_hotel"), t("adm_rv_col_user"), t("adm_rv_col_rating"), t("adm_rv_col_comment"), t("adm_rv_col_date"), t("adm_actions")]}
+              headers={[t("adm_rv_col_hotel"), t("adm_rv_col_user"), t("adm_rv_col_rating"), t("adm_rv_col_comment"), t("adm_rv_col_date"), t("adm_actions")]}
               rows={filtered.slice((page - 1) * pageSize, page * pageSize).map(r => [
-              <span style={{ color: "#bbb", fontSize: 12, fontFamily: "monospace" }}>#{r.id}</span>,
               <span style={{ fontWeight: 700, color: "#1a1a1a", fontSize: 13 }}>{r.hotelName || "—"}</span>,
               <span style={{ fontSize: 12, color: "#555" }}>{r.userEmail || "—"}</span>,
               <StarRating rating={r.rating} />,
@@ -149,14 +214,15 @@ export default function AdminReviews({ navigate, user, onLogout }) {
               <span style={{ fontSize: 12, color: "#888" }}>
                 {r.createdAt ? new Date(r.createdAt).toLocaleDateString("vi-VN") : "—"}
               </span>,
-              <div style={{ display: "flex", gap: 6 }}>
-                <Btn small variant="action" onClick={() => setDetail(r)}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}><Eye size={13} /> {t("adm_view")}</div>
+              <div className="admin-cell-actions">
+                <Btn small iconOnly variant="action" title="Xem chi tiết" onClick={() => setDetail(r)}>
+                  <Eye size={14} />
                 </Btn>
-                <Btn small variant="danger" disabled={deleteReview.isPending && deleteReview.variables === r.id} onClick={() => handleDelete(r.id)}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <Trash2 size={13} /> {deleteReview.isPending && deleteReview.variables === r.id ? t("adm_rv_deleting") : t("adm_rv_delete")}
-                  </div>
+                <Btn small iconOnly variant="danger" title={t("adm_rv_delete")}
+                  disabled={deleteReview.isPending && deleteReview.variables === r.id}
+                  onClick={() => handleDelete(r.id)}
+                >
+                  <Trash2 size={14} />
                 </Btn>
               </div>,
             ])}
@@ -165,17 +231,12 @@ export default function AdminReviews({ navigate, user, onLogout }) {
 
             {/* Pagination */}
             {filtered.length > pageSize && (
-              <div style={{ display: "flex", justifyContent: "center", gap: 8, padding: "24px 0", borderTop: "1px solid #f5f5f5", marginTop: 10 }}>
+              <div className="admin-pagination">
                 {[...Array(Math.ceil(filtered.length / pageSize))].map((_, i) => (
                   <button
                     key={i}
                     onClick={() => { setPage(i + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                    style={{
-                      width: 34, height: 34, borderRadius: 8, border: "1px solid #e0e0e0",
-                      background: page === i + 1 ? AP : "#fff",
-                      color: page === i + 1 ? "#fff" : "#666",
-                      fontWeight: 800, fontSize: 13, cursor: "pointer", transition: "all 0.2s"
-                    }}
+                    className={`admin-page-btn${page === i + 1 ? " active" : ""}`}
                   >
                     {i + 1}
                   </button>
@@ -189,21 +250,18 @@ export default function AdminReviews({ navigate, user, onLogout }) {
       {/* Detail modal */}
       {detailModal && (
         <Modal title={t("adm_rv_detail_title")} onClose={() => setDetail(null)} width={500}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <div>
             {[
-              ["ID",                    `#${detailModal.id}`],
+              ["Mã đánh giá",           `#${detailModal.id}`],
               [t("adm_rv_col_hotel"),   detailModal.hotelName || "—"],
               [t("adm_rv_col_user"),    detailModal.userEmail || "—"],
               [t("adm_rv_col_date"),    detailModal.createdAt
                 ? new Date(detailModal.createdAt).toLocaleString("vi-VN")
                 : "—"],
             ].map(([k, v]) => (
-              <div key={k} style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "10px 0", borderBottom: "1px solid #f5f5f5", fontSize: 13,
-              }}>
-                <span style={{ color: "#888", fontWeight: 600 }}>{k}</span>
-                <span style={{ fontWeight: 700, color: "#1a1a1a" }}>{v}</span>
+              <div key={k} className="admin-modal-row">
+                <span className="admin-modal-row-key">{k}</span>
+                <span className="admin-modal-row-val">{v}</span>
               </div>
             ))}
             <div style={{ padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
@@ -222,7 +280,7 @@ export default function AdminReviews({ navigate, user, onLogout }) {
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16 }}>
             <Btn variant="danger" disabled={deleteReview.isPending && deleteReview.variables === detailModal.id} onClick={() => { handleDelete(detailModal.id); setDetail(null); }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Trash2 size={14} /> {t("adm_rv_del_btn")}</div>
+              <Trash2 size={14} /> {t("adm_rv_del_btn")}
             </Btn>
             <Btn variant="ghost" onClick={() => setDetail(null)}>{t("adm_close")}</Btn>
           </div>
