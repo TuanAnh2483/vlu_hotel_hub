@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { Menu, Bell, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import PartnerSidebar from "../components/partner/PartnerSidebar";
 import "./partner/PartnerLayout.css";
 
@@ -102,12 +102,6 @@ export default function PartnerLayout() {
 
           <div className="partner-topbar-breadcrumb">
             <span className="partner-topbar-title">{pageTitle}</span>
-          </div>
-          <div className="partner-topbar-bell-wrap">
-            <button className="partner-topbar-bell" aria-label="Thông báo">
-              <Bell size={18} />
-            </button>
-            <span className="partner-topbar-bell-tip">Tính năng thông báo đang phát triển</span>
           </div>
         </div>
 
