@@ -30,7 +30,6 @@ public class InventoryServiceImpl implements InventoryService {
     private static final int DEFAULT_INVENTORY_DAYS = 365;
 
     private final DailyInventoryRepository dailyInventoryRepository;
-    // FIX BUG-004: Needed to enforce DailyRate.isClosed during reservation/availability checks.
     private final DailyRateRepository dailyRateRepository;
 
     @PersistenceContext
@@ -44,18 +43,10 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     /**
-     * FIX BUG-002: initInventory now performs a CREATE-OR-CAP operation.
-     *
-     * Previous behaviour: skip existing rows unconditionally — caused inventory drift
-     * when Room.quantity was reduced (existing rows kept stale availableRooms).
-     *
-     * New behaviour:
-     *   • Missing dates  → create with availableRooms = totalRooms (unchanged)
-     *   • Existing dates where availableRooms > totalRooms
-     *       → cap to max(blockedRooms, totalRooms)
-     *         blockedRooms floor prevents violating invariant C (blocked <= available)
-     *   • Existing dates where availableRooms <= totalRooms → leave untouched
-     *     (partner may have deliberately set a lower ceiling; don't widen it)
+     * CREATE-OR-CAP operation on DailyInventory rows:
+     * - Missing dates → create with availableRooms = totalRooms
+     * - Existing rows with availableRooms > totalRooms → cap down (prevents stale inventory after quantity decrease)
+     * - Existing rows with availableRooms <= totalRooms → leave untouched (respect partner-set ceiling)
      */
     @Override
     @Transactional
@@ -108,10 +99,7 @@ public class InventoryServiceImpl implements InventoryService {
         if (!toUpdate.isEmpty()) dailyInventoryRepository.saveAll(toUpdate);
     }
 
-    /**
-     * FIX BUG-004: checkAvailability now also returns false when any date in the
-     * range has DailyRate.isClosed = true.
-     */
+    /** Returns false when any date in the range has DailyRate.isClosed = true. */
     @Override
     @Transactional(readOnly = true)
     public boolean checkAvailability(Long roomId,
@@ -132,10 +120,7 @@ public class InventoryServiceImpl implements InventoryService {
         return hasEnoughRooms(inventories, quantity);
     }
 
-    /**
-     * FIX BUG-004: reserveInventory now throws CONFLICT when any date in the
-     * range is closed, preventing guests from booking partner-blocked dates.
-     */
+    /** Throws CONFLICT when any date in the range is closed by the partner. */
     @Override
     @Transactional
     public void reserveInventory(Long roomId,

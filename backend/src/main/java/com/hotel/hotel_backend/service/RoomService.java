@@ -200,9 +200,7 @@ public class RoomService {
         if (bookingItemRepository.existsByRoomId(roomId)) {
             room.setStatus(RoomStatus.INACTIVE);
         } else {
-            // FIX BUG-001: Delete DailyRate rows BEFORE deleting the Room entity.
-            // DailyRate has a FK (room_id → rooms.id) with no cascade, so skipping this
-            // delete caused a DataIntegrityViolationException on roomRepository.delete().
+            // Delete DailyRate and inventory rows before the Room entity; FK has no cascade.
             dailyRateRepository.deleteByIdRoomId(roomId);
             dailyInventoryRepository.deleteByIdRoomId(roomId);
             roomUnitRepository.deleteByRoomId(roomId);

@@ -16,8 +16,7 @@ public interface DailyRateRepository extends JpaRepository<DailyRate, DailyRateI
 
     List<DailyRate> findByIdRoomIdInAndIdDateBetween(List<Long> roomIds, LocalDate from, LocalDate to);
 
-    // FIX BUG-001: Delete all DailyRate rows for a given room before hard-deleting the Room entity.
-    // Without this, roomRepository.delete(room) throws a FK constraint violation.
+    // Must delete DailyRate rows for a room before deleting the Room entity (no cascade on FK).
     @Modifying
     @Query("DELETE FROM DailyRate dr WHERE dr.id.roomId = :roomId")
     void deleteByIdRoomId(@Param("roomId") Long roomId);

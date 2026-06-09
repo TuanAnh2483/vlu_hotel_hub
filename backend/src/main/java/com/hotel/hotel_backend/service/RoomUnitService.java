@@ -42,9 +42,7 @@ public class RoomUnitService {
     }
 
     public RoomUnitResponse create(Long roomId, CreateRoomUnitRequest request) {
-        // FIX BUG-005: Use SELECT ... FOR UPDATE to prevent the TOCTOU race condition.
-        // Without the lock, two concurrent requests could both pass the count check and
-        // both insert, producing more RoomUnits than Room.quantity allows.
+        // Acquire row-level write lock to prevent TOCTOU race on the capacity check.
         Room room = findOwnedRoomForUpdate(roomId);
 
         if (request.roomNumber() != null && !request.roomNumber().isBlank()) {
@@ -155,8 +153,7 @@ public class RoomUnitService {
         int newQuantity = Math.max(0, room.getQuantity() - 1);
         room.setQuantity(newQuantity);
 
-        // FIX BUG-003: Re-sync DailyInventory after quantity drops.
-        // capInventory dùng 1 query UPDATE duy nhất thay vì load 365 dòng rồi so sánh từng ngày.
+        // Re-sync DailyInventory after quantity drops using a single bulk UPDATE query.
         inventoryService.capInventory(room.getId(), newQuantity);
     }
 
@@ -210,9 +207,7 @@ public class RoomUnitService {
         return room;
     }
 
-    // FIX BUG-005: Locked variant used only for create() to prevent over-provisioning
-    // under concurrent requests. Acquires a row-level write lock on the Room row so
-    // the count-then-insert window is serialised at the database level.
+    // Locked variant for create() only: serialises the count-then-insert window at DB level.
     private Room findOwnedRoomForUpdate(Long roomId) {
         Room room = roomRepository.findByIdForUpdate(roomId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Không tìm thấy loại phòng"));

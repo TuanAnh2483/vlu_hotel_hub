@@ -13,9 +13,8 @@ import java.util.Optional;
 
 public interface RoomRepository extends JpaRepository<Room, Long> {
 
-    // FIX BUG-005: SELECT ... FOR UPDATE on the Room row so that concurrent
-    // RoomUnit-creation requests cannot both pass the capacity check and both
-    // insert — only one proceeds at a time within the transaction.
+    // SELECT ... FOR UPDATE: serialises concurrent RoomUnit-creation requests
+    // so only one passes the capacity check and inserts at a time.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT r FROM Room r WHERE r.id = :id")
     Optional<Room> findByIdForUpdate(@Param("id") Long id);

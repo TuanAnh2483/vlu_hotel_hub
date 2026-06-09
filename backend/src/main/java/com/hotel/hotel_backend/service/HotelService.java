@@ -180,7 +180,7 @@ public class HotelService {
             // Chưa có booking nào → hard-delete thật sự
             var roomIds = rooms.stream().map(r -> r.getId()).toList();
             if (!roomIds.isEmpty()) {
-                // FIX BUG-001: Delete child rows before rooms to avoid FK constraint violation.
+                // Delete child rows before rooms to avoid FK constraint violation (no cascade on FK).
                 dailyRateRepository.deleteByIdRoomIdIn(roomIds);
                 dailyInventoryRepository.deleteByIdRoomIdIn(roomIds);
                 roomIds.forEach(roomUnitRepository::deleteByRoomId);
