@@ -10,7 +10,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -33,7 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Component
 @Order(1)
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.rate-limit.enabled", havingValue = "true", matchIfMissing = true)
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -43,9 +41,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             "/api/auth/register", "/api/v1/auth/register"
     );
 
-    private final ObjectMapper objectMapper;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Key: "<clientIp>:<path>", Value: token-bucket for that IP+path combo
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
     @Override
