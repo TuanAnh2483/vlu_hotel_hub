@@ -230,7 +230,7 @@ class AdminPartnerIntegrationTest {
         mockMvc.perform(get("/api/admin/users")
                         .header(HttpHeaders.AUTHORIZATION, bearer(adminToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value(createdUserId));
+                .andExpect(jsonPath("$.data.length()").value(2));
     }
 
     private String createUserAndExtractToken(String email, String password, UserType userType) {

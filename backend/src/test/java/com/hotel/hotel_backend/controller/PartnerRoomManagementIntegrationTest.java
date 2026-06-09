@@ -248,6 +248,10 @@ class PartnerRoomManagementIntegrationTest {
 
         long bookingId = createBookingHttp(customerToken, room.getId(), checkIn, checkOut, "list-reviews@test.com");
         payBookingHttp(customerToken, bookingId, "list-reviews-pay");
+        LocalDate pastIn = LocalDate.now().minusDays(3);
+        LocalDate pastOut = LocalDate.now().minusDays(1);
+        inventoryService.initInventory(room.getId(), pastIn, pastOut, room.getQuantity());
+        inventoryService.reserveInventory(room.getId(), pastIn, pastOut, 1);
         moveBookingToPast(bookingId);
         mockMvc.perform(post("/api/partner/bookings/{bookingId}/complete", bookingId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(partnerToken)))

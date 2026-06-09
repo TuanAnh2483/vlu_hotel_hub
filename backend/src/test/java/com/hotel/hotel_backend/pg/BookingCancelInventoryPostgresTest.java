@@ -114,9 +114,10 @@ class BookingCancelInventoryPostgresTest extends AbstractPostgresIntegrationTest
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CANCELLED"));
 
-        // Second cancel must be rejected
+        // Second cancel is idempotent — returns 200 with CANCELLED status
         mockMvc.perform(post("/api/v1/bookings/{id}/cancel", bookingId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(customerToken)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
     }
 }

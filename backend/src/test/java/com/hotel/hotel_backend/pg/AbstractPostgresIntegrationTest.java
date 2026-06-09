@@ -4,6 +4,7 @@ import com.hotel.hotel_backend.entity.*;
 import com.hotel.hotel_backend.repository.*;
 import com.hotel.hotel_backend.security.JwtService;
 import com.hotel.hotel_backend.service.InventoryService;
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -11,29 +12,49 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 /**
  * Base class for integration tests that run against a real PostgreSQL container.
  * All subclasses share a single container instance started once for the JVM run.
  * Spring's context cache ensures one ApplicationContext is reused across all subclasses.
+ * Tests are skipped automatically when Docker is not available.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public abstract class AbstractPostgresIntegrationTest {
 
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16")
-            .withDatabaseName("hotel_test")
-            .withUsername("pgtest")
-            .withPassword("pgtest");
+    private static final boolean DOCKER_AVAILABLE;
+    static PostgreSQLContainer<?> POSTGRES;
 
     static {
-        POSTGRES.start();
+        boolean available;
+        try {
+            available = DockerClientFactory.instance().isDockerAvailable();
+        } catch (Exception e) {
+            available = false;
+        }
+        DOCKER_AVAILABLE = available;
+        if (DOCKER_AVAILABLE) {
+            POSTGRES = new PostgreSQLContainer<>("postgres:16")
+                    .withDatabaseName("hotel_test")
+                    .withUsername("pgtest")
+                    .withPassword("pgtest");
+            POSTGRES.start();
+        }
+    }
+
+    @BeforeAll
+    static void checkDocker() {
+        assumeTrue(DOCKER_AVAILABLE, "Docker is not available — skipping PostgreSQL integration tests");
     }
 
     @DynamicPropertySource

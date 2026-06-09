@@ -99,7 +99,7 @@ class AuthConstraintPostgresTest extends AbstractPostgresIntegrationTest {
         // Seed an already-verified user directly via repository (simulates existing account)
         seedUser("existing@example.com", UserType.CUSTOMER);
 
-        // Re-registering same email re-sends verification (idempotent, not a DB error)
+        // Re-registering a verified email is rejected with EMAIL_EXISTS
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -109,7 +109,8 @@ class AuthConstraintPostgresTest extends AbstractPostgresIntegrationTest {
                                   "confirmPassword": "AnotherPass123"
                                 }
                                 """))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("EMAIL_EXISTS"));
 
         // PostgreSQL unique constraint ensures only one row per email
         assertThat(userRepository.count()).isEqualTo(1);

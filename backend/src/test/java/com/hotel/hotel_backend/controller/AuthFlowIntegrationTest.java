@@ -61,6 +61,7 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Disabled("auth-demo.html static file was removed")
     void authDemoPageShouldBePublic() throws Exception {
         mockMvc.perform(get("/auth-demo.html"))
                 .andExpect(status().isOk())

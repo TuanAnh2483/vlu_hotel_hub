@@ -191,6 +191,10 @@ class AdminManagementIntegrationTest {
 
         long bookingId = createBookingHttp(customerToken, room.getId(), checkIn, checkOut, "admin-review@test.com");
         payBookingHttp(customerToken, bookingId, "admin-review-pay-1");
+        LocalDate pastCheckIn = LocalDate.now().minusDays(3);
+        LocalDate pastCheckOut = LocalDate.now().minusDays(1);
+        inventoryService.initInventory(room.getId(), pastCheckIn, pastCheckOut, room.getQuantity());
+        inventoryService.reserveInventory(room.getId(), pastCheckIn, pastCheckOut, 1);
         moveBookingToPast(bookingId);
         completeBookingHttp(partnerToken, bookingId);
 
