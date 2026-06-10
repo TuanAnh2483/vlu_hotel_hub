@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { partnerService } from "../../services/partnerService";
 import {
-  createPendingImageItems, createPendingImageItemsSafe,
+  createPendingImageItemsSafe,
   pendingImageFilesFromItems, imageItemUrl, revokePendingImageUrls,
 } from "../../utils/imageFormItems";
 import { getPropertyGroup, getDefaultBookingMode } from "../../utils/propertyGroupUtils";
@@ -66,9 +66,9 @@ const INITIAL_STATE = {
 
 function saveDraft(state) {
   try {
-    const { images, ...rest } = state;
+    const { images: _images, ...rest } = state;
     localStorage.setItem(DRAFT_KEY, JSON.stringify(rest));
-  } catch {}
+  } catch { /* noop */ }
 }
 
 function loadDraft() {

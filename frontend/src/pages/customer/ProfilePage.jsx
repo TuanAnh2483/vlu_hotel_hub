@@ -10,7 +10,6 @@ import {
   useUpdateProfile,
   useUploadAvatar,
   useMarkNotificationRead,
-  useChangePassword,
 } from "../../hooks/useProfileQueries";
 import { 
   Camera, User, Mail, Phone, MapPin, Shield, CheckCircle2, 
@@ -131,7 +130,6 @@ export default function ProfilePage({ navigate, onLogout }) {
   const updateProfile       = useUpdateProfile();
   const uploadAvatar        = useUploadAvatar();
   const markNotifRead       = useMarkNotificationRead();
-  const changePasswordMut   = useChangePassword();
 
   const loading              = updateProfile.isPending;
   const avatarLoading        = uploadAvatar.isPending;

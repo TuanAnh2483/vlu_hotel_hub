@@ -3,7 +3,6 @@ import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
 import BookingStepper from "../components/ui/BookingStepper";
 import { useBookingDetail, useCreatePaymentSession, useReconcilePayment } from "../hooks/useBookingQueries";
-import { useLang } from "../contexts/LanguageContext";
 import { C } from "../lib/constants";
 import {
   ChevronLeft, CreditCard, Wallet,
@@ -52,7 +51,6 @@ function MethodBtn({ method, active, onSelect }) {
 
 export default function PaymentPage({ navigate, user, params = {}, onLogout }) {
   const { bookingId } = params;
-  const { t } = useLang();
 
   const isPending = (data) => data?.status === "PENDING_PAYMENT";
 

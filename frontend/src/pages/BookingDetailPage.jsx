@@ -303,6 +303,10 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
 
   const cancelBooking = useCancelBooking();
 
+  // Must be called before any conditional return
+  const { data: myReviews = [] } = useMyReviews();
+  const createReview = useCreateReview();
+
   const payments     = Array.isArray(rawPayments) ? rawPayments : [];
   const error        = bookingError?.message || cancelError || "";
   const paymentsError = paymentsErr?.message || "";
@@ -349,8 +353,6 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
   const StatusIcon = statusCfg.icon;
   const hasPaid = payments.some(p => p.status === "SUCCESS" && p.amount > 0);
 
-  const { data: myReviews = [] } = useMyReviews();
-  const createReview = useCreateReview();
   const hasReview = myReviews.some(r => Number(r.bookingId) === Number(bookingId));
   const canWriteReview = booking?.status === "COMPLETED" && !hasReview;
 

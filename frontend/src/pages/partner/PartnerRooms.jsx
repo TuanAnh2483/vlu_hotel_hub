@@ -10,7 +10,6 @@ import { useSearchParams, useOutletContext, useLocation, useNavigate } from "rea
 import { partnerService } from "../../services/partnerService"; // only used in queryClient.fetchQuery below
 import {
   createExistingImageItems,
-  createPendingImageItems,
   createPendingImageItemsSafe,
   existingImageUrlsFromItems,
   imageItemUrl,
@@ -457,7 +456,6 @@ function UnnumberedBanner({ count, hotelId, navigate, onDismiss }) {
 }
 
 function UnitCard({ unit, hotelId, updateUnit }) {
-  const cfg = UNIT_STATUS_CONFIG[unit.status] || {};
   const [draft, setDraft] = useState({
     roomNumber: unit.roomNumber || "",
     floor:      unit.floor != null ? String(unit.floor) : "",
@@ -483,7 +481,7 @@ function UnitCard({ unit, hotelId, updateUnit }) {
     finally { setSaving(false); }
   }
 
-  function onBlur(field) {
+  function onBlur(_field) {
     const next = { ...draft };
     if (
       next.roomNumber !== (unit.roomNumber || "") ||
@@ -697,7 +695,7 @@ export default function PartnerRooms() {
   const [saveError, setSaveError] = useState("");
   const [showNewBanner, setShowNewBanner] = useState(!!navState?.newProperty);
   const [page, setPage]         = useState(1);
-  const [error, setError]       = useState("");
+  const [error, _setError]      = useState("");
   const [searchText, setSearchText]     = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [roomAiSuggestion, setRoomAiSuggestion] = useState({ loading: false, data: null, error: false });
@@ -785,7 +783,7 @@ export default function PartnerRooms() {
         const room = rooms.find(r => r.id === selectedId);
         if (room) setSelected(room);
       }
-    } catch {}
+    } catch { /* noop */ }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const catalog = {
@@ -1332,7 +1330,7 @@ export default function PartnerRooms() {
               sessionStorage.setItem("pr_room_form_draft", JSON.stringify({
                 form, modal, selectedId: selected?.id, hotelId: selectedHotelId,
               }));
-            } catch {}
+            } catch { /* noop */ }
             navigate("/partner/services", {
               state: { returnToRooms: true, hotelId: selectedHotelId },
             });

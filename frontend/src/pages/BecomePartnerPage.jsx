@@ -188,7 +188,7 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
       if (freshUser?.userType === "PARTNER") {
         navigate("partner-dashboard");
       }
-    } catch {}
+    } catch { /* noop */ }
     finally { setRefreshing(false); }
   }
 

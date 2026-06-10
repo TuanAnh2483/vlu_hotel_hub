@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  useMyHotels, useHotelRoomUnits, usePartnerRooms, partnerKeys,
+  useMyHotels, useHotelRoomUnits, usePartnerRooms,
   useUpdateRoomUnit, useDeleteRoomUnit, useUploadRoomUnitImage,
 } from "../../hooks/usePartnerQueries";
-import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useOutletContext, useNavigate } from "react-router-dom";
 import { Modal } from "../../components/admin/AdminLayout";
 import {
@@ -394,8 +393,6 @@ export default function PartnerRoomUnits() {
   const [sp] = useSearchParams();
   const outletCtx = useOutletContext() || {};
   const { selectedHotelId: ctxHotelId, setSelectedHotelId: setCtxHotelId } = outletCtx;
-  const queryClient = useQueryClient();
-
   const [selectedHotelId, setSelectedHotelId] = useState(
     () => sp.get("hotelId") || (ctxHotelId ? String(ctxHotelId) : "")
   );

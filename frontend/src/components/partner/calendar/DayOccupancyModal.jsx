@@ -99,24 +99,14 @@ export default function DayOccupancyModal({
   // Reset to info tab whenever a different date is opened
   useEffect(() => { setActiveTab("info"); }, [modal?.iso]);
 
-  if (!modal) return null;
-
-  const { item, iso, weekend } = modal;
-  const totalQ   = calendar?.defaultQuantity || 0;
-  const booked   = item?.blockedRooms || 0;
-  const sellable = item?.sellableRooms ?? Math.max(0, totalQ - booked);
-  const isClosed = Boolean(item?.closed);
-  const roomName = calendar?.roomName || "—";
-  const price    = item?.price ?? calendar?.basePrice;
-
+  // Destructure with fallback so useMemo deps are defined before the early return below
+  const { item, iso, weekend } = modal || {};
+  const totalQ      = calendar?.defaultQuantity || 0;
+  const booked      = item?.blockedRooms || 0;
+  const isClosed    = Boolean(item?.closed);
   const hasRealUnits = Array.isArray(roomUnits) && roomUnits.length > 0;
 
-  // When physical unit data is available, derive stats from it so they match the slot diagram
-  const statsTotal    = hasRealUnits ? roomUnits.length : totalQ;
-  const statsOccupied = hasRealUnits ? roomUnits.filter(u => u.status === "OCCUPIED").length  : booked;
-  const statsFree     = hasRealUnits ? roomUnits.filter(u => u.status === "AVAILABLE").length : sellable;
-  const statsPct      = statsTotal > 0 ? Math.round(statsOccupied / statsTotal * 100) : 0;
-
+  // Hooks must be called unconditionally — no early return before this point
   const slots = useMemo(() => {
     if (hasRealUnits) {
       return roomUnits.map(u => {
@@ -145,6 +135,18 @@ export default function DayOccupancyModal({
       b.status !== "CANCELLED" && b.status !== "REFUNDED",
     );
   }, [bookings, iso]);
+
+  if (!modal) return null;
+
+  const sellable = item?.sellableRooms ?? Math.max(0, totalQ - booked);
+  const roomName = calendar?.roomName || "—";
+  const price    = item?.price ?? calendar?.basePrice;
+
+  // When physical unit data is available, derive stats from it so they match the slot diagram
+  const statsTotal    = hasRealUnits ? roomUnits.length : totalQ;
+  const statsOccupied = hasRealUnits ? roomUnits.filter(u => u.status === "OCCUPIED").length  : booked;
+  const statsFree     = hasRealUnits ? roomUnits.filter(u => u.status === "AVAILABLE").length : sellable;
+  const statsPct      = statsTotal > 0 ? Math.round(statsOccupied / statsTotal * 100) : 0;
 
   // Edit tab helpers
   const aiLevel  = aiData ? getAiLevel(aiData.suggestedPrice, form?.price) : "MEDIUM";

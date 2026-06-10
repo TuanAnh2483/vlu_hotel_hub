@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { BedDouble, CheckCircle2, Wrench, CircleDollarSign } from "lucide-react";
-import { fmtCompact, calcOccPct } from "./calendarUtils";
+import { fmtCompact } from "./calendarUtils";
 
 const TONES = {
   red:   { bg: "#FFF1F2", fg: "#BE1E2E" },

@@ -8,7 +8,7 @@ import {
   Bed, Calendar, ArrowRight, TrendingUp, BedDouble,
   CalendarDays, Star, Lightbulb, PhoneCall,
 } from "lucide-react";
-import { getPropertyGroup, getGroupColor, getTypeLabel } from "../../utils/propertyGroupUtils";
+import { getGroupColor, getTypeLabel } from "../../utils/propertyGroupUtils";
 import { calcADR, calcOccupancyRate, calcRevPAR, sumBookingNights, periodDays, fmtMetric } from "../../utils/metricsCalculator";
 import { SkeletonRow } from "../../components/ui/Skeleton";
 import "../../styles/pages/PartnerDashboard.css";

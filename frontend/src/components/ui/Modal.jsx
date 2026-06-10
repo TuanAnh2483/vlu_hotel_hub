@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId } from "react";
 import { X } from "lucide-react";
 import "./Modal.css";
 
 export default function Modal({ title, children, onClose, width = 460 }) {
-  const titleId = useRef(`modal-title-${Math.random().toString(36).slice(2)}`).current;
+  const titleId = useId();
 
   useEffect(() => {
     const prev = document.body.style.overflow;

@@ -122,7 +122,7 @@ export function useCreateRoom(options = {}) {
 export function useUpdateRoom(options = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ roomId, hotelId, ...data }) => partnerService.updateRoom(roomId, data),
+    mutationFn: ({ roomId, hotelId: _hid, ...data }) => partnerService.updateRoom(roomId, data),
     onSuccess: (_data, { hotelId }) => {
       queryClient.invalidateQueries({ queryKey: partnerKeys.rooms(hotelId) });
       // quantity có thể thay đổi khi update room → keep hotel unit list in sync
@@ -135,7 +135,7 @@ export function useUpdateRoom(options = {}) {
 export function useDeleteRoom(options = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ roomId, hotelId }) => partnerService.deleteRoom(roomId),
+    mutationFn: ({ roomId, hotelId: _hid }) => partnerService.deleteRoom(roomId),
     onSuccess: (_data, { hotelId }) => {
       queryClient.invalidateQueries({ queryKey: partnerKeys.rooms(hotelId) });
       // FIX TASK-4: deleting a room cascades to all its units — keep hotel unit list in sync
@@ -148,7 +148,7 @@ export function useDeleteRoom(options = {}) {
 export function useUploadRoomImages(options = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ roomId, hotelId, files }) => partnerService.uploadRoomImages(roomId, files),
+    mutationFn: ({ roomId, hotelId: _hid, files }) => partnerService.uploadRoomImages(roomId, files),
     onSuccess: (_data, { hotelId }) =>
       queryClient.invalidateQueries({ queryKey: partnerKeys.rooms(hotelId) }),
     ...options,
@@ -158,7 +158,7 @@ export function useUploadRoomImages(options = {}) {
 export function useDeleteRoomImage(options = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ roomId, hotelId, imageUrl }) =>
+    mutationFn: ({ roomId, hotelId: _hid, imageUrl }) =>
       partnerService.deleteRoomImage(roomId, imageUrl),
     onSuccess: (_data, { hotelId }) =>
       queryClient.invalidateQueries({ queryKey: partnerKeys.rooms(hotelId) }),
@@ -169,7 +169,7 @@ export function useDeleteRoomImage(options = {}) {
 export function useSetRoomCoverImage(options = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ roomId, hotelId, imageUrl }) =>
+    mutationFn: ({ roomId, hotelId: _hid, imageUrl }) =>
       partnerService.setRoomCoverImage(roomId, imageUrl),
     onSuccess: (_data, { hotelId }) =>
       queryClient.invalidateQueries({ queryKey: partnerKeys.rooms(hotelId) }),

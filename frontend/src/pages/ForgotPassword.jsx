@@ -25,7 +25,6 @@ const ForgotPassword = ({ setPage }) => {
   const {
     register,
     handleSubmit,
-    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),

@@ -7,7 +7,6 @@ import {
 } from "../../hooks/usePartnerQueries";
 import {
   createExistingImageItems,
-  createPendingImageItems,
   createPendingImageItemsSafe,
   existingImageUrlsFromItems,
   imageItemUrl,
@@ -351,7 +350,7 @@ export default function PartnerHotels() {
       // Cập nhật ảnh bìa nếu user thay đổi
       const desiredCover = form.coverImageUrl || existingImageUrls[0] || "";
       if (desiredCover && desiredCover !== selected.coverImageUrl) {
-        try { await setCoverImageMut.mutateAsync({ id: selected.id, imageUrl: desiredCover }); } catch {}
+        try { await setCoverImageMut.mutateAsync({ id: selected.id, imageUrl: desiredCover }); } catch { /* noop */ }
       }
       revokePendingImageUrls(images);
       setModal(null);
