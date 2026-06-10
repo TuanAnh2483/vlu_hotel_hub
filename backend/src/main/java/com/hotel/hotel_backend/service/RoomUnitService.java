@@ -124,9 +124,9 @@ public class RoomUnitService {
             boolean wasInMaintenance = oldStatus == RoomUnitStatus.MAINTENANCE;
             boolean isInMaintenance  = newStatus == RoomUnitStatus.MAINTENANCE;
             if (wasInMaintenance != isInMaintenance) {
-                long nonMaintenance = roomUnitRepository.countByRoomIdAndStatusNot(
-                        room.getId(), RoomUnitStatus.MAINTENANCE);
                 if (isInMaintenance) {
+                    long nonMaintenance = roomUnitRepository.countByRoomIdAndStatusNot(
+                            room.getId(), RoomUnitStatus.MAINTENANCE);
                     inventoryService.capInventory(room.getId(), (int) nonMaintenance);
                 } else {
                     inventoryService.restoreOneUnit(room.getId(), room.getQuantity());
@@ -141,10 +141,10 @@ public class RoomUnitService {
         Room room = findOwnedRoom(roomId);
         RoomUnit unit = findUnit(unitId, room.getId());
 
-        if (unit.getStatus() == RoomUnitStatus.OCCUPIED) {
+        if (unit.getStatus() == RoomUnitStatus.OCCUPIED || unit.getStatus() == RoomUnitStatus.RESERVED) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR,
-                    "Không thể xóa phòng đang có khách. " +
-                    "Đảm bảo khách đã trả phòng và trạng thái không còn là OCCUPIED trước khi xóa.");
+                    "Không thể xóa phòng đang có khách hoặc đã được đặt. " +
+                    "Đảm bảo trạng thái không còn là OCCUPIED/RESERVED trước khi xóa.");
         }
 
         roomUnitRepository.delete(unit);
@@ -153,8 +153,11 @@ public class RoomUnitService {
         int newQuantity = Math.max(0, room.getQuantity() - 1);
         room.setQuantity(newQuantity);
 
-        // Re-sync DailyInventory after quantity drops using a single bulk UPDATE query.
-        inventoryService.capInventory(room.getId(), newQuantity);
+        // Re-sync DailyInventory: cap to the lesser of newQuantity and actual non-maintenance count
+        // to avoid overbooking when maintenance units still exist.
+        long nonMaintenance = roomUnitRepository.countByRoomIdAndStatusNot(
+                room.getId(), RoomUnitStatus.MAINTENANCE);
+        inventoryService.capInventory(room.getId(), (int) Math.min(newQuantity, nonMaintenance));
     }
 
     public RoomUnitResponse setCoverImage(Long roomId, Long unitId, String imageUrl) {
