@@ -79,12 +79,6 @@ public class AdminController {
         return ok(adminOperationsService.backfillMissingCoordinates());
     }
 
-    @DeleteMapping("/hotels/{hotelId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> deleteHotel(@PathVariable Long hotelId) {
-        adminOperationsService.deleteHotel(hotelId);
-        return ok(null);
-    }
 
     @GetMapping("/bookings")
     @PreAuthorize("hasRole('ADMIN')")
