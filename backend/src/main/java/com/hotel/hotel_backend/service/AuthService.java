@@ -316,9 +316,11 @@ public class AuthService {
 
         User existingUser = userRepo.findByEmail(email).orElse(null);
         if (existingUser != null) {
-            if (existingUser.isEmailVerified()
-                    || !canIssueVerification(existingUser)
-                    || existingUser.getUserType() != role) {
+            if (existingUser.isEmailVerified()) {
+                // Security: don't reveal that this email already has a verified account
+                return new RegisterResponse(REGISTER_MESSAGE, null, null, null);
+            }
+            if (!canIssueVerification(existingUser) || existingUser.getUserType() != role) {
                 throw new ApiException(ErrorCode.EMAIL_EXISTS);
             }
 
