@@ -308,6 +308,8 @@ public class CustomerToolService {
         boolean canDistance = byDistance && lat != null && lng != null;
         Set<HotelAmenity> wantedAmenities = parseHotelAmenities(asStringList(args, "amenities"));
         Map<Long, Set<HotelAmenity>> amenityMap = wantedAmenities.isEmpty() ? Map.of() : loadAmenityMap();
+        Long minPrice = asLong(args, "minPrice");
+        Long maxPrice = asLong(args, "maxPrice");
 
         List<Map<String, Object>> hotels = new ArrayList<>();
         for (Object[] row : hotelRepository.findHotelSuggestionRows()) {
@@ -322,6 +324,15 @@ public class CustomerToolService {
             if (!wantedAmenities.isEmpty()
                     && !amenityMap.getOrDefault(id, Set.of()).containsAll(wantedAmenities)) {
                 continue;
+            }
+            Long fromPrice = row[6] == null ? null : ((Number) row[6]).longValue();
+            if (fromPrice != null) {
+                if (minPrice != null && fromPrice < minPrice) {
+                    continue;
+                }
+                if (maxPrice != null && fromPrice > maxPrice) {
+                    continue;
+                }
             }
             Double hLat = row[8] == null ? null : ((Number) row[8]).doubleValue();
             Double hLng = row[9] == null ? null : ((Number) row[9]).doubleValue();
@@ -359,6 +370,17 @@ public class CustomerToolService {
                     "note", location != null && !location.isBlank()
                             ? "Không tìm thấy khách sạn nào ở \"" + location + "\"."
                             : "Hiện chưa có khách sạn nào để gợi ý.");
+        }
+        // Dòng gợi ý chỉ có coverImageUrl; nếu trống thì fallback ảnh đầu trong imageUrls (giống search_rooms).
+        // Chỉ tra cứu cho số ít KS top thiếu ảnh (≤ MAX_HOTELS) — không N+1 toàn bảng.
+        for (Map<String, Object> h : top) {
+            Object cover = h.get("coverImage");
+            if (cover != null && !String.valueOf(cover).isBlank()) {
+                continue;
+            }
+            hotelRepository.findById((Long) h.get("hotelId"))
+                    .map(this::coverImageOf)
+                    .ifPresent(img -> h.put("coverImage", img));
         }
         String appliedSort = canDistance ? "distance" : (byPrice ? "price" : "rating");
         return obj("sortBy", appliedSort, "count", top.size(), "hotels", top);

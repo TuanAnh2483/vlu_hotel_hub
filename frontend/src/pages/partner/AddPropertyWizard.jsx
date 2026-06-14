@@ -110,15 +110,50 @@ function Input({ value, onChange, placeholder, type = "text" }) {
   return <input style={inputSt} type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />;
 }
 
-function ProgressBar({ step, total }) {
+// Stepper: hiển thị tất cả các bước để người dùng biết đang ở đâu & còn gì phía trước.
+// `labels` là tên các bước tương ứng step 1..N (không tính step 0 chọn loại hình).
+function Stepper({ step, labels }) {
+  const total = labels.length;
   return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+    <div style={{ marginBottom: 28 }}>
+      <div style={{ display: "flex", alignItems: "flex-start" }}>
+        {labels.map((label, i) => {
+          const idx = i + 1;            // số bước thực (khớp state.step)
+          const isDone = step > idx;
+          const isCurrent = step === idx;
+          const active = isDone || isCurrent;
+          return (
+            <div key={label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative", minWidth: 0 }}>
+              {/* đường nối tới bước trước */}
+              {i > 0 && (
+                <div style={{ position: "absolute", top: 13, right: "50%", width: "100%", height: 2, background: step > idx - 1 ? "#BE1E2E" : "#e5e7eb", zIndex: 0 }} />
+              )}
+              <div style={{
+                position: "relative", zIndex: 1, width: 28, height: 28, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800,
+                background: active ? "#BE1E2E" : "#fff",
+                color: active ? "#fff" : "#9ca3af",
+                border: active ? "2px solid #BE1E2E" : "2px solid #e5e7eb",
+                boxShadow: isCurrent ? "0 0 0 4px #fde2e4" : "none",
+                transition: "all 0.2s",
+              }}>
+                {isDone ? <Check size={14} /> : idx}
+              </div>
+              <div style={{
+                marginTop: 6, padding: "0 4px", fontSize: 11,
+                fontWeight: isCurrent ? 800 : 600,
+                color: isCurrent ? "#BE1E2E" : isDone ? "#374151" : "#9ca3af",
+                textAlign: "center", lineHeight: 1.3,
+              }}>
+                {label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: "#6b7280" }}>Bước {step} / {total}</span>
         <span style={{ fontSize: 12, color: "#9ca3af" }}>{Math.round((step / total) * 100)}%</span>
-      </div>
-      <div style={{ height: 6, background: "#f3f4f6", borderRadius: 99, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${(step / total) * 100}%`, background: "#BE1E2E", borderRadius: 99, transition: "width 0.3s" }} />
       </div>
     </div>
   );
@@ -859,7 +894,7 @@ export default function AddPropertyWizard() {
 
       {/* Card */}
       <div style={{ background: "#fff", borderRadius: 20, padding: 32, border: "1px solid #f3f4f6", boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
-        {state.step > 0 && <ProgressBar step={state.step} total={STEPS.length - 1} />}
+        {state.step > 0 && <Stepper step={state.step} labels={STEPS.slice(1)} />}
 
         {/* Step content */}
         {state.step === 0 && <StepPropertyType state={state} update={update} />}

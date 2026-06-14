@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,6 +50,14 @@ public class ChatService {
     /** Tool ghi cần xác nhận trước khi thực thi (theo role). */
     private static final Set<String> CUSTOMER_CONFIRM = Set.of("cancel_my_booking", "create_booking_hold");
     private static final Set<String> PARTNER_CONFIRM = Set.of("block_room", "set_room_price", "reply_to_review");
+
+    /**
+     * Field chỉ phục vụ hiển thị (thẻ UI) hoặc quá nặng — cắt khỏi functionResponse gửi cho model để
+     * tiết kiệm token, vì kết quả tool được gửi LẠI Gemini ở MỌI lượt sau (history). Thẻ UI vẫn dùng
+     * result đầy đủ (emit trước khi cắt). {@code coverImage}/{@code payUrl} là URL chỉ thẻ cần;
+     * {@code days} là mảng tồn kho theo ngày (rất nặng) trong get_available_rooms — model chỉ cần minSellable.
+     */
+    private static final Set<String> MODEL_OMIT_KEYS = Set.of("coverImage", "payUrl", "days");
 
     private final ChatGeminiClient geminiClient;
     private final ChatSessionService sessionService;
@@ -122,7 +131,7 @@ public class ChatService {
         history.add(userContent("Xác nhận thực hiện."));
         history.add(modelFunctionCall(action.toolName(), action.args()));
         Map<String, Object> result = dispatch(role, action.toolName(), action.args());
-        history.add(functionResponse(action.toolName(), result));
+        history.add(functionResponse(action.toolName(), modelView(result)));
         return runLoop(role, sessionId, context, history, tools, systemPrompt);
     }
 
@@ -140,7 +149,7 @@ public class ChatService {
                 history.add(modelFunctionCall(turn.functionName(), turn.functionArgs()));
                 Map<String, Object> result = dispatch(role, turn.functionName(),
                         augmentArgs(role, turn.functionName(), turn.functionArgs(), context));
-                history.add(functionResponse(turn.functionName(), result));
+                history.add(functionResponse(turn.functionName(), modelView(result)));
                 continue;
             }
             String text = turn.text();
@@ -199,7 +208,7 @@ public class ChatService {
         safeSend(emitter, "tool", Map.of("name", action.toolName()));
         Map<String, Object> result = dispatch(role, action.toolName(), action.args());
         emitCards(role, action.toolName(), action.args(), result, emitter);
-        history.add(functionResponse(action.toolName(), result));
+        history.add(functionResponse(action.toolName(), modelView(result)));
         streamLoop(role, sessionId, context, history, tools, systemPrompt, emitter, new boolean[]{false});
     }
 
@@ -224,7 +233,7 @@ public class ChatService {
                     Map<String, Object> result = dispatch(role, turn.functionName(),
                             augmentArgs(role, turn.functionName(), turn.functionArgs(), context));
                     emitCards(role, turn.functionName(), turn.functionArgs(), result, emitter);
-                    history.add(functionResponse(turn.functionName(), result));
+                    history.add(functionResponse(turn.functionName(), modelView(result)));
                     continue;
                 }
                 String text = turn.text();
@@ -473,6 +482,42 @@ public class ChatService {
         }
     }
 
+    // ── Model view (rút gọn tool result trước khi đưa vào history) ───────────────
+
+    /**
+     * Bản rút gọn của tool result để nhét vào history gửi Gemini: loại bỏ {@link #MODEL_OMIT_KEYS}
+     * (đệ quy qua map/list lồng nhau). Trả map MỚI — không sửa result gốc (thẻ UI vẫn dùng bản đầy đủ).
+     */
+    private Map<String, Object> modelView(Map<String, Object> result) {
+        return stripMap(result);
+    }
+
+    private Map<String, Object> stripMap(Map<String, Object> src) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> e : src.entrySet()) {
+            if (MODEL_OMIT_KEYS.contains(e.getKey())) {
+                continue;
+            }
+            out.put(e.getKey(), stripValue(e.getValue()));
+        }
+        return out;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object stripValue(Object v) {
+        if (v instanceof Map<?, ?> m) {
+            return stripMap((Map<String, Object>) m);
+        }
+        if (v instanceof List<?> list) {
+            List<Object> out = new ArrayList<>(list.size());
+            for (Object o : list) {
+                out.add(stripValue(o));
+            }
+            return out;
+        }
+        return v;
+    }
+
     // ── Gemini Content builders ──────────────────────────────────────────────
 
     private Map<String, Object> userContent(String text) {
@@ -515,8 +560,16 @@ public class ChatService {
                 - Khi khách đã đăng nhập muốn đặt nhanh một phòng cụ thể (đã rõ khách sạn, phòng, ngày), dùng
                   create_booking_hold để giữ phòng rồi hướng dẫn thanh toán. Khi khách muốn huỷ đơn của họ, dùng
                   cancel_my_booking. Nếu khách chưa đăng nhập, mời khách đăng nhập hoặc mở trang khách sạn để đặt.
-                - Nếu thiếu thông tin để gọi tool, hỏi lại ngắn gọn — mỗi lần chỉ hỏi 1 thông tin còn thiếu.
-                - Khi đã đủ thông tin thì gọi tool ngay, không hỏi thêm.
+                - Tư vấn trước khi tìm: khi yêu cầu còn chung chung, hãy HỎI để hiểu rõ nhu cầu rồi mới gọi tool —
+                  ưu tiên nắm: địa điểm; ngày nhận–trả & số khách; ngân sách mỗi đêm; ưu tiên/tiện nghi
+                  (gần biển, trung tâm, yên tĩnh, hồ bơi, đỗ xe…). Gom 2–3 ý vào MỘT câu hỏi ngắn, thân thiện;
+                  hỏi tối đa 2 lượt, không tra hỏi từng thứ một và không hỏi lại điều khách đã nói.
+                - Quy đổi ngân sách dạng lời nói thành minPrice/maxPrice: "dưới 1 triệu" → maxPrice=1000000;
+                  "tầm 500–800k" → minPrice=500000, maxPrice=800000; "rẻ/bình dân" → đặt maxPrice hợp lý.
+                - Khi đã đủ địa điểm + ngày + số khách thì gọi search_rooms NGAY, kèm MỌI tiêu chí đã thu thập
+                  (minPrice/maxPrice/amenities/location) để kết quả khớp nhất. Khách chưa có ngày cụ thể thì dùng
+                  suggest_hotels (cũng truyền kèm location/amenities/khoảng giá). Khách đã nói rõ hết ngay từ đầu
+                  thì tìm luôn, không hỏi thêm cho có.
                 - Nếu tool trả về không có kết quả, thông báo lịch sự và gợi ý thay đổi tiêu chí.
                 - Khi liệt kê khách sạn/phòng, trình bày ngắn gọn (giao diện đã hiển thị thẻ khách sạn
                   kèm nút đặt riêng) — không cần lặp lại toàn bộ giá từng phòng.

@@ -65,6 +65,8 @@ final class ChatTools {
                             "properties", obj(
                                     "location", str("Tỉnh/thành phố hoặc quận/huyện muốn lọc, tuỳ chọn"),
                                     "amenities", strArray("Tiện nghi cần có (hồ bơi, đỗ xe, gym, spa…), tuỳ chọn"),
+                                    "minPrice", number("Giá tối thiểu mỗi đêm (VND), tuỳ chọn"),
+                                    "maxPrice", number("Giá tối đa mỗi đêm (VND), tuỳ chọn"),
                                     "sortBy", enumStr("Tiêu chí xếp hạng: rating (mặc định), price, hoặc distance (gần tôi)",
                                             List.of("rating", "price", "distance"))
                             ),
