@@ -36,6 +36,9 @@ const PROPERTY_TYPES = [
 
 const EMPTY_ROOM_TYPE = { name: "", bedType: "DOUBLE", quantity: 1, capacity: 2, roomCategory: "STANDARD", price: "" };
 
+// Giá trần / đêm: 100 triệu ₫ — chặn trường hợp gõ dư số 0 ra giá phi thực tế.
+const MAX_PRICE = 100_000_000;
+
 const INITIAL_STATE = {
   propertyType: null,
   step: 0,
@@ -108,6 +111,23 @@ const inputSt = {
 
 function Input({ value, onChange, placeholder, type = "text" }) {
   return <input style={inputSt} type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />;
+}
+
+// Ô nhập tiền (VND): hiển thị kèm dấu phân cách hàng nghìn để người dùng đọc được
+// độ lớn ngay khi gõ (tránh lỡ thêm số 0 → giá khổng lồ), nhưng vẫn lưu số thô vào state.
+function MoneyInput({ value, onChange, placeholder }) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  const display = digits === "" ? "" : new Intl.NumberFormat("vi-VN").format(Number(digits));
+  return (
+    <input
+      style={inputSt}
+      type="text"
+      inputMode="numeric"
+      value={display}
+      onChange={e => onChange(e.target.value.replace(/\D/g, ""))}
+      placeholder={placeholder}
+    />
+  );
 }
 
 // Stepper: hiển thị tất cả các bước để người dùng biết đang ở đâu & còn gì phía trước.
@@ -346,7 +366,7 @@ function StepHotelDetail({ state, update }) {
                 <Input value={rt.capacity} onChange={v => updateRoomType(idx, "capacity", v)} type="number" placeholder="2" />
               </Field>
               <Field label="Giá / đêm (₫)">
-                <Input value={rt.price} onChange={v => updateRoomType(idx, "price", v)} type="number" placeholder="500000" />
+                <MoneyInput value={rt.price} onChange={v => updateRoomType(idx, "price", v)} placeholder="500.000" />
               </Field>
             </div>
             <Field label="Hạng phòng">
@@ -560,14 +580,14 @@ function StepPricing({ state, update }) {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 4 }}>
           <Field label="Giá thuê / đêm (₫)" required>
-            <Input value={state.basePrice} onChange={v => update({ basePrice: v })} type="number" placeholder="2500000" />
+            <MoneyInput value={state.basePrice} onChange={v => update({ basePrice: v })} placeholder="2.500.000" />
           </Field>
           <Field label="Tăng giá cuối tuần (%)" hint="Để trống nếu không áp dụng">
             <Input value={state.weekendMarkup} onChange={v => update({ weekendMarkup: v })} type="number" placeholder="20" />
           </Field>
           {group === "villa" && (
             <Field label="Phí dọn dẹp (₫)" hint="1 lần duy nhất">
-              <Input value={state.cleaningFee} onChange={v => update({ cleaningFee: v })} type="number" placeholder="300000" />
+              <MoneyInput value={state.cleaningFee} onChange={v => update({ cleaningFee: v })} placeholder="300.000" />
             </Field>
           )}
         </div>
@@ -671,6 +691,10 @@ export default function AddPropertyWizard() {
         if (lowPrice) {
           setError(`Giá loại phòng "${lowPrice.name}" phải từ 10.000 ₫ trở lên`); return;
         }
+        const highPrice = state.roomTypes.find(rt => rt.name?.trim() && Number(rt.price) > MAX_PRICE);
+        if (highPrice) {
+          setError(`Giá loại phòng "${highPrice.name}" không được vượt quá ${new Intl.NumberFormat("vi-VN").format(MAX_PRICE)} ₫/đêm`); return;
+        }
         const totalRoomsNum = Number(state.totalRooms);
         const sumQuantity = state.roomTypes
           .filter(rt => rt.name?.trim())
@@ -709,6 +733,9 @@ export default function AddPropertyWizard() {
         }
         if (Number(state.basePrice) < 10000) {
           setError("Giá thuê phải từ 10.000 ₫ trở lên"); return;
+        }
+        if (Number(state.basePrice) > MAX_PRICE) {
+          setError(`Giá thuê không được vượt quá ${new Intl.NumberFormat("vi-VN").format(MAX_PRICE)} ₫/đêm`); return;
         }
         if (state.weekendMarkup !== "" && (Number(state.weekendMarkup) < 0 || Number(state.weekendMarkup) > 200)) {
           setError("Tăng giá cuối tuần phải từ 0% đến 200%"); return;
