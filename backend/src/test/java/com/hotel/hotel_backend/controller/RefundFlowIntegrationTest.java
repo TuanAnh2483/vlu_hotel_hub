@@ -747,7 +747,9 @@ class RefundFlowIntegrationTest {
      * Đây là trạng thái điều kiện để tạo refund request.
      */
     private Booking buildCancelledPaidBooking(Long userId, Room room, Hotel hotel) {
-        LocalDate checkIn  = LocalDate.now().minusDays(5);
+        // Check-in trong tương lai để chính sách FLEXIBLE hoàn 100% (= totalPrice) khi tạo
+        // refund request, khớp với cách tính bậc mới của RefundPolicyCalculator.
+        LocalDate checkIn  = LocalDate.now().plusDays(10);
         LocalDate checkOut = checkIn.plusDays(2);
 
         Booking booking = Booking.builder()

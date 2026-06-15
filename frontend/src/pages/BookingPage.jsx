@@ -10,6 +10,7 @@ import {
   Bed, Calendar, ChevronLeft, Clock, Info, Mail, Moon,
   Phone, Shield, ShieldCheck, ShieldOff, User, Users,
 } from "lucide-react";
+import CancellationPolicyInfo from "../components/CancellationPolicyInfo";
 import "../styles/pages/BookingPage.css";
 
 
@@ -295,9 +296,10 @@ export default function BookingPage({ navigate, user, params = {}, onLogout }) {
                       {t(`booking_cancel_policy_title_${cancellationPolicy.toLowerCase()}`)}
                     </div>
                   </div>
-                  <div className="bkp-policy-text">
+                  <div className="bkp-policy-text" style={{ marginBottom: 14 }}>
                     {t(`booking_cancel_policy_text_${cancellationPolicy.toLowerCase()}`)}
                   </div>
+                  <CancellationPolicyInfo policy={cancellationPolicy} checkIn={checkin} total={total} />
                   {pKey === "STRICT" && (
                     <label className="bkp-strict-ack">
                       <input

@@ -11,6 +11,7 @@ import { ROOM_CATEGORY_LABELS, BED_TYPE_LABELS } from "../utils/roomConfig";
 import { getTypeLabel } from "../utils/propertyGroupUtils";
 import "../styles/pages/HotelDetailPage.css";
 import HotelLocationMap from "../components/map/HotelLocationMap";
+import CancellationPolicyInfo from "../components/CancellationPolicyInfo";
 
 const PLACEHOLDER = "repeating-conic-gradient(#ccc 0% 25%,#e8e8e8 0% 50%) 0 0/20px 20px";
 
@@ -474,6 +475,12 @@ export default function HotelDetailPage({ navigate, params = {}, user, onLogout,
               </div>
             </div>
           )}
+
+          {/* Chính sách hủy & hoàn tiền */}
+          <div className="hdp-card">
+            <h2 className="hdp-card-title">{t("cpi_title")}</h2>
+            <CancellationPolicyInfo policy={policy} />
+          </div>
 
           {/* Vị trí trên bản đồ */}
           <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 20, boxShadow: "0 1px 6px rgba(0,0,0,0.07)" }}>

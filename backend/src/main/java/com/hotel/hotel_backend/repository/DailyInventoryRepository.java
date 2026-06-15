@@ -26,9 +26,16 @@ public interface DailyInventoryRepository
             LocalDate end
     );
 
-    void deleteByIdRoomId(Long roomId);
+    // Bulk delete để bỏ qua optimistic locking (@Version). Derived delete sẽ load entity rồi
+    // remove từng cái kèm "where version=?", dễ dính StaleObjectStateException khi job/booking
+    // chỉnh inventory đồng thời lúc xóa hotel. Phải xóa trước Room (FK, no cascade).
+    @Modifying
+    @Query("DELETE FROM DailyInventory di WHERE di.id.roomId = :roomId")
+    void deleteByIdRoomId(@Param("roomId") Long roomId);
 
-    void deleteByIdRoomIdIn(List<Long> roomIds);
+    @Modifying
+    @Query("DELETE FROM DailyInventory di WHERE di.id.roomId IN :roomIds")
+    void deleteByIdRoomIdIn(@Param("roomIds") List<Long> roomIds);
 
     // TASK-1: Find stale rows where availableRooms drifted above Room.quantity.
     // Pageable keeps batch size bounded so the repair runner never OOMs on large datasets.

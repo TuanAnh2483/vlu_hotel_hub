@@ -26,11 +26,20 @@ public class BookingRefundService {
 
     @Transactional
     public Booking refundBooking(Booking booking, String clientRequestId) {
-        return refundBooking(booking, clientRequestId, null);
+        return refundBooking(booking, clientRequestId, null, null);
     }
 
     @Transactional
     public Booking refundBooking(Booking booking, String clientRequestId, String transferNote) {
+        return refundBooking(booking, clientRequestId, transferNote, null);
+    }
+
+    /**
+     * @param refundAmount số tiền hoàn cụ thể (theo chính sách hủy). Null → hoàn đủ totalPrice
+     *                     (dùng cho hoàn tiền thủ công của partner, giữ nguyên hành vi cũ).
+     */
+    @Transactional
+    public Booking refundBooking(Booking booking, String clientRequestId, String transferNote, Long refundAmount) {
         booking = bookingExpirationService.expirePendingBookingIfNeeded(booking);
 
         PaymentTransaction existingTransaction = paymentTransactionRepository
@@ -72,7 +81,7 @@ public class BookingRefundService {
         booking.setStatus(BookingStatus.REFUNDED);
         booking.setExpiresAt(null);
         Booking savedBooking = bookingRepository.save(booking);
-        recordRefundTransaction(savedBooking, clientRequestId, transferNote);
+        recordRefundTransaction(savedBooking, clientRequestId, transferNote, refundAmount);
         return savedBooking;
     }
 
@@ -90,7 +99,8 @@ public class BookingRefundService {
                 && paymentTransaction.getAmount() < 0;
     }
 
-    private void recordRefundTransaction(Booking booking, String clientRequestId, String transferNote) {
+    private void recordRefundTransaction(Booking booking, String clientRequestId, String transferNote, Long refundAmount) {
+        long amount = (refundAmount != null) ? refundAmount : booking.getTotalPrice();
         String providerRef = (transferNote != null && !transferNote.isBlank())
                 ? transferNote.trim()
                 : "MANUAL-REFUND-" + UUID.randomUUID();
@@ -98,7 +108,7 @@ public class BookingRefundService {
                 .booking(booking)
                 .method(PaymentMethod.MANUAL_TRANSFER)
                 .status(PaymentTransactionStatus.SUCCESS)
-                .amount(-Math.abs(booking.getTotalPrice()))
+                .amount(-Math.abs(amount))
                 .providerReference(providerRef)
                 .clientRequestId(clientRequestId)
                 .build();

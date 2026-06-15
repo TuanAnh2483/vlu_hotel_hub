@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import "../styles/pages/BookingDetailPage.css";
 import { useScrollLock } from "../hooks/useScrollLock";
+import CancellationPolicyInfo from "../components/CancellationPolicyInfo";
 
 const POLICY_CFG = {
   FLEXIBLE: { Icon: ShieldCheck, color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", warnKey: "bkd_cancel_warn_flexible" },
@@ -556,14 +557,11 @@ export default function BookingDetailPage({ navigate, user, params = {}, onLogou
                       <PolicyIcon size={18} color={pcfg.color} />
                       <h2 style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", margin: 0 }}>{t("bkd_policy_title")}</h2>
                     </div>
-                    <div style={{ background: pcfg.bg, border: `1px solid ${pcfg.border}`, borderRadius: 10, padding: "11px 14px" }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: pcfg.color, marginBottom: 4 }}>
-                        {t(`booking_cancel_policy_title_${(booking.cancellationPolicy || "MODERATE").toLowerCase()}`)}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.6 }}>
-                        {t(`booking_cancel_policy_text_${(booking.cancellationPolicy || "MODERATE").toLowerCase()}`)}
-                      </div>
-                    </div>
+                    <CancellationPolicyInfo
+                      policy={booking.cancellationPolicy}
+                      checkIn={booking.checkIn}
+                      total={booking.totalPrice}
+                    />
                   </Card>
                 );
               })()}

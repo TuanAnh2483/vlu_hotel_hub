@@ -54,11 +54,20 @@ public class RefundRequestService {
 
         Hotel hotel = resolveHotelFromBooking(booking);
 
+        // Số tiền hoàn tính theo chính sách hủy + thời điểm hủy (cùng logic hiển thị cho khách),
+        // để admin/partner duyệt đúng số khách thực sự được hoàn.
+        long refundAmount = RefundPolicyCalculator.computeRefundAmount(
+                hotel.getCancellationPolicy(), booking.getCheckIn(), LocalDateTime.now(), booking.getTotalPrice());
+        if (refundAmount <= 0) {
+            throw new ApiException(ErrorCode.CONFLICT,
+                    "Theo chính sách hủy của khách sạn, đơn này không đủ điều kiện hoàn tiền");
+        }
+
         RefundRequest refundRequest = new RefundRequest();
         refundRequest.setBooking(booking);
         refundRequest.setUser(currentUser);
         refundRequest.setHotel(hotel);
-        refundRequest.setAmount(booking.getTotalPrice());
+        refundRequest.setAmount(refundAmount);
         refundRequest.setReason(request.reason().trim());
         refundRequest.setNote(normalizeOptionalText(request.note()));
         refundRequest.setStatus(RefundRequestStatus.PENDING);
@@ -132,7 +141,8 @@ public class RefundRequestService {
         Booking refundedBooking = bookingRefundService.refundBooking(
                 refundRequest.getBooking(),
                 "refund-request-" + refundRequest.getId(),
-                transferNote
+                transferNote,
+                refundRequest.getAmount()
         );
 
         refundRequest.setBooking(refundedBooking);

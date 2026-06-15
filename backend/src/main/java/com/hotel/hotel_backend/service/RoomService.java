@@ -66,7 +66,7 @@ public class RoomService {
 
         Room room = new Room();
         room.setName(request.name());
-        room.setCapacity(request.capacity());
+        room.setCapacity(request.capacity());   
         room.setQuantity(request.quantity());
         room.setPrice(request.price());
         room.setHotel(hotel);
