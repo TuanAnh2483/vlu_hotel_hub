@@ -1,0 +1,310 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Chatbot" id="page-chatbot">
+    <mxGraphModel dx="1100" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="c_title" value="Chatbot HotelHub — Gemini Function-Calling" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="10" width="520" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_user" value="Khách / Đối tác&#10;(Web client)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="470" y="60" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_ctrl" value="ChatController&#10;POST /api/chat/customer · /partner&#10;+ /stream (SSE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="160" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="c_rl" value="ChatRateLimiter&#10;(IP + role)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="120" y="170" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="c_ex" value="chatStreamExecutor&#10;(propagate SecurityContext)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="840" y="170" width="220" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_svc" value="ChatService — orchestrator&#10;Vòng lặp function-calling (≤ 5 lượt)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="410" y="290" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="c_pas" value="PendingActionStore&#10;(xác nhận tool ghi)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="120" y="295" width="190" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="c_mv" value="modelView()&#10;cắt field nặng khỏi history" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="840" y="295" width="220" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_hist" value="ChatSessionService&#10;(history, trim 20)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="120" y="420" width="190" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="c_gem" value="ChatGeminiClient&#10;generate() / generateStream()&#10;retry + backoff" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="420" y="410" width="260" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="c_tools" value="ChatTools&#10;(function declarations)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="840" y="420" width="220" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_api" value="Google Gemini API&#10;gemini-2.5-flash-lite" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="530" width="220" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_cts" value="CustomerToolService&#10;search_rooms, suggest_hotels,&#10;create_booking_hold, cancel..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="120" y="630" width="260" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="c_pts" value="PartnerToolService&#10;get_today_overview, set_room_price,&#10;block_room, reply_to_review..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="440" y="630" width="280" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="c_dom" value="Domain services &amp; repositories&#10;HotelSearch, Booking, Review,&#10;PartnerBooking..." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="780" y="630" width="260" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ce1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_user" target="c_ctrl">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce2" value="allow?" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_ctrl" target="c_rl">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_ctrl" target="c_ex">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_ex" target="c_svc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce5" value="history" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;" edge="1" parent="1" source="c_svc" target="c_hist">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce6" value="contents + tools + prompt" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;" edge="1" parent="1" source="c_svc" target="c_gem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce7" value="REST / SSE" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;" edge="1" parent="1" source="c_gem" target="c_api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce8" value="metadata tools" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="c_tools" target="c_gem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce9" value="functionCall ⇒ dispatch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_svc" target="c_cts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_svc" target="c_pts">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce11" value="tool ghi → xác nhận" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_svc" target="c_pas">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce12" value="trim token" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_svc" target="c_mv">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_cts" target="c_dom">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="c_pts" target="c_dom">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Gợi ý giá" id="page-pricing">
+    <mxGraphModel dx="1100" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="p_title" value="Gợi ý giá (AI Pricing) — Engine luật + Logistic Regression + Gemini sinh lý do" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="220" y="10" width="740" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p_user" value="Đối tác (Dashboard)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="470" y="60" width="200" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p_ctrl" value="PriceSuggestionController&#10;GET /price-suggestions&#10;POST /price-feedback · /train&#10;GET /revenue-analytics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="140" width="290" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p_svc" value="PriceSuggestionService&#10;orchestrator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="270" width="250" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p_val" value="PricingValidator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="120" y="275" width="170" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p_sec" value="SecurityService&#10;(ownerId từ JWT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="850" y="275" width="190" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p_occ" value="OccupancyForecastService&#10;dự báo lấp đầy/ngày&#10;(EMA smoothing, holiday floor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="100" y="370" width="260" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p_model" value="ModelTrainingService&#10;getOrDefault → PricingModel&#10;optimizePrice() argmax(price×P)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="450" y="370" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p_data" value="Repositories&#10;Room, DailyRate, Booking,&#10;PriceFeedback, PricingModel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="820" y="365" width="240" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p_eng" value="PricingEngineService&#10;demand × weekend × holiday × seasonal&#10;+ LR override + soft clamp + smoothing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="80" y="480" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p_seas" value="SeasonalPricingService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="450" y="480" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_hol" value="HolidayService" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="450" y="530" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p_train" value="Nightly cron 02:00 — trainForRoom()&#10;Phase 1: feedback (time-decay)&#10;Phase 2: occupancy lịch sử&#10;Phase 3: Logistic Regression (8 features)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="780" y="490" width="300" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p_ai" value="AiReasonService&#10;GeminiPromptBuilder → GeminiClient (async 10s)&#10;→ GeminiResponseParser → RuleBased fallback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="80" y="610" width="340" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p_gapi" value="Gemini API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="460" y="625" width="160" height="45" as="geometry" />
+        </mxCell>
+
+        <mxCell id="p_map" value="PriceSuggestionMapper" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="180" y="740" width="220" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p_resp" value="PriceSuggestionResponse&#10;(items theo ngày + model meta)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="470" y="735" width="250" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pe1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_user" target="p_ctrl">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_ctrl" target="p_svc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_svc" target="p_val">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_svc" target="p_sec">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe5" value="① forecast" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_svc" target="p_occ">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe6" value="getOrDefault" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_svc" target="p_model">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe7" value="load room/rates/bookings" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_svc" target="p_data">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe8" value="② generatePricing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_occ" target="p_eng">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_eng" target="p_seas">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_occ" target="p_hol">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe11" value="nếu LR ready" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="p_eng" target="p_model">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe12" value="③ generateReasons" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_svc" target="p_ai">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="p_ai" target="p_gapi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe14" value="pricing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_eng" target="p_map">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe15" value="reasons" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_ai" target="p_map">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_map" target="p_resp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe17" value="trả về" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_resp" target="p_user">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe18" value="feedback / train" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="p_ctrl" target="p_data">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe19" value="đọc/ghi PricingModel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;" edge="1" parent="1" source="p_train" target="p_data">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pe20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;" edge="1" parent="1" source="p_model" target="p_data">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="Vòng học model" id="page-training">
+    <mxGraphModel dx="1100" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="t_title" value="Vòng học (training loop) của model gợi ý giá" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="20" width="520" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t1" value="Partner xem đề xuất giá" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="120" y="90" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="Quyết định:&#10;APPLIED / APPLIED_PLUS5 /&#10;APPLIED_MINUS5 / SKIPPED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="430" y="85" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" value="PriceFeedback lưu DB&#10;(POST /price-feedback)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="790" y="85" width="240" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="t4" value="Nightly cron 02:00 — trainForRoom()&#10;(cần ≥ 5 feedback / cửa sổ 60 ngày)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="720" y="210" width="310" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tp1" value="Phase 1 — Feedback learning&#10;acceptance rate (time-decay λ=0.025)&#10;→ priceAggressiveness, partnerAdjustment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="100" y="340" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="tp2" value="Phase 2 — Occupancy lịch sử&#10;(8 tuần) → weekday/weekend boost" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="430" y="340" width="300" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="tp3" value="Phase 3 — Logistic Regression&#10;8 features, weighted gradient descent&#10;→ w0…w7, lrReady=true" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="760" y="340" width="300" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tm" value="PricingModel cập nhật&#10;(round++, lastTrainedAt)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="430" y="480" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tfeat" value="8 features của LR:&#10;[bias, priceUplift, isWeekend, isHoliday,&#10; sin(dow), cos(dow), leadTimeNorm, seasonalDeviation]&#10;optimizePrice quét 75%→150% giá gốc, chọn max(price × P(accept))" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="120" y="600" width="560" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="te1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="t1" target="t2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="t2" target="t3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="t3" target="t4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="t4" target="tp1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="t4" target="tp2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="t4" target="tp3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="tp1" target="tm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="tp2" target="tm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="tp3" target="tm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="te10" value="dùng cho lần đề xuất sau" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;dashed=1;" edge="1" parent="1" source="tm" target="t1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
