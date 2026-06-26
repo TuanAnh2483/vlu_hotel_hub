@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { C } from "../lib/constants";
 import MainNavbar from "../components/MainNavbar";
 import Footer from "../components/Footer";
@@ -83,11 +83,31 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
   const [touched, setTouched] = useState({});
   const [appId, setAppId] = useState(savedAppId);
   const [refreshing, setRefreshing] = useState(false);
+  // Người dùng vừa bấm "Nộp đơn lại" sau khi bị từ chối → cho phép ở step 0 dù server vẫn còn đơn cũ
+  const [resubmitting, setResubmitting] = useState(false);
 
   const startOnboarding  = useStartOnboarding();
   const submitOnboarding = useSubmitOnboarding();
-  const { data: application, refetch: refetchApp } = useMyApplication({ enabled: Boolean(savedAppId || appId) });
+  // Luôn hỏi server đơn của CHÍNH tài khoản đang đăng nhập (không tin appId trong localStorage)
+  const { data: application, isLoading: appLoading, isSuccess: appLoaded, refetch: refetchApp } =
+    useMyApplication({ enabled: Boolean(user) });
   const loading = startOnboarding.isPending || submitOnboarding.isPending;
+
+  // Đồng bộ trạng thái theo dữ liệu server: tránh hiển thị đơn của tài khoản cũ còn sót trong localStorage
+  useEffect(() => {
+    if (!user || appLoading || !appLoaded || resubmitting) return;
+    const serverId = application?.applicationId || application?.id;
+    if (serverId) {
+      localStorage.setItem(APP_ID_KEY, serverId);
+      setAppId(serverId);
+      setStep(2);
+    } else {
+      // Tài khoản này chưa có đơn → dọn mọi appId rác và quay về form
+      localStorage.removeItem(APP_ID_KEY);
+      setAppId(null);
+      setStep(s => (s === 2 ? 0 : s));
+    }
+  }, [user, application, appLoading, appLoaded, resubmitting]);
 
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -219,6 +239,8 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
               localStorage.setItem(APP_ID_KEY, id);
               setAppId(id);
               setStep(2);
+              setResubmitting(false);
+              refetchApp();
             },
             onError: (e) => setError(e.message),
           });
@@ -449,7 +471,7 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
 
               <div className="bp-success-id-box">
                 <div className="bp-success-id-label">{t("bp_app_id_lbl")}</div>
-                <div className="bp-success-id-val">#{appId || application?.id || "—"}</div>
+                <div className="bp-success-id-val">#{application?.applicationId || application?.id || appId || "—"}</div>
               </div>
 
               {!isApproved && !isRejected && (
@@ -464,7 +486,7 @@ export default function BecomePartnerPage({ navigate, user, onLogout }) {
 
               {isRejected && (
                 <button
-                  onClick={() => { localStorage.removeItem(APP_ID_KEY); setAppId(null); setStep(0); setForm({ businessName: "", email: user?.email || "", phone: "", taxCode: "", propertyType: "" }); }}
+                  onClick={() => { setResubmitting(true); localStorage.removeItem(APP_ID_KEY); setAppId(null); setStep(0); setForm({ businessName: "", email: user?.email || "", phone: "", taxCode: "", propertyType: "" }); }}
                   style={{ background: C.primary, border: "none", borderRadius: 10, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 800, marginTop: 14, padding: "10px 20px", width: "100%" }}
                 >
                   Nộp đơn lại

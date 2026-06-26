@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { authService } from "../services/authService";
 import {
   clearSession,
@@ -11,6 +12,7 @@ import {
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(() => getStoredUser());
   const [loading, setLoading] = useState(() => Boolean(getToken()));
 
@@ -70,6 +72,9 @@ export function AuthProvider({ children }) {
       // authService.logout() clears the session in its own finally block
     } finally {
       setUser(null);
+      // Xoá toàn bộ cache React Query để dữ liệu của tài khoản cũ (đơn partner,
+      // booking, hồ sơ…) không lộ sang tài khoản mới khi đổi tài khoản mà không reload trang
+      queryClient.clear();
     }
   }
 

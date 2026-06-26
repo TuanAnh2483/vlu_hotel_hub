@@ -31,4 +31,6 @@ export function clearSession() {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("user");
+  // Hồ sơ partner gắn với từng tài khoản — xoá để tài khoản mới không thấy đơn của tài khoản cũ
+  localStorage.removeItem("partner_application_id");
 }
