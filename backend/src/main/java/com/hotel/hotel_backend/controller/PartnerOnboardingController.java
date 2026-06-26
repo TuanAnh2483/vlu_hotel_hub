@@ -2,9 +2,12 @@ package com.hotel.hotel_backend.controller;
 
 import com.hotel.hotel_backend.dto.request.StartPartnerRequest;
 import com.hotel.hotel_backend.dto.response.ApiResponse;
+import com.hotel.hotel_backend.dto.response.MyPartnerApplicationResponse;
 import com.hotel.hotel_backend.dto.response.PartnerApplicationResponse;
 import com.hotel.hotel_backend.entity.PartnerApplication;
 import com.hotel.hotel_backend.entity.User;
+import com.hotel.hotel_backend.exception.ApiException;
+import com.hotel.hotel_backend.exception.ErrorCode;
 import com.hotel.hotel_backend.service.PartnerOnboardingService;
 import com.hotel.hotel_backend.service.SecurityService;
 import jakarta.validation.Valid;
@@ -59,6 +62,24 @@ public class PartnerOnboardingController {
                 application.getId(),
                 application.getStatus().name(),
                 application.getBusinessName()
+        ));
+    }
+
+    /**
+     * Đơn đăng ký partner mới nhất của tài khoản đang đăng nhập, kèm status thật.
+     * Trả 404 nếu tài khoản chưa từng nộp đơn (frontend coi 404 = chưa có đơn → hiện form).
+     */
+    @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<MyPartnerApplicationResponse> getMyApplication() {
+        User currentUser = securityService.getCurrentUser();
+        PartnerApplication application = partnerOnboardingService.findLatestApplication(currentUser)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "No partner application"));
+        return ApiResponse.ok(new MyPartnerApplicationResponse(
+                application.getId(),
+                application.getStatus().name(),
+                application.getBusinessName(),
+                application.getRejectReason()
         ));
     }
 }

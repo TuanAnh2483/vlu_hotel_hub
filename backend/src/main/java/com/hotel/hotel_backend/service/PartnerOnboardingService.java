@@ -85,6 +85,15 @@ public class PartnerOnboardingService {
         return partnerApplicationRepository.save(partnerApplication);
     }
 
+    /**
+     * Đơn đăng ký partner mới nhất của tài khoản hiện tại (mọi trạng thái).
+     * Rỗng nếu tài khoản chưa từng nộp đơn → controller trả 404 để frontend hiện form.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Optional<PartnerApplication> findLatestApplication(User currentUser) {
+        return partnerApplicationRepository.findTopByUserIdOrderByIdDesc(currentUser.getId());
+    }
+
     private void assertVerifiedCustomer(User currentUser) {
         if (currentUser.getUserType() != UserType.CUSTOMER) {
             throw new ApiException(ErrorCode.FORBIDDEN, "Only customers can start partner onboarding");
