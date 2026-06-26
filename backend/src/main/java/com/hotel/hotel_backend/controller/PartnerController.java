@@ -1,8 +1,10 @@
 package com.hotel.hotel_backend.controller;
 
+import com.hotel.hotel_backend.dto.request.AssignRoomUnitsRequest;
 import com.hotel.hotel_backend.dto.request.CreateRoomRequest;
 import com.hotel.hotel_backend.dto.request.CreateRoomUnitRequest;
 import com.hotel.hotel_backend.dto.request.CreateHotelRequest;
+import com.hotel.hotel_backend.dto.request.RoomUnitBlockRequest;
 import com.hotel.hotel_backend.dto.request.PartnerAnalyticsSummaryRequest;
 import com.hotel.hotel_backend.dto.request.PartnerBookingRefundRequest;
 import com.hotel.hotel_backend.dto.request.PartnerBookingSearchRequest;
@@ -24,6 +26,7 @@ import com.hotel.hotel_backend.dto.response.PartnerRoomCalendarResponse;
 import com.hotel.hotel_backend.dto.response.RefundRequestResponse;
 import com.hotel.hotel_backend.dto.response.HotelRoomUnitResponse;
 import com.hotel.hotel_backend.dto.response.RoomResponse;
+import com.hotel.hotel_backend.dto.response.RoomUnitAssignmentResponse;
 import com.hotel.hotel_backend.dto.response.RoomUnitResponse;
 import com.hotel.hotel_backend.entity.RefundRequestStatus;
 import com.hotel.hotel_backend.service.HotelService;
@@ -34,6 +37,7 @@ import com.hotel.hotel_backend.service.PartnerImageUploadService;
 import com.hotel.hotel_backend.service.PartnerRoomCalendarService;
 import com.hotel.hotel_backend.service.RefundRequestService;
 import com.hotel.hotel_backend.service.RoomService;
+import com.hotel.hotel_backend.service.RoomUnitAssignmentService;
 import com.hotel.hotel_backend.service.RoomUnitService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +71,7 @@ public class PartnerController {
     private final HotelService hotelService;
     private final RoomService roomService;
     private final RoomUnitService roomUnitService;
+    private final RoomUnitAssignmentService roomUnitAssignmentService;
     private final PartnerBookingService partnerBookingService;
     private final PartnerRoomCalendarService partnerRoomCalendarService;
     private final HotelReviewService hotelReviewService;
@@ -355,10 +360,65 @@ public class PartnerController {
 
     // ── Room Units ─────────────────────────────────────────────────────────
 
+    /**
+     * Danh sách phòng vật lý của cơ sở kèm trạng thái suy ra cho NGÀY chỉ định
+     * (mặc định hôm nay nếu không truyền {@code date}). Trống/đặt trước/có khách
+     * tính từ các booking đang giữ phòng vào ngày đó; bảo trì/khoá theo khoảng ngày.
+     */
     @GetMapping("/hotels/{hotelId}/room-units")
     @PreAuthorize("hasRole('PARTNER')")
-    public ApiResponse<List<HotelRoomUnitResponse>> getHotelRoomUnits(@PathVariable Long hotelId) {
-        return ApiResponse.ok(roomUnitService.getUnitsByHotel(hotelId));
+    public ApiResponse<List<HotelRoomUnitResponse>> getHotelRoomUnits(
+            @PathVariable Long hotelId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        return ApiResponse.ok(roomUnitService.getUnitsByHotel(hotelId, date));
+    }
+
+    // ── Gán phòng vật lý cho booking (theo khoảng ngày của booking) ──────────
+
+    @GetMapping("/bookings/{bookingId}/room-units")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ApiResponse<List<RoomUnitAssignmentResponse>> getBookingRoomUnits(@PathVariable Long bookingId) {
+        return ApiResponse.ok(roomUnitAssignmentService.getBookingAssignments(bookingId));
+    }
+
+    /** Id các booking đã gán phòng vật lý — để danh sách booking đánh dấu nhanh "đã gán". */
+    @GetMapping("/bookings/assigned-room-units")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ApiResponse<List<Long>> getAssignedBookingIds() {
+        return ApiResponse.ok(roomUnitAssignmentService.getAssignedBookingIds());
+    }
+
+    @PutMapping("/bookings/{bookingId}/room-units")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ApiResponse<List<RoomUnitAssignmentResponse>> assignBookingRoomUnits(
+            @PathVariable Long bookingId,
+            @Valid @RequestBody AssignRoomUnitsRequest request
+    ) {
+        return ApiResponse.ok(roomUnitAssignmentService.assignBookingUnits(bookingId, request.unitIds()));
+    }
+
+    // ── Khoá phòng theo khoảng ngày (bảo trì / block) ────────────────────────
+
+    @PostMapping("/rooms/{roomId}/units/{unitId}/blocks")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ApiResponse<RoomUnitAssignmentResponse> createRoomUnitBlock(
+            @PathVariable Long roomId,
+            @PathVariable Long unitId,
+            @Valid @RequestBody RoomUnitBlockRequest request
+    ) {
+        return ApiResponse.ok(roomUnitAssignmentService.createBlock(roomId, unitId, request));
+    }
+
+    @DeleteMapping("/rooms/{roomId}/units/{unitId}/blocks/{assignmentId}")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ApiResponse<Void> deleteRoomUnitBlock(
+            @PathVariable Long roomId,
+            @PathVariable Long unitId,
+            @PathVariable Long assignmentId
+    ) {
+        roomUnitAssignmentService.deleteBlock(roomId, unitId, assignmentId);
+        return ApiResponse.ok(null);
     }
 
     @GetMapping("/rooms/{roomId}/units")

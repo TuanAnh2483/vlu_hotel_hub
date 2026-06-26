@@ -46,8 +46,11 @@ export const partnerService = {
     apiClient.put(`/api/partner/rooms/${roomId}/cover-image`, { imageUrl }),
 
   // ── Room Units (phòng cụ thể) ────────────────────────────────────────
-  getHotelRoomUnits: (hotelId) =>
-    apiClient.get(`/api/partner/hotels/${hotelId}/room-units`),
+  // date (YYYY-MM-DD) tùy chọn → trạng thái phòng suy ra cho ngày đó (mặc định hôm nay)
+  getHotelRoomUnits: (hotelId, date) =>
+    apiClient.get(`/api/partner/hotels/${hotelId}/room-units`, {
+      params: date ? { date } : {},
+    }),
 
   getRoomUnits: (roomId) =>
     apiClient.get(`/api/partner/rooms/${roomId}/units`),
@@ -66,6 +69,25 @@ export const partnerService = {
     fd.append("file", file);
     return apiClient.post(`/api/partner/rooms/${roomId}/units/${unitId}/image`, fd);
   },
+
+  // ── Gán phòng vật lý cho booking theo khoảng ngày ────────────────────
+  getBookingRoomUnits: (bookingId) =>
+    apiClient.get(`/api/partner/bookings/${bookingId}/room-units`),
+
+  // Id các booking đã gán phòng — để danh sách đánh dấu nhanh
+  getAssignedBookingIds: () =>
+    apiClient.get(`/api/partner/bookings/assigned-room-units`),
+
+  // unitIds thay thế toàn bộ phòng đã gán cho booking ([] = gỡ hết). Ngày lấy từ booking.
+  assignBookingRoomUnits: (bookingId, unitIds) =>
+    apiClient.put(`/api/partner/bookings/${bookingId}/room-units`, { unitIds }),
+
+  // ── Khoá phòng theo khoảng ngày (bảo trì / block) ────────────────────
+  createRoomUnitBlock: (roomId, unitId, data) =>
+    apiClient.post(`/api/partner/rooms/${roomId}/units/${unitId}/blocks`, data),
+
+  deleteRoomUnitBlock: (roomId, unitId, assignmentId) =>
+    apiClient.delete(`/api/partner/rooms/${roomId}/units/${unitId}/blocks/${assignmentId}`),
 
   // ── Bookings ─────────────────────────────────────────────────────────
   getBookings: (params = {}) => {

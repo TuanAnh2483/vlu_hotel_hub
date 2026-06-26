@@ -137,6 +137,11 @@ public class RoomService {
         if (oldQuantity != request.quantity()) {
             roomUnitProvisionService.syncUnitsWithQuantity(room);
             inventoryService.generateInventory(room);
+            // generateInventory chỉ cap xuống cho row đã tồn tại → khi TĂNG quantity phải
+            // nâng pool bán được thêm delta, nếu không availableRooms kẹt ở mức cũ (vd 0).
+            if (request.quantity() > oldQuantity) {
+                inventoryService.raiseInventory(room.getId(), request.quantity() - oldQuantity, request.quantity());
+            }
         }
 
         return mapToResponse(room);

@@ -354,6 +354,7 @@ export default function PartnerCalendar() {
             aiLoading={aiLoading}
             onEditTabOpen={() => dayModal && setAiParams({ from: dayModal.iso, to: dayModal.iso })}
             roomUnits={roomUnits}
+            todayIso={todayIso}
             warnModal={warnModal}
             onWarnClose={() => setWarnModal(null)}
           />

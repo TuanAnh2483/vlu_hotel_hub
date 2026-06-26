@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   useMyHotels, useHotelRoomUnits, usePartnerRooms,
   useUpdateRoomUnit, useDeleteRoomUnit, useUploadRoomUnitImage,
+  useCreateRoomUnitBlock, useDeleteRoomUnitBlock,
 } from "../../hooks/usePartnerQueries";
 import { useSearchParams, useOutletContext, useNavigate } from "react-router-dom";
 import { Modal } from "../../components/admin/AdminLayout";
@@ -9,8 +10,19 @@ import {
   Search, BedDouble, DoorOpen,
   Pencil, Trash2, AlertTriangle, ChevronDown, Hash, Layers,
   Sparkles, ImagePlus, X, Plus, Info, ArrowRight,
+  CalendarDays, Wrench, ExternalLink, Unlock,
 } from "lucide-react";
 import "../../styles/pages/partner/PartnerRoomUnits.css";
+
+// YYYY-MM-DD theo giờ địa phương (en-CA cho định dạng ISO)
+function localIso(d = new Date()) {
+  return d.toLocaleDateString("en-CA");
+}
+function fmtDateVi(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
 
 const STATUS_CONFIG = {
   AVAILABLE:   { label: "Phòng trống",   color: "#10b981", bg: "#d1fae5", dot: "#10b981" },
@@ -22,6 +34,11 @@ const STATUS_CONFIG = {
 
 const STATUS_OPTIONS = Object.entries(STATUS_CONFIG).map(([key, v]) => ({ key, ...v }));
 
+// RESERVED/OCCUPIED đến từ booking (gán phòng) → không chỉnh tay ở đây.
+const MANUAL_STATUS_OPTIONS = STATUS_OPTIONS.filter(
+  s => s.key === "AVAILABLE" || s.key === "CLEANING" || s.key === "MAINTENANCE"
+);
+
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.AVAILABLE;
   return (
@@ -32,7 +49,7 @@ function StatusBadge({ status }) {
   );
 }
 
-function StatusSelect({ value, onChange, disabled }) {
+function StatusSelect({ value, onChange, disabled, options = STATUS_OPTIONS }) {
   return (
     <div className="pru-status-select-wrap">
       <select
@@ -42,7 +59,7 @@ function StatusSelect({ value, onChange, disabled }) {
         disabled={disabled}
         style={{ color: STATUS_CONFIG[value]?.color, opacity: disabled ? 0.55 : 1 }}
       >
-        {STATUS_OPTIONS.map(s => (
+        {options.map(s => (
           <option key={s.key} value={s.key}>{s.label}</option>
         ))}
       </select>
@@ -388,6 +405,62 @@ function AddRoomRedirectModal({ rooms, preselectedRoomId, hotelId, onClose, navi
   );
 }
 
+// ── BlockModal: khoá phòng (bảo trì) theo khoảng ngày ──────────────────────
+function BlockModal({ unit, defaultDate, onSave, onClose, saving, error }) {
+  const [startDate, setStartDate] = useState(defaultDate);
+  const [endDate, setEndDate]     = useState(defaultDate);
+  const [note, setNote]           = useState("");
+  const label = unit.roomNumber ? `Phòng ${unit.roomNumber}` : `#${unit.id}`;
+
+  return (
+    <Modal title={`Khoá bảo trì — ${label}`} onClose={onClose} width={440}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <p style={{ fontSize: 13, color: "#64748b", margin: 0, lineHeight: 1.6 }}>
+          Phòng sẽ ở trạng thái <strong style={{ color: "#ef4444" }}>Bảo trì</strong> từ ngày bắt đầu
+          đến hết ngày kết thúc. Không thể gán khách vào phòng trong khoảng này.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="pru-edit-field">
+            <label className="pru-edit-label"><CalendarDays size={12} /> Từ ngày</label>
+            <input
+              className="pru-edit-input" type="date" value={startDate}
+              min={defaultDate}
+              onChange={e => { setStartDate(e.target.value); if (endDate < e.target.value) setEndDate(e.target.value); }}
+            />
+          </div>
+          <div className="pru-edit-field">
+            <label className="pru-edit-label"><CalendarDays size={12} /> Đến ngày</label>
+            <input
+              className="pru-edit-input" type="date" value={endDate}
+              min={startDate}
+              onChange={e => setEndDate(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="pru-edit-field">
+          <label className="pru-edit-label">Lý do (tuỳ chọn)</label>
+          <input
+            className="pru-edit-input" maxLength={500}
+            placeholder="VD: Sửa điều hoà, sơn lại phòng..."
+            value={note} onChange={e => setNote(e.target.value)}
+          />
+        </div>
+        {error && <div className="pru-edit-error">{error}</div>}
+        <div className="pru-edit-actions">
+          <button className="pru-btn pru-btn-ghost" onClick={onClose} disabled={saving}>Huỷ</button>
+          <button
+            className="pru-btn pru-btn-primary"
+            disabled={saving || !startDate || !endDate}
+            onClick={() => onSave({ startDate, endDate, note: note.trim() || null })}
+          >
+            {saving ? "Đang khoá..." : "Khoá phòng"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function PartnerRoomUnits() {
   const navigate = useNavigate();
   const [sp] = useSearchParams();
@@ -398,6 +471,7 @@ export default function PartnerRoomUnits() {
   );
   const [filterRoomId, setFilterRoomId] = useState(sp.get("roomId") || "");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterDate, setFilterDate] = useState(localIso());
   const [searchText, setSearchText] = useState("");
   const [editingUnit, setEditingUnit] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -405,6 +479,8 @@ export default function PartnerRoomUnits() {
   const [saving, setSaving] = useState(false);
   const [changingStatusId, setChangingStatusId] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [blockUnit, setBlockUnit] = useState(null);
+  const [blockError, setBlockError] = useState("");
 
   useEffect(() => {
     if (ctxHotelId && !sp.get("hotelId")) setSelectedHotelId(String(ctxHotelId));
@@ -418,7 +494,7 @@ export default function PartnerRoomUnits() {
 
   const { data: hotelData } = useMyHotels();
   const { data: roomData } = usePartnerRooms(selectedHotelId);
-  const { data: unitData = [], isLoading } = useHotelRoomUnits(selectedHotelId);
+  const { data: unitData = [], isLoading } = useHotelRoomUnits(selectedHotelId, filterDate);
 
   const hotels = Array.isArray(hotelData) ? hotelData : [];
   const rooms  = Array.isArray(roomData)  ? roomData  : [];
@@ -437,6 +513,28 @@ export default function PartnerRoomUnits() {
 
   const updateUnit = useUpdateRoomUnit();
   const deleteUnit = useDeleteRoomUnit();
+  const createBlock = useCreateRoomUnitBlock();
+  const deleteBlock = useDeleteRoomUnitBlock();
+  const isToday = filterDate === localIso();
+
+  async function handleCreateBlock(data) {
+    setBlockError("");
+    try {
+      await createBlock.mutateAsync({
+        roomId: blockUnit.roomId, unitId: blockUnit.id, hotelId: selectedHotelId,
+        startDate: data.startDate, endDate: data.endDate, type: "MAINTENANCE", note: data.note,
+      });
+      setBlockUnit(null);
+    } catch (e) { setBlockError(e.message || "Không thể khoá phòng"); }
+  }
+
+  async function handleUnblock(unit) {
+    try {
+      await deleteBlock.mutateAsync({
+        roomId: unit.roomId, unitId: unit.id, assignmentId: unit.assignmentId,
+      });
+    } catch (e) { alert(e.message); }
+  }
 
   async function handleStatusChange(unit, newStatus) {
     if (changingStatusId === unit.id) return;
@@ -554,10 +652,40 @@ export default function PartnerRoomUnits() {
                     <option key={s.key} value={s.key}>{s.label}</option>
                   ))}
                 </select>
+                <div className="pru-filter-date" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <CalendarDays size={15} color="#BE1E2E" />
+                  <input
+                    type="date"
+                    className="pru-filter-select"
+                    value={filterDate}
+                    onChange={e => setFilterDate(e.target.value || localIso())}
+                    title="Xem trạng thái phòng theo ngày"
+                    style={{ minWidth: 150 }}
+                  />
+                  {!isToday && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterDate(localIso())}
+                      style={{
+                        border: "1.5px solid #e2e8f0", background: "#fff", color: "#64748b",
+                        borderRadius: 8, padding: "6px 10px", fontSize: 12.5, fontWeight: 600,
+                        cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                      }}
+                    >
+                      Hôm nay
+                    </button>
+                  )}
+                </div>
                 <div className="pru-filter-count">{filteredUnits.length} / {units.length} phòng</div>
               </>
             )}
           </div>
+          {selectedHotelId && (
+            <div style={{ fontSize: 12.5, color: "#64748b", margin: "2px 0 0 2px" }}>
+              Trạng thái phòng cho ngày <strong style={{ color: "#1e293b" }}>{fmtDateVi(filterDate)}</strong>
+              {isToday ? " (hôm nay)" : ""}
+            </div>
+          )}
           {selectedHotelId && units.length > 0 && <StatStrip units={units} />}
         </div>
       )}
@@ -643,16 +771,53 @@ export default function PartnerRoomUnits() {
                           {unit.floor != null ? `Tầng ${unit.floor}` : <span className="pru-empty-val">—</span>}
                         </td>
                         <td>
-                          <StatusSelect
-                            value={unit.status}
-                            onChange={v => handleStatusChange(unit, v)}
-                            disabled={changingStatusId === unit.id}
-                          />
+                          {unit.bookingId ? (
+                            <button
+                              onClick={() => navigate(`/partner/bookings/${unit.bookingId}`)}
+                              title="Xem booking đang giữ phòng"
+                              style={{
+                                display: "inline-flex", alignItems: "center", gap: 6,
+                                background: "none", border: "none", cursor: "pointer", padding: 0,
+                              }}
+                            >
+                              <StatusBadge status={unit.status} />
+                              <ExternalLink size={12} color="#94a3b8" />
+                            </button>
+                          ) : (unit.assignmentType === "MAINTENANCE" || unit.assignmentType === "BLOCK") ? (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <StatusBadge status="MAINTENANCE" />
+                              <button
+                                onClick={() => handleUnblock(unit)}
+                                title="Gỡ khoá bảo trì"
+                                style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "#64748b", display: "inline-flex" }}
+                              >
+                                <Unlock size={13} />
+                              </button>
+                            </span>
+                          ) : isToday ? (
+                            <StatusSelect
+                              value={unit.status}
+                              onChange={v => handleStatusChange(unit, v)}
+                              disabled={changingStatusId === unit.id}
+                              options={MANUAL_STATUS_OPTIONS}
+                            />
+                          ) : (
+                            <StatusBadge status={unit.status} />
+                          )}
                         </td>
                         <td className="pru-cell-notes">
                           <NotesCell notes={unit.notes} guestName={unit.guestName} />
                         </td>
                         <td className="pru-cell-actions">
+                          {!unit.bookingId && unit.assignmentType !== "MAINTENANCE" && unit.assignmentType !== "BLOCK" && (
+                            <button
+                              className="pru-action-btn"
+                              title="Khoá bảo trì theo ngày"
+                              onClick={() => { setBlockUnit(unit); setBlockError(""); }}
+                            >
+                              <Wrench size={13} />
+                            </button>
+                          )}
                           <button
                             className="pru-action-btn"
                             title="Chỉnh sửa"
@@ -696,6 +861,17 @@ export default function PartnerRoomUnits() {
           onClose={() => { setEditingUnit(null); setFormError(""); }}
           saving={saving}
           error={formError}
+        />
+      )}
+
+      {blockUnit && (
+        <BlockModal
+          unit={blockUnit}
+          defaultDate={filterDate}
+          onSave={handleCreateBlock}
+          onClose={() => { setBlockUnit(null); setBlockError(""); }}
+          saving={createBlock.isPending}
+          error={blockError}
         />
       )}
     </div>

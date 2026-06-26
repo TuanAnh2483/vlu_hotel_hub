@@ -9,7 +9,9 @@ import com.hotel.hotel_backend.repository.BookingRepository;
 import com.hotel.hotel_backend.repository.DailyInventoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -25,16 +27,61 @@ public class BookingExpirationService {
     private final BookingItemRepository bookingItemRepository;
     private final DailyInventoryRepository dailyInventoryRepository;
     private final InventoryService inventoryService;
+    // Self-proxy: can goi expireBookingById() QUA proxy de @Transactional(REQUIRES_NEW) co hieu luc.
+    // ObjectProvider resolve lazily nen khong gay circular dependency luc khoi tao bean.
+    private final ObjectProvider<BookingExpirationService> selfProvider;
 
-    @Transactional
+    /**
+     * Quet va expire moi booking PENDING_PAYMENT qua han. Moi booking duoc expire trong mot
+     * transaction RIENG (REQUIRES_NEW) nen mot booking loi chi bi bo qua — khong rollback ca batch
+     * va khong khien scheduled job lap vo han tren cung mot booking hong.
+     *
+     * @return so booking thuc su duoc expire
+     */
     public int expireOverduePendingBookings() {
-        List<Booking> overdueBookings = bookingRepository.findByStatusAndExpiresAtBefore(
-                BookingStatus.PENDING_PAYMENT,
-                LocalDateTime.now()
-        );
+        BookingExpirationService self = selfProvider.getObject();
+        int expired = 0;
+        for (Long bookingId : findOverduePendingBookingIds()) {
+            try {
+                if (self.expireBookingById(bookingId)) {
+                    expired++;
+                }
+            } catch (Exception e) {
+                log.error("Failed to expire pending bookingId={}, skipping", bookingId, e);
+            }
+        }
+        return expired;
+    }
 
-        overdueBookings.forEach(this::expirePendingBooking);
-        return overdueBookings.size();
+    /** Chi lay danh sach id booking qua han — viec expire tung cai chay o transaction rieng. */
+    @Transactional(readOnly = true)
+    public List<Long> findOverduePendingBookingIds() {
+        return bookingRepository.findByStatusAndExpiresAtBefore(
+                        BookingStatus.PENDING_PAYMENT,
+                        LocalDateTime.now()
+                )
+                .stream()
+                .map(Booking::getId)
+                .toList();
+    }
+
+    /**
+     * Expire mot booking trong transaction RIENG (REQUIRES_NEW) — phai goi qua self-proxy.
+     * Cach ly nay dam bao mot booking loi khong rollback ca batch.
+     *
+     * @return true neu booking thuc su duoc expire trong lan goi nay
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean expireBookingById(Long bookingId) {
+        return bookingRepository.findById(bookingId)
+                .map(booking -> {
+                    if (booking.getStatus() != BookingStatus.PENDING_PAYMENT) {
+                        return false;
+                    }
+                    expirePendingBooking(booking);
+                    return true;
+                })
+                .orElse(false);
     }
 
     @Transactional

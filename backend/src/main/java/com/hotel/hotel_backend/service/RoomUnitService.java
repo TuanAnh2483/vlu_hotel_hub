@@ -5,32 +5,46 @@ import com.hotel.hotel_backend.dto.request.UpdateRoomUnitRequest;
 import com.hotel.hotel_backend.dto.response.HotelRoomUnitResponse;
 import com.hotel.hotel_backend.dto.response.RoomUnitResponse;
 import com.hotel.hotel_backend.dto.response.RoomUnitSummaryResponse;
+import com.hotel.hotel_backend.entity.AssignmentType;
+import com.hotel.hotel_backend.entity.Booking;
+import com.hotel.hotel_backend.entity.BookingStatus;
 import com.hotel.hotel_backend.entity.Hotel;
 import com.hotel.hotel_backend.entity.Room;
 import com.hotel.hotel_backend.entity.RoomUnit;
+import com.hotel.hotel_backend.entity.RoomUnitAssignment;
 import com.hotel.hotel_backend.entity.RoomUnitStatus;
 import com.hotel.hotel_backend.exception.ApiException;
 import com.hotel.hotel_backend.exception.ErrorCode;
 import com.hotel.hotel_backend.repository.HotelRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
+import com.hotel.hotel_backend.repository.RoomUnitAssignmentRepository;
 import com.hotel.hotel_backend.repository.RoomUnitRepository;
 import com.hotel.hotel_backend.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class RoomUnitService {
 
+    /** Booking ở các trạng thái này mới thực sự "giữ" phòng cho ngày đang xem. */
+    private static final Set<BookingStatus> ACTIVE_STATUSES =
+            Set.of(BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN);
+
     private final RoomUnitRepository roomUnitRepository;
     private final RoomRepository roomRepository;
     private final HotelRepository hotelRepository;
     private final SecurityService securityService;
     private final InventoryService inventoryService;
+    private final RoomUnitAssignmentRepository assignmentRepository;
 
     @Transactional(readOnly = true)
     public List<RoomUnitResponse> getUnits(Long roomId) {
@@ -183,19 +197,54 @@ public class RoomUnitService {
                 row.getCleaningCount());
     }
 
+    /**
+     * Danh sách phòng vật lý của cơ sở kèm trạng thái SUY RA cho một ngày.
+     * {@code date == null} → dùng hôm nay. Trạng thái lấy từ assignment phủ ngày đó
+     * (booking đang active → RESERVED/OCCUPIED; bảo trì/khoá → MAINTENANCE), nếu
+     * không có assignment thì rơi về trạng thái thủ công lưu trên phòng.
+     */
     @Transactional(readOnly = true)
-    public List<HotelRoomUnitResponse> getUnitsByHotel(Long hotelId) {
+    public List<HotelRoomUnitResponse> getUnitsByHotel(Long hotelId, LocalDate date) {
         Hotel hotel = hotelRepository.findById(hotelId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Không tìm thấy cơ sở lưu trú"));
         Long currentUserId = securityService.getCurrentPrincipal().userId();
         if (!hotel.getOwner().getId().equals(currentUserId)) {
             throw new ApiException(ErrorCode.FORBIDDEN);
         }
+
+        LocalDate today = LocalDate.now();
+        LocalDate effectiveDate = date != null ? date : today;
+
+        // Gom assignment phủ ngày → mỗi phòng giữ 1 assignment ưu tiên (bảo trì > booking)
+        Map<Long, RoomUnitAssignment> byUnit = new HashMap<>();
+        for (RoomUnitAssignment a : assignmentRepository.findCoveringDateByHotel(hotelId, effectiveDate, ACTIVE_STATUSES)) {
+            byUnit.merge(a.getRoomUnit().getId(), a, (cur, cand) -> priority(cand) > priority(cur) ? cand : cur);
+        }
+
         // findByHotelId already filters out INACTIVE rooms via JPQL
         return roomUnitRepository.findByHotelId(hotelId)
                 .stream()
-                .map(this::mapToHotelResponse)
+                .map(u -> mapToHotelResponse(u, effectiveDate, today, byUnit.get(u.getId())))
                 .toList();
+    }
+
+    private static int priority(RoomUnitAssignment a) {
+        return a.getType() == AssignmentType.BOOKING ? 1 : 2; // bảo trì/khoá thắng booking
+    }
+
+    private RoomUnitStatus deriveStatus(RoomUnit unit, LocalDate effectiveDate, LocalDate today, RoomUnitAssignment a) {
+        if (a != null) {
+            if (a.getType() == AssignmentType.BOOKING) {
+                Booking b = a.getBooking();
+                return (b != null && b.getStatus() == BookingStatus.CHECKED_IN)
+                        ? RoomUnitStatus.OCCUPIED : RoomUnitStatus.RESERVED;
+            }
+            return RoomUnitStatus.MAINTENANCE;
+        }
+        // Không có assignment cho ngày này → trạng thái thủ công lưu trên phòng
+        if (unit.getStatus() == RoomUnitStatus.MAINTENANCE) return RoomUnitStatus.MAINTENANCE;
+        if (unit.getStatus() == RoomUnitStatus.CLEANING && effectiveDate.isEqual(today)) return RoomUnitStatus.CLEANING;
+        return RoomUnitStatus.AVAILABLE;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
@@ -242,8 +291,15 @@ public class RoomUnitService {
         );
     }
 
-    private HotelRoomUnitResponse mapToHotelResponse(RoomUnit unit) {
+    private HotelRoomUnitResponse mapToHotelResponse(
+            RoomUnit unit, LocalDate effectiveDate, LocalDate today, RoomUnitAssignment a) {
         Room room = unit.getRoom();
+        RoomUnitStatus status = deriveStatus(unit, effectiveDate, today, a);
+
+        boolean booking = a != null && a.getType() == AssignmentType.BOOKING;
+        String guestName = booking ? a.getGuestName() : null;
+        String notes = a != null ? a.getNote() : unit.getNotes();
+
         return new HotelRoomUnitResponse(
                 unit.getId(),
                 room.getId(),
@@ -252,13 +308,17 @@ public class RoomUnitService {
                 room.getCoverImageUrl(),
                 unit.getRoomNumber(),
                 unit.getFloor(),
-                unit.getStatus(),
-                unit.getNotes(),
-                unit.getGuestName(),
+                status,
+                notes,
+                guestName,
                 unit.getCoverImageUrl(),
                 unit.isAutoGenerated(),
                 unit.getCreatedAt(),
-                unit.getUpdatedAt()
+                unit.getUpdatedAt(),
+                effectiveDate,
+                a != null && a.getBooking() != null ? a.getBooking().getId() : null,
+                a != null ? a.getType() : null,
+                a != null ? a.getId() : null
         );
     }
 }

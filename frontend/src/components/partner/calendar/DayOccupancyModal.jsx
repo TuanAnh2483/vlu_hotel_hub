@@ -29,7 +29,7 @@ function getAiLevel(suggested, currentStr) {
   return pct >= 12 ? "HIGH" : pct >= -5 ? "MEDIUM" : "LOW";
 }
 
-function SlotGrid({ slots, useRealUnits }) {
+function SlotGrid({ slots, useRealUnits, occupiedLabel = "Có khách" }) {
   const shown  = slots.slice(0, MAX_VISUAL_SLOTS);
   const hidden = slots.length - shown.length;
   return (
@@ -52,7 +52,7 @@ function SlotGrid({ slots, useRealUnits }) {
         )}
       </div>
       <div className="pdom-legend">
-        <span className="pdom-legend-item pdom-legend--occupied">Có khách</span>
+        <span className="pdom-legend-item pdom-legend--occupied">{occupiedLabel}</span>
         {useRealUnits && <span className="pdom-legend-item pdom-legend--reserved">Đặt trước</span>}
         <span className="pdom-legend-item pdom-legend--vacant">Còn trống</span>
         {useRealUnits && <span className="pdom-legend-item pdom-legend--maintenance">Bảo trì / Dọn</span>}
@@ -92,6 +92,7 @@ export default function DayOccupancyModal({
   aiData, aiLoading,
   onEditTabOpen,
   roomUnits,
+  todayIso,
   warnModal, onWarnClose,
 }) {
   const [activeTab, setActiveTab] = useState("info");
@@ -105,10 +106,14 @@ export default function DayOccupancyModal({
   const booked      = item?.blockedRooms || 0;
   const isClosed    = Boolean(item?.closed);
   const hasRealUnits = Array.isArray(roomUnits) && roomUnits.length > 0;
+  // Hướng A: MỌI con số lấy từ daily_inventory (item) để NHẤT QUÁN với ô lịch ở mọi ngày.
+  // room_units (trạng thái vật lý real-time) chỉ đúng cho hôm nay → chỉ dùng cho SƠ ĐỒ phòng.
+  const isFuture     = Boolean(iso) && Boolean(todayIso) && iso > todayIso;
+  const useLiveUnits = hasRealUnits && Boolean(iso) && iso === todayIso;
 
   // Hooks must be called unconditionally — no early return before this point
   const slots = useMemo(() => {
-    if (hasRealUnits) {
+    if (useLiveUnits) {
       return roomUnits.map(u => {
         const map = UNIT_SLOT_MAP[u.status] || { status: "vacant", txt: "Trống" };
         return {
@@ -123,10 +128,10 @@ export default function DayOccupancyModal({
     return Array.from({ length: totalQ }, (_, i) => ({
       label:  `P${String(i + 1).padStart(2, "0")}`,
       status: isClosed ? "closed" : i < booked ? "occupied" : "vacant",
-      txt:    isClosed ? "Đóng" : i < booked ? "Có khách" : "Trống",
+      txt:    isClosed ? "Đóng" : i < booked ? (isFuture ? "Đã đặt" : "Có khách") : "Trống",
       floor:  null,
     }));
-  }, [hasRealUnits, roomUnits, totalQ, booked, isClosed]);
+  }, [useLiveUnits, roomUnits, totalQ, booked, isClosed, isFuture]);
 
   const activeGuests = useMemo(() => {
     const list = bookings?.items ?? bookings ?? [];
@@ -142,11 +147,16 @@ export default function DayOccupancyModal({
   const roomName = calendar?.roomName || "—";
   const price    = item?.price ?? calendar?.basePrice;
 
-  // When physical unit data is available, derive stats from it so they match the slot diagram
-  const statsTotal    = hasRealUnits ? roomUnits.length : totalQ;
-  const statsOccupied = hasRealUnits ? roomUnits.filter(u => u.status === "OCCUPIED").length  : booked;
-  const statsFree     = hasRealUnits ? roomUnits.filter(u => u.status === "AVAILABLE").length : sellable;
-  const statsPct      = statsTotal > 0 ? Math.round(statsOccupied / statsTotal * 100) : 0;
+  // Hướng A: số liệu LUÔN theo tồn kho của ngày (khớp ô lịch), kể cả hôm nay.
+  const statsTotal    = totalQ;
+  const statsOccupied = booked;
+  const statsFree     = sellable;
+  const statsPct      = totalQ > 0 ? Math.round(booked / totalQ * 100) : 0;
+  // Nhãn ô "đang giữ": ngày tương lai = "Đã đặt"; hôm nay/quá khứ = "Đang có khách".
+  const occupiedLabel = isFuture ? "Đã đặt" : "Đang có khách";
+  // Hôm nay: số phòng đã đặt nhưng CHƯA hiện thành phòng vật lý OCCUPIED (chưa gán / khách chưa nhận).
+  const occupiedUnits  = useLiveUnits ? roomUnits.filter(u => u.status === "OCCUPIED").length : 0;
+  const unassignedHeld = useLiveUnits ? Math.max(0, booked - occupiedUnits) : 0;
 
   // Edit tab helpers
   const aiLevel  = aiData ? getAiLevel(aiData.suggestedPrice, form?.price) : "MEDIUM";
@@ -202,7 +212,7 @@ export default function DayOccupancyModal({
                   <div className="pdom-stat-icon"><Users size={16} /></div>
                   <div>
                     <div className="pdom-stat-num">{statsOccupied}</div>
-                    <div className="pdom-stat-lbl">Đang có khách</div>
+                    <div className="pdom-stat-lbl">{occupiedLabel}</div>
                   </div>
                 </div>
                 <div className="pdom-stat pdom-stat--free">
@@ -237,10 +247,16 @@ export default function DayOccupancyModal({
                   <div className="pdom-section-hd">
                     <span className="pdom-section-title">Sơ đồ phòng</span>
                     <span className="pdom-section-note">
-                      {hasRealUnits ? "Phòng vật lý thực tế — trạng thái hiện tại" : "Mã tự động theo vị trí"}
+                      {useLiveUnits ? "Phòng vật lý thực tế — trạng thái hiện tại" : "Theo tồn kho của ngày này"}
                     </span>
                   </div>
-                  <SlotGrid slots={slots} useRealUnits={hasRealUnits} />
+                  <SlotGrid slots={slots} useRealUnits={useLiveUnits} occupiedLabel={isFuture ? "Đã đặt" : "Có khách"} />
+                  {unassignedHeld > 0 && (
+                    <div className="pdom-section-note" style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, color: "#92400e" }}>
+                      <Info size={13} style={{ flexShrink: 0 }} />
+                      {unassignedHeld} phòng đã đặt nhưng chưa gán phòng cụ thể (khách chưa nhận phòng).
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -188,12 +188,72 @@ export function useRoomUnits(roomId, options = {}) {
   });
 }
 
-export function useHotelRoomUnits(hotelId, options = {}) {
+// date (YYYY-MM-DD) tùy chọn → trạng thái phòng suy ra cho ngày đó (mặc định hôm nay)
+export function useHotelRoomUnits(hotelId, date, options = {}) {
   return useQuery({
-    queryKey: partnerKeys.hotelRoomUnits(hotelId),
-    queryFn:  () => partnerService.getHotelRoomUnits(hotelId),
+    queryKey: [...partnerKeys.hotelRoomUnits(hotelId), date || "today"],
+    queryFn:  () => partnerService.getHotelRoomUnits(hotelId, date),
     enabled:  Boolean(hotelId),
     staleTime: 30 * 1000,
+    ...options,
+  });
+}
+
+// ── Gán phòng vật lý cho booking theo khoảng ngày ─────────────────────
+export function useBookingRoomUnits(bookingId, options = {}) {
+  return useQuery({
+    queryKey: ["partner", "booking-room-units", bookingId],
+    queryFn:  () => partnerService.getBookingRoomUnits(bookingId),
+    enabled:  Boolean(bookingId),
+    staleTime: 30 * 1000,
+    ...options,
+  });
+}
+
+// Set các bookingId đã gán phòng vật lý → danh sách booking đánh dấu nhanh "đã gán"
+export function usePartnerAssignedBookingIds(options = {}) {
+  return useQuery({
+    queryKey: ["partner", "assigned-booking-ids"],
+    queryFn:  () => partnerService.getAssignedBookingIds(),
+    staleTime: 30 * 1000,
+    ...options,
+  });
+}
+
+export function useAssignBookingRoomUnits(options = {}) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookingId, unitIds }) => partnerService.assignBookingRoomUnits(bookingId, unitIds),
+    onSuccess: (_data, { bookingId }) => {
+      queryClient.invalidateQueries({ queryKey: ["partner", "booking-room-units", bookingId] });
+      queryClient.invalidateQueries({ queryKey: ["partner", "hotel-room-units"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", "assigned-booking-ids"] });
+    },
+    ...options,
+  });
+}
+
+export function useCreateRoomUnitBlock(options = {}) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ roomId, unitId, ...data }) => partnerService.createRoomUnitBlock(roomId, unitId, data),
+    onSuccess: (_data, { roomId }) => {
+      queryClient.invalidateQueries({ queryKey: ["partner", "hotel-room-units"] });
+      queryClient.invalidateQueries({ queryKey: partnerKeys.roomUnits(roomId) });
+    },
+    ...options,
+  });
+}
+
+export function useDeleteRoomUnitBlock(options = {}) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ roomId, unitId, assignmentId }) =>
+      partnerService.deleteRoomUnitBlock(roomId, unitId, assignmentId),
+    onSuccess: (_data, { roomId }) => {
+      queryClient.invalidateQueries({ queryKey: ["partner", "hotel-room-units"] });
+      queryClient.invalidateQueries({ queryKey: partnerKeys.roomUnits(roomId) });
+    },
     ...options,
   });
 }
@@ -278,7 +338,12 @@ export function useCheckinBooking(options = {}) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (bookingId) => partnerService.checkinBooking(bookingId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["partner", "bookings"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["partner", "bookings"] });
+      // Booking detail (singular) + trạng thái phòng suy ra đổi RESERVED→OCCUPIED
+      queryClient.invalidateQueries({ queryKey: ["partner", "booking"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", "hotel-room-units"] });
+    },
     ...options,
   });
 }
@@ -289,7 +354,11 @@ export function useCompleteBooking(options = {}) {
     mutationFn: (bookingId) => partnerService.completeBooking(bookingId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["partner", "bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", "booking"] });
       queryClient.invalidateQueries({ queryKey: ["partner", "hotel-room-units"] });
+      // Checkout giải phóng assignment → làm mới danh sách phòng đã gán + cờ "đã gán"
+      queryClient.invalidateQueries({ queryKey: ["partner", "booking-room-units"] });
+      queryClient.invalidateQueries({ queryKey: ["partner", "assigned-booking-ids"] });
     },
     ...options,
   });

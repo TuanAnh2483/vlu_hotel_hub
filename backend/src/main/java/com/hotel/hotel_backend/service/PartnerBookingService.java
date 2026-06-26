@@ -15,10 +15,12 @@ import com.hotel.hotel_backend.entity.Booking;
 import com.hotel.hotel_backend.entity.BookingStatus;
 import com.hotel.hotel_backend.entity.Hotel;
 import com.hotel.hotel_backend.entity.RoomUnit;
+import com.hotel.hotel_backend.entity.RoomUnitAssignment;
 import com.hotel.hotel_backend.entity.RoomUnitStatus;
 import com.hotel.hotel_backend.exception.ApiException;
 import com.hotel.hotel_backend.exception.ErrorCode;
 import com.hotel.hotel_backend.repository.BookingRepository;
+import com.hotel.hotel_backend.repository.RoomUnitAssignmentRepository;
 import com.hotel.hotel_backend.repository.RoomUnitRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -41,6 +43,7 @@ public class PartnerBookingService {
 
     private final BookingRepository bookingRepository;
     private final RoomUnitRepository roomUnitRepository;
+    private final RoomUnitAssignmentRepository roomUnitAssignmentRepository;
     private final SecurityService securityService;
     private final BookingExpirationService bookingExpirationService;
     private final BookingRefundService bookingRefundService;
@@ -128,18 +131,34 @@ public class PartnerBookingService {
     }
 
     private void cleanupRoomUnitsOnCheckout(Long bookingId) {
+        // Mô hình mới: phòng được gán qua room_unit_assignment theo khoảng ngày.
+        // Khi checkout → đánh dấu phòng cần dọn (hôm nay) rồi giải phóng assignment.
+        List<RoomUnitAssignment> assignments = roomUnitAssignmentRepository.findByBookingId(bookingId);
+        if (!assignments.isEmpty()) {
+            List<RoomUnit> assignedUnits = assignments.stream()
+                    .map(RoomUnitAssignment::getRoomUnit)
+                    .toList();
+            for (RoomUnit unit : assignedUnits) {
+                unit.setStatus(RoomUnitStatus.CLEANING);
+                unit.setGuestName(null);
+            }
+            roomUnitRepository.saveAll(assignedUnits);
+            roomUnitAssignmentRepository.deleteByBookingId(bookingId);
+        }
+
+        // Tương thích ngược: phòng còn gắn nhãn cũ notes = 'bk:<id>' (trước khi có bảng assignment).
         String bookingTag = "bk:" + bookingId + "%";
-        List<RoomUnit> occupiedUnits = roomUnitRepository.findByNotesStartingWithAndStatusIn(
+        List<RoomUnit> legacyUnits = roomUnitRepository.findByNotesStartingWithAndStatusIn(
                 bookingTag,
                 Set.of(RoomUnitStatus.OCCUPIED, RoomUnitStatus.RESERVED)
         );
-        for (RoomUnit unit : occupiedUnits) {
+        for (RoomUnit unit : legacyUnits) {
             unit.setStatus(RoomUnitStatus.CLEANING);
             unit.setGuestName(null);
             unit.setNotes(null);
         }
-        if (!occupiedUnits.isEmpty()) {
-            roomUnitRepository.saveAll(occupiedUnits);
+        if (!legacyUnits.isEmpty()) {
+            roomUnitRepository.saveAll(legacyUnits);
         }
     }
 

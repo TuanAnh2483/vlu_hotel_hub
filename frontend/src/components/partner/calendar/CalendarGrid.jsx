@@ -20,10 +20,12 @@ function CalendarCell({ cell, todayIso, calendar, onCellClick }) {
   const basePrice = calendar?.basePrice;
   const price     = item?.price ?? basePrice;
   const booked    = item?.blockedRooms ?? 0;
+  // sellableRooms = availableRooms − blockedRooms (đã trừ cả phòng bị đóng/bảo trì), là số
+  // thực sự còn bán được. Dùng nó cho "trống" + màu sold-out để khớp badge "Hết phòng".
   const sellable  = item?.sellableRooms ?? 0;
-  const occPct    = calcOccPct(booked, totalQ);
-  const cellCls   = getCellClass(occPct, isClosed, isPast);
   const isSoldOut = !isClosed && !isPast && totalQ > 0 && sellable === 0;
+  const occPct    = calcOccPct(booked, totalQ);
+  const cellCls   = isSoldOut ? "pc-cell-occ-sold" : getCellClass(occPct, isClosed, isPast);
   const isNearFull = !isClosed && !isPast && !isSoldOut && occPct >= 80;
   const hasCustomRate = Boolean(item?.hasCustomRate);
   const barColor  = BAR_COLORS[cellCls] || "#e2e8f0";
@@ -67,13 +69,13 @@ function CalendarCell({ cell, todayIso, calendar, onCellClick }) {
           <div className="pc-occ-track">
             <div
               className="pc-occ-fill"
-              style={{ width: `${occPct}%`, background: barColor }}
+              style={{ width: `${isSoldOut ? 100 : occPct}%`, background: barColor }}
             />
           </div>
           <div className="pc-room-row">
             <span className="pc-booked-count">{booked} đặt</span>
             <span className="pc-room-sep">·</span>
-            <span className="pc-total-count">{Math.max(0, totalQ - booked)} trống</span>
+            <span className="pc-total-count">{Math.max(0, sellable)} trống</span>
           </div>
         </>
       )}

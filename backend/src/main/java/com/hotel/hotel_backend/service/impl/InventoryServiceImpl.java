@@ -159,10 +159,19 @@ public class InventoryServiceImpl implements InventoryService {
         List<DailyInventory> inventories = loadInventories(roomId, checkIn, checkOut);
         ensureCompleteRangeForRelease(nights, inventories);
 
+        // Release la thao tac "tra phong ve kho" => khong duoc phep that bai. Neu blocked_rooms da
+        // thap hon quantity (du lieu lech: booking chen thang vao DB chua reserve kho, booking qua
+        // khu ma repair chi sua date >= today, hoac da release truoc do) thi clamp ve 0 thay vi nem.
+        // Ly do: nem se khien expiry job KHONG huy duoc booking (release chay truoc setStatus) =>
+        // booking ket o PENDING_PAYMENT, bi quet lai moi 60s, spam stack-trace vo han va phong van
+        // bi "giu"; con user/partner cancel & refund (cung goi path nay) se bi 500. Clamp ve 0 dat
+        // dung invariant (phong da duoc tra het), chi WARN de van lo ra su lech cho dieu tra.
         for (DailyInventory inventory : inventories) {
             int nextBlocked = inventory.getBlockedRooms() - quantity;
             if (nextBlocked < 0) {
-                throw new ApiException(ErrorCode.CONFLICT, "Inventory release underflow");
+                log.warn("Inventory release underflow clamped to 0: roomId={}, date={}, blocked={}, requested={}",
+                        roomId, inventory.getId().getDate(), inventory.getBlockedRooms(), quantity);
+                nextBlocked = 0;
             }
             inventory.setBlockedRooms(nextBlocked);
         }
@@ -222,5 +231,30 @@ public class InventoryServiceImpl implements InventoryService {
     public void restoreOneUnit(Long roomId, int maxCapacity) {
         if (maxCapacity <= 0) return;
         dailyInventoryRepository.incrementAvailableRoomsUpTo(roomId, LocalDate.now(), maxCapacity);
+    }
+
+    @Override
+    @Transactional
+    public void raiseInventory(Long roomId, int delta, int maxCapacity) {
+        if (delta <= 0 || maxCapacity <= 0) return;
+        dailyInventoryRepository.raiseAvailableRoomsBy(roomId, LocalDate.now(), delta, maxCapacity);
+    }
+
+    @Override
+    @Transactional
+    public void adjustBlockedRooms(Long roomId, LocalDate startInclusive, LocalDate endExclusive, int delta) {
+        if (startInclusive == null || endExclusive == null
+                || !endExclusive.isAfter(startInclusive) || delta == 0) {
+            return;
+        }
+        List<DailyInventory> rows = dailyInventoryRepository.findByIdRoomIdAndIdDateBetween(
+                roomId, startInclusive, endExclusive.minusDays(1));
+        for (DailyInventory inv : rows) {
+            int next = inv.getBlockedRooms() + delta;
+            if (next < 0) next = 0;
+            if (next > inv.getAvailableRooms()) next = inv.getAvailableRooms();
+            inv.setBlockedRooms(next);
+        }
+        if (!rows.isEmpty()) dailyInventoryRepository.saveAll(rows);
     }
 }

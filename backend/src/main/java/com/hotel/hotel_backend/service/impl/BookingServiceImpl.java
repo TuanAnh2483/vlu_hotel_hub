@@ -18,6 +18,7 @@ import com.hotel.hotel_backend.repository.BookingItemRepository;
 import com.hotel.hotel_backend.repository.BookingRepository;
 import com.hotel.hotel_backend.repository.PaymentTransactionRepository;
 import com.hotel.hotel_backend.repository.RoomRepository;
+import com.hotel.hotel_backend.repository.RoomUnitAssignmentRepository;
 import com.hotel.hotel_backend.service.BookingExpirationService;
 import com.hotel.hotel_backend.service.BookingService;
 import com.hotel.hotel_backend.service.InventoryService;
@@ -55,6 +56,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingMapper bookingMapper;
     private final HotelAvailabilityService hotelAvailabilityService;
     private final BookingExpirationService bookingExpirationService;
+    private final RoomUnitAssignmentRepository roomUnitAssignmentRepository;
 
     // FIX TASK-2: Self-proxy injected lazily so @Transactional on createBookingOnce() is honoured.
     // Non-final → Lombok @RequiredArgsConstructor skips it; Spring injects the CGLIB proxy at first use.
@@ -259,6 +261,8 @@ public class BookingServiceImpl implements BookingService {
         }
 
         bookingExpirationService.releaseReservedInventory(booking);
+        // Giải phóng phòng vật lý đã gán (nếu có) khi huỷ booking.
+        roomUnitAssignmentRepository.deleteByBookingId(booking.getId());
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setExpiresAt(null);
 

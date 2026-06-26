@@ -9,6 +9,7 @@ import com.hotel.hotel_backend.exception.ApiException;
 import com.hotel.hotel_backend.exception.ErrorCode;
 import com.hotel.hotel_backend.repository.BookingRepository;
 import com.hotel.hotel_backend.repository.PaymentTransactionRepository;
+import com.hotel.hotel_backend.repository.RoomUnitAssignmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ public class BookingRefundService {
     private final BookingRepository bookingRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final BookingExpirationService bookingExpirationService;
+    private final RoomUnitAssignmentRepository roomUnitAssignmentRepository;
 
     @Transactional
     public Booking refundBooking(Booking booking, String clientRequestId) {
@@ -80,6 +82,8 @@ public class BookingRefundService {
 
         booking.setStatus(BookingStatus.REFUNDED);
         booking.setExpiresAt(null);
+        // Giải phóng phòng vật lý đã gán (nếu booking trước đó CONFIRMED và đã gán phòng).
+        roomUnitAssignmentRepository.deleteByBookingId(booking.getId());
         Booking savedBooking = bookingRepository.save(booking);
         recordRefundTransaction(savedBooking, clientRequestId, transferNote, refundAmount);
         return savedBooking;

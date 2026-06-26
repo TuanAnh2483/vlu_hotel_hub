@@ -1,6 +1,6 @@
 import { createElement, useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { useMyHotels, usePartnerBookings, usePartnerBookingDetail, useCompleteBooking } from "../../hooks/usePartnerQueries";
+import { useMyHotels, usePartnerBookings, usePartnerBookingDetail, useCompleteBooking, usePartnerAssignedBookingIds } from "../../hooks/usePartnerQueries";
 import { PageHeader, Card, Badge, Btn, Table, Modal } from "../../components/admin/AdminLayout";
 import { Filter, Calendar, Download, User, Users, Building2, Eye, CheckCircle2, BedDouble, LogIn } from "lucide-react";
 import { useLang } from "../../contexts/LanguageContext";
@@ -60,9 +60,11 @@ export default function PartnerBookings() {
   const { data: hotels = [] }                     = useMyHotels();
   const { data: pageData, isLoading: loading, error: loadError } = usePartnerBookings({ ...filters, size: 10 });
   const { data: detail }                          = usePartnerBookingDetail(detailId, { enabled: Boolean(detailId) });
+  const { data: assignedIds = [] }                = usePartnerAssignedBookingIds();
   const completeBooking = useCompleteBooking();
 
   const items = pageData?.items || [];
+  const assignedSet = new Set(assignedIds);
 
   const handleExport = () => {
     if (!items.length) return;
@@ -109,9 +111,25 @@ export default function PartnerBookings() {
     const canCheckin   = canCheckinBooking(b);
     const needsAssign  = b.status === "CONFIRMED" && !canCheckin;
     const isCheckingOut = completeBooking.isPending && completeBooking.variables === b.bookingId;
+    const isAssigned   = assignedSet.has(b.bookingId);
 
     return [
-      <span className="pb-cell-id">#{b.bookingId}</span>,
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
+        <span className="pb-cell-id">#{b.bookingId}</span>
+        {isAssigned && (
+          <span
+            title="Đã gán phòng vật lý"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 4,
+              background: "#d1fae5", color: "#047857",
+              borderRadius: 999, padding: "2px 8px",
+              fontSize: 11, fontWeight: 800, whiteSpace: "nowrap",
+            }}
+          >
+            <BedDouble size={12} /> Đã gán
+          </span>
+        )}
+      </div>,
 
       <div className="pb-cell-hotel">
         <Building2 size={14} color="#94a3b8" />

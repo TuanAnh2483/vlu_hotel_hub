@@ -34,6 +34,7 @@ public class BookingExpirationJob {
 
     @Scheduled(fixedDelayString = "${app.booking.expiration.fixed-delay-ms:60000}")
     public void expirePendingBookings() {
+        // Orchestration + cach ly per-booking nam trong service; moi booking loi chi bi bo qua.
         int expiredCount = bookingExpirationService.expireOverduePendingBookings();
         if (expiredCount > 0) {
             log.info("Expired {} pending payment bookings", expiredCount);

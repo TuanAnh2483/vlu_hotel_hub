@@ -72,5 +72,20 @@ public interface DailyInventoryRepository
     int incrementAvailableRoomsUpTo(@Param("roomId") Long roomId,
                                     @Param("fromDate") LocalDate fromDate,
                                     @Param("max") int max);
+
+    /**
+     * Tăng availableRooms thêm {@code delta} cho mọi ngày từ fromDate trở đi,
+     * nhưng không vượt quá max (Room.quantity mới). Dùng khi partner TĂNG quantity
+     * để pool bán được nở theo — vá đúng lỗ hổng "initInventory chỉ cap xuống".
+     */
+    @Modifying
+    @Query("UPDATE DailyInventory di SET di.availableRooms = " +
+           "CASE WHEN di.availableRooms + :delta > :max THEN :max ELSE di.availableRooms + :delta END " +
+           "WHERE di.id.roomId = :roomId AND di.id.date >= :fromDate " +
+           "AND di.availableRooms < :max")
+    int raiseAvailableRoomsBy(@Param("roomId") Long roomId,
+                              @Param("fromDate") LocalDate fromDate,
+                              @Param("delta") int delta,
+                              @Param("max") int max);
 }
 
