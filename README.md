@@ -147,9 +147,8 @@ Thêm file CONTRIBUTING.md nếu cần quy tắc chi tiết về code style, lin
 
 Nếu cần trợ giúp hoặc muốn báo lỗi, liên hệ:
 
-- Email: your-email@example.com
+- Email: tuananh240803@gmail.com
 - GitHub: https://github.com/TuanAnh2483
 
 ---
 
-Chúc bạn phát triển dự án tốt! Nếu bạn muốn, tôi có thể: thêm hướng dẫn cấu hình cụ thể cho loại cơ sở dữ liệu bạn dùng, tạo file .env.example, hoặc tạo tài liệu API (OpenAPI/Swagger).
